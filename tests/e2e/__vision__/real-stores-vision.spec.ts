@@ -96,12 +96,6 @@ for (const store of REAL_STORES) {
               await revealPage(page);
               await page.screenshot({ path: join(outDir, "carrito-lleno.png"), fullPage: true });
               (summary.capturas as string[]).push(`${viewport.name}/carrito-lleno.png`);
-              if (loaded.files.has("checkout/index.html")) {
-                await page.goto(new URL("/checkout/", url).toString());
-                await revealPage(page);
-                await page.screenshot({ path: join(outDir, "checkout-lleno.png"), fullPage: true });
-                (summary.capturas as string[]).push(`${viewport.name}/checkout-lleno.png`);
-              }
             } else {
               (summary.errores as string[]).push(
                 `${viewport.name}: no se encontró botón Agregar en ${producto.path}`,

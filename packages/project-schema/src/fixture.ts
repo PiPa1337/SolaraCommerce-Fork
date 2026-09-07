@@ -35,7 +35,6 @@ export const referenceStore = StoreProjectV2Schema.parse({
     merchantVerification: "",
   },
   theme: {
-    colorMode: "auto",
     colors: {
       background: "#f5f0e6",
       surface: "#e9e1d3",
@@ -57,8 +56,6 @@ export const referenceStore = StoreProjectV2Schema.parse({
   navigation: {
     catalogLabel: "Colecciones",
     showHome: true,
-    showContact: true,
-    showAbout: true,
     showSearch: true,
     showCart: true,
     items: [
@@ -89,25 +86,6 @@ export const referenceStore = StoreProjectV2Schema.parse({
       title: "Una casa con materia y calma.",
       seoTitle: "Tienda Referencia | Objetos para todos los días",
       seoDescription: "Objetos de mesa, textiles y piezas de autor seleccionadas en Buenos Aires.",
-      sections: [],
-    },
-    {
-      id: "page-about",
-      kind: "about",
-      slug: "nosotros",
-      title: "Elegimos objetos para vivirlos.",
-      seoTitle: "Nosotros | Tienda Referencia",
-      seoDescription:
-        "Conocé la mirada detrás de la tienda de referencia y las piezas que elegimos.",
-      sections: [],
-    },
-    {
-      id: "page-contact",
-      kind: "contact",
-      slug: "contacto",
-      title: "Estamos para ayudarte.",
-      seoTitle: "Contacto | Tienda Referencia",
-      seoDescription: "Escribinos por WhatsApp, email o teléfono para coordinar tu pedido.",
       sections: [],
     },
   ],
@@ -403,7 +381,7 @@ export const referenceStore = StoreProjectV2Schema.parse({
         imageId: "asset-jarra",
         imageSide: "right",
         actionLabel: "Conocé nuestra mirada",
-        actionHref: "/nosotros/",
+        actionHref: "#contact-form",
       },
       motion: {
         preset: "fade-up",

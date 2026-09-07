@@ -22,8 +22,6 @@ const ROUTES = [
   ["product", ""],
   ["search", "/buscar/?q=a"],
   ["cart", "/carrito/"],
-  ["checkout", "/checkout/"],
-  ["contact", "/contacto/"],
 ] as const;
 function positiveIntegerEnv(name: string, fallback: number): number {
   const value = Number.parseInt(process.env[name] ?? "", 10);

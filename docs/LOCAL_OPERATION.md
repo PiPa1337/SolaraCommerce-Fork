@@ -1,12 +1,14 @@
 # Operación local de SolaraCommerce
 
-SolaraCommerce tiene un único runtime operativo: `Abrir SolaraCommerce.cmd` abre
-el Studio mediante Node 24 y el navegador del sistema. No existe una distribución
-EXE/portable activa ni un segundo almacenamiento comercial.
+SolaraCommerce tiene un único runtime operativo basado en Node 24, servidor
+loopback y navegador del sistema. Se puede iniciar con `Abrir SolaraCommerce.cmd`
+o, como alternativa, con el tray liviano `Abrir SolaraCommerce.exe`; ambos usan
+el mismo servidor, el mismo `proyectos/` y el mismo almacenamiento comercial.
+El EXE no es una distribución portable ni empaqueta el Studio.
 
 ## Requisitos y arranque
 
-- Windows 10/11 para el launcher `.cmd`.
+- Windows 10/11 para los launchers `.cmd` y tray `.exe`.
 - Node.js 24.x y Corepack.
 - Dependencias instaladas con `corepack pnpm install --frozen-lockfile`.
 
@@ -14,6 +16,14 @@ Desde la raíz del checkout, abrí `Abrir SolaraCommerce.cmd`. El launcher valid
 Node/Corepack, recompila el Studio cuando hace falta, inicia el servidor Node en
 loopback y abre el navegador. `pnpm dev` sigue disponible para desarrollo, pero
 la operación comercial normal usa el launcher.
+
+El tray se genera con `corepack pnpm build:tray` y queda como
+`Abrir SolaraCommerce.exe` en la raíz, ignorado por Git. Al abrirlo crea un único
+icono por checkout. Su menú contextual muestra la cantidad de sesiones activas,
+permite abrir una nueva, abrir o cerrar una sesión concreta, cerrar todas y
+salir. `Salir` sólo termina cuando todas las sesiones gestionadas pudieron
+cerrarse. El tray refresca el registro periódicamente y también detecta sesiones
+que ya estaban abiertas antes de iniciarlo.
 
 ## Fuente de verdad y layout
 
@@ -24,6 +34,7 @@ clone, pull o backup del repositorio no incluye esas tiendas.
 ```text
 SolaraCommerce/
 ├── Abrir SolaraCommerce.cmd
+├── Abrir SolaraCommerce.exe        # generado por build:tray
 ├── SolaraCommerce-Agent.cmd
 ├── proyectos/
 │   └── <tienda>--<id>/
@@ -31,13 +42,17 @@ SolaraCommerce/
     ├── logs/
     ├── transactions/
     ├── agent/
+    ├── instances/
+    │   └── <sessionId>.json
     └── instance.json
 ```
 
 Los proyectos conservan el formato `manifestVersion: 2`, `current.projectPath`,
 `.solara.json`, `actual/`, `respaldos/`, `respaldos-manuales/` y `sitios/`.
 `.solara-runtime/` contiene estado operativo regenerable, logs, transacciones y
-estado del agente; no reemplaza los respaldos de `proyectos/`.
+estado del agente; no reemplaza los respaldos de `proyectos/`. `instances/`
+mantiene un registro efímero por sesión activa. `instance.json` conserva sólo
+metadata del layout local y no se usa como autoridad para cerrar procesos.
 
 ## Copiar o respaldar una instalación
 
@@ -76,6 +91,11 @@ requiere HTTP local se usa un servidor efímero limitado a la carpeta publicada.
 ## Diagnóstico
 
 - Si el launcher rechaza la versión de Node, instalá/activá Node 24.x.
+- Si falta `Abrir SolaraCommerce.exe`, ejecutá `corepack pnpm build:tray`.
+- `corepack pnpm test:tray` recompila el tray y prueba detección previa,
+  múltiples sesiones, cierre individual/total, registros inválidos, identidad
+  exacta de sesión, fallo seguro de shutdown y el límite de ocho puertos usando
+  exclusivamente raíces temporales.
 - Si una tienda no aparece, revisá `proyectos/<tienda>/manifest.json`, que
   `current.projectPath` sea relativo y que el SHA-256 coincida con el respaldo.
 - Si hay un error de permisos, verificá que el checkout y `proyectos/` sean
@@ -85,9 +105,16 @@ requiere HTTP local se usa un servidor efímero limitado a la carpeta publicada.
 
 ## Archivos de implementación
 
-- `Abrir SolaraCommerce.cmd`: entrada operativa de Windows.
-- `scripts/open-solara.ps1`: validación de Node/Corepack, build y apertura.
+- `Abrir SolaraCommerce.cmd`: launcher clásico de Windows.
+- `Abrir SolaraCommerce.exe`: tray opcional generado, sin empaquetado del Studio.
+- `scripts/open-solara.ps1`: validación de Node/Corepack, build, selección de
+  puerto y creación/reutilización de sesiones.
+- `scripts/tray/SolaraCommerceTray.cs`: menú del tray, descubrimiento y cierre.
+- `scripts/build-tray.ps1`: compilación WinForms con .NET Framework y el icono
+  existente del Studio.
+- `scripts/tray-smoke.mjs`: smoke aislado de sesiones y seguridad del tray.
 - `packages/exporter/scripts/local-layout.mjs`: layout local y seguridad de paths.
+- `packages/exporter/scripts/session-registry.mjs`: registro efímero por sesión.
 - `packages/exporter/scripts/local-project-storage.mjs`: persistencia confirmada.
 - `packages/exporter/scripts/solara-request-handler.mjs`: API local administrada.
 - `packages/exporter/scripts/serve.mjs`: servidor Node HTTP loopback.

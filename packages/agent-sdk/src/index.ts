@@ -1,5 +1,6 @@
 import type {
   AgentResponse,
+  AssetGeneratePlaceholderParams,
   AssetStageParams,
   AssetUploadBeginParams,
   AssetUploadChunkParams,
@@ -7,12 +8,49 @@ import type {
   AuditListParams,
   JobGetParams,
   PlanCommitParams,
+  PlanCreateAndCommitParams,
   PlanCreateParams,
   PlanDiscardParams,
   PlanGetParams,
   PlanHeartbeatParams,
+  RolloutCommitParams,
+  RolloutGetParams,
+  RolloutPreviewParams,
+  RolloutRollbackParams,
   StoreGetParams,
+  StoreRestoreParams,
+  TemplateCommitUpgradeParams,
+  TemplateGetParams,
+  TemplatePreviewUpgradeParams,
 } from "@solara/agent-contracts";
+
+export interface QaRunExportParams {
+  storeId?: string;
+  projectData: Record<string, unknown>;
+}
+
+export interface QaRunGatesParams {
+  suite?: string;
+  filter?: string;
+}
+
+export interface QaDetectFlakyParams {
+  testFile: string;
+  runs?: number;
+}
+
+export interface QaWriteTestParams {
+  filePath: string;
+  content: string;
+}
+
+export interface QaLogProgressParams {
+  entry: string;
+}
+
+export interface QaUpdateStateParams {
+  patch: Record<string, unknown>;
+}
 
 export interface AgentTransport {
   request(method: string, params?: unknown): Promise<unknown>;
@@ -33,6 +71,30 @@ export class AgentClient {
   getStore<T = unknown>(params: StoreGetParams): Promise<T> {
     return this.transport.request("stores.get", params) as Promise<T>;
   }
+  restoreStore<T = unknown>(params: StoreRestoreParams): Promise<T> {
+    return this.transport.request("stores.restore", params) as Promise<T>;
+  }
+  getTemplate<T = unknown>(params: TemplateGetParams): Promise<T> {
+    return this.transport.request("templates.get", params) as Promise<T>;
+  }
+  previewTemplateUpgrade<T = unknown>(params: TemplatePreviewUpgradeParams): Promise<T> {
+    return this.transport.request("templates.previewUpgrade", params) as Promise<T>;
+  }
+  commitTemplateUpgrade<T = unknown>(params: TemplateCommitUpgradeParams): Promise<T> {
+    return this.transport.request("templates.commitUpgrade", params) as Promise<T>;
+  }
+  previewRollout<T = unknown>(params: RolloutPreviewParams): Promise<T> {
+    return this.transport.request("rollouts.preview", params) as Promise<T>;
+  }
+  commitRollout<T = unknown>(params: RolloutCommitParams): Promise<T> {
+    return this.transport.request("rollouts.commit", params) as Promise<T>;
+  }
+  getRollout<T = unknown>(params: RolloutGetParams): Promise<T> {
+    return this.transport.request("rollouts.get", params) as Promise<T>;
+  }
+  rollbackRollout<T = unknown>(params: RolloutRollbackParams): Promise<T> {
+    return this.transport.request("rollouts.rollback", params) as Promise<T>;
+  }
   createPlan<T = unknown>(params: PlanCreateParams): Promise<T> {
     return this.transport.request("plans.create", params) as Promise<T>;
   }
@@ -41,6 +103,9 @@ export class AgentClient {
   }
   commitPlan<T = unknown>(params: PlanCommitParams): Promise<T> {
     return this.transport.request("plans.commit", params) as Promise<T>;
+  }
+  createAndCommitPlan<T = unknown>(params: PlanCreateAndCommitParams): Promise<T> {
+    return this.transport.request("plans.createAndCommit", params) as Promise<T>;
   }
   discardPlan<T = unknown>(params: PlanDiscardParams): Promise<T> {
     return this.transport.request("plans.discard", params) as Promise<T>;
@@ -57,6 +122,9 @@ export class AgentClient {
   stageAsset<T = unknown>(params: AssetStageParams): Promise<T> {
     return this.transport.request("assets.stage", params) as Promise<T>;
   }
+  generatePlaceholderAsset<T = unknown>(params: AssetGeneratePlaceholderParams): Promise<T> {
+    return this.transport.request("assets.generatePlaceholder", params) as Promise<T>;
+  }
   beginAssetUpload<T = unknown>(params: AssetUploadBeginParams): Promise<T> {
     return this.transport.request("assets.upload.begin", params) as Promise<T>;
   }
@@ -65,6 +133,33 @@ export class AgentClient {
   }
   finishAssetUpload<T = unknown>(params: AssetUploadFinishParams): Promise<T> {
     return this.transport.request("assets.upload.finish", params) as Promise<T>;
+  }
+  qaRunExport<T = unknown>(params: QaRunExportParams): Promise<T> {
+    return this.transport.request("qa.runExport", params) as Promise<T>;
+  }
+  qaRunGates<T = unknown>(params: QaRunGatesParams = {}): Promise<T> {
+    return this.transport.request("qa.runGates", params) as Promise<T>;
+  }
+  qaDetectFlaky<T = unknown>(params: QaDetectFlakyParams): Promise<T> {
+    return this.transport.request("qa.detectFlaky", params) as Promise<T>;
+  }
+  qaWriteTest<T = unknown>(params: QaWriteTestParams): Promise<T> {
+    return this.transport.request("qa.writeTest", params) as Promise<T>;
+  }
+  qaReadBacklog<T = unknown>(): Promise<T> {
+    return this.transport.request("qa.readBacklog", {}) as Promise<T>;
+  }
+  qaLogProgress<T = unknown>(params: QaLogProgressParams): Promise<T> {
+    return this.transport.request("qa.logProgress", params) as Promise<T>;
+  }
+  qaUpdateState<T = unknown>(params: QaUpdateStateParams): Promise<T> {
+    return this.transport.request("qa.updateState", params) as Promise<T>;
+  }
+  qaRunCycle<T = unknown>(): Promise<T> {
+    return this.transport.request("qa.runCycle", {}) as Promise<T>;
+  }
+  qaStatus<T = unknown>(): Promise<T> {
+    return this.transport.request("qa.status", {}) as Promise<T>;
   }
 
   async createStore<TPlan = unknown, TCommit = unknown>(

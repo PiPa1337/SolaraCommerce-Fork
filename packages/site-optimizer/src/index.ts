@@ -42,17 +42,7 @@ export interface AppliedOptimization {
 
 export interface OptimizationRoute {
   path: string;
-  pageType:
-    | "home"
-    | "category"
-    | "collection"
-    | "product"
-    | "about"
-    | "contact"
-    | "legal"
-    | "search"
-    | "cart"
-    | "checkout";
+  pageType: "home" | "category" | "collection" | "product" | "legal" | "search" | "cart";
   indexable: boolean;
   canonicalPath: string;
   title: string;
@@ -250,8 +240,6 @@ function categoryProducts(project: StoreProjectV1, category: Category): Product[
 function buildRoutes(project: StoreProjectV1): OptimizationRoute[] {
   const pageByKind = new Map(project.pages.map((page) => [page.kind, page]));
   const home = pageByKind.get("home");
-  const about = pageByKind.get("about");
-  const contact = pageByKind.get("contact");
   const isV2 = project.commerceTemplates.designFamily === "catalog-modern-v2";
   const pageSize = project.commerceTemplates.category.productsPerPage;
   const activeProductTitleCounts = buildPublicProductTitleCounts(project);
@@ -269,24 +257,6 @@ function buildRoutes(project: StoreProjectV1): OptimizationRoute[] {
 
   if (!isV2) {
     routes.push(
-      route(
-        "/nosotros/",
-        "about",
-        true,
-        "/nosotros/",
-        about?.seoTitle ?? `Nosotros | ${project.identity.brandName}`,
-        about?.seoDescription ?? project.identity.description,
-        true,
-      ),
-      route(
-        "/contacto/",
-        "contact",
-        true,
-        "/contacto/",
-        contact?.seoTitle ?? `Contacto | ${project.identity.brandName}`,
-        contact?.seoDescription ?? "Escribinos para coordinar tu pedido.",
-        true,
-      ),
       route(
         "/envios/",
         "legal",
@@ -355,20 +325,6 @@ function buildRoutes(project: StoreProjectV1): OptimizationRoute[] {
       ),
     );
   }
-  if (project.commerceTemplates.checkout.enabled && !isV2) {
-    routes.push(
-      route(
-        "/compra/",
-        "checkout",
-        false,
-        "/compra/",
-        `Compra | ${project.identity.brandName}`,
-        "Completa los datos para coordinar tu pedido.",
-        true,
-      ),
-    );
-  }
-
   project.categories
     .filter((category) => category.status !== "hidden")
     .forEach((category) => {
@@ -983,10 +939,7 @@ export function buildLlmsTxt(project: StoreProjectV1): string {
     return true;
   });
 
-  const contactPath =
-    project.commerceTemplates.designFamily === "catalog-modern-v2"
-      ? "/#contact-form"
-      : "/contacto/";
+  const contactPath = "/#contact-form";
   const routeLines = (items: readonly OptimizationRoute[]) =>
     items.map(
       (item) =>

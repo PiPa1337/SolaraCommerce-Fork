@@ -1,10 +1,9 @@
 /**
  * Diálogo de creación de tienda (wizard de 4 pasos) extraído del Dashboard.
  * El wizard es estado interno: pasos, campos, validación y error de envío.
- * El padre sólo controla la apertura (`open`), el submit (`onCreate`) y el
- * cierre (`onClose`).
+ * El padre controla la apertura, la creación, la importación y el cierre.
  */
-import { Plus, X } from "@phosphor-icons/react";
+import { Plus, UploadSimple, X } from "@phosphor-icons/react";
 import { useEffect, useId, useRef, useState } from "react";
 import { Button, Field, IconButton, InlineError } from "../../components/Ui";
 
@@ -18,10 +17,12 @@ export interface CreateStoreDraft {
 export function CreateStoreDialog({
   open,
   onCreate,
+  onImport,
   onClose,
 }: {
   open: boolean;
   onCreate(draft: CreateStoreDraft): Promise<void>;
+  onImport(file: File): Promise<void>;
   onClose(): void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -84,6 +85,23 @@ export function CreateStoreDialog({
     }
   };
 
+  const importStore = async (file: File) => {
+    if (busyRef.current) return;
+    setError("");
+    busyRef.current = true;
+    setBusy(true);
+    try {
+      await onImport(file);
+      onClose();
+      setStep(1);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "No se pudo importar la tienda.");
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+    }
+  };
+
   return (
     <dialog
       ref={dialogRef}
@@ -122,6 +140,29 @@ export function CreateStoreDialog({
           <li className={step >= 4 ? "is-active" : ""}>4 Revisión</li>
         </ol>
         {error ? <InlineError>{error}</InlineError> : null}
+        {step === 1 ? (
+          <div className="create-store__import">
+            <p className="dashboard-cosmic-dialog__summary">
+              ¿Ya tenés una tienda guardada? Importá un respaldo .solara.json como una tienda nueva.
+            </p>
+            <label className="button">
+              <UploadSimple aria-hidden />
+              Importar tienda
+              <input
+                className="visually-hidden"
+                type="file"
+                aria-label="Seleccionar tienda para importar"
+                accept=".json,.solara.json,application/json"
+                disabled={busy}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void importStore(file);
+                  event.target.value = "";
+                }}
+              />
+            </label>
+          </div>
+        ) : null}
         <Field label="Nueva tienda">
           <input
             ref={nameInputRef}

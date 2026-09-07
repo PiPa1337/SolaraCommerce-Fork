@@ -17,7 +17,6 @@ export interface ThemePreset {
     shadows?: Partial<Theme["shadows"]>;
     borders?: Partial<Theme["borders"]>;
     motion?: Partial<Theme["motion"]>;
-    colorMode?: "auto" | "light" | "dark";
   };
 }
 
@@ -145,7 +144,6 @@ export const THEME_PRESETS: readonly ThemePreset[] = [
       radius: 2,
       shadows: { card: "none", elevated: "none", overlay: "0 0 30px rgba(0,255,136,.05)" },
       borders: { width: "1px", style: "solid" },
-      colorMode: "dark" as const,
     },
   },
   {

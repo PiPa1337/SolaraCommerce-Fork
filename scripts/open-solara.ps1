@@ -1,40 +1,112 @@
-param([switch]$NoBrowser)
+param(
+  [switch]$NoBrowser,
+  [switch]$NewSession,
+  [switch]$Json
+)
 
 $ErrorActionPreference = "Stop"
+$ProgressPreference = "SilentlyContinue"
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $studioDist = Join-Path $projectRoot "apps\studio\dist"
 $studioIndex = Join-Path $studioDist "index.html"
 $serverScript = Join-Path $projectRoot "packages\exporter\scripts\serve.mjs"
 $runtimeDirectory = Join-Path $projectRoot ".solara-runtime"
-$runtimeFile = Join-Path $runtimeDirectory "server.json"
+$instancesDirectory = Join-Path $runtimeDirectory "instances"
+$legacyRuntimeFile = Join-Path $runtimeDirectory "server.json"
 
-function Test-SolaraServer {
-  param([int]$Port)
-
-  try {
-    $response = Invoke-WebRequest `
-      -Uri "http://127.0.0.1:$Port" `
-      -UseBasicParsing `
-      -TimeoutSec 1
-    return $response.StatusCode -eq 200 -and $response.Content.Contains("<title>SolaraCommerce Studio</title>")
-  } catch {
-    return $false
+function Write-LauncherStatus {
+  param([string]$Message)
+  if (-not $Json) {
+    Write-Host $Message -ForegroundColor Cyan
   }
 }
 
-function Test-SolaraManagedServer {
+function Get-SolaraSession {
   param([int]$Port)
 
   try {
-    $response = Invoke-WebRequest `
+    return Invoke-RestMethod `
       -Uri "http://127.0.0.1:$Port/__solara/session" `
+      -Method Get `
       -UseBasicParsing `
       -TimeoutSec 1
-    return $response.StatusCode -eq 200 -and $response.Content.Contains('"managed":true')
   } catch {
-    return $false
+    return $null
   }
+}
+
+function Test-SolaraManagedSession {
+  param(
+    [int]$Port,
+    [string]$SessionId
+  )
+
+  $session = Get-SolaraSession -Port $Port
+  return $null -ne $session -and $session.managed -eq $true -and $session.sessionId -eq $SessionId
+}
+
+function Test-SolaraManagedLegacyServer {
+  param([int]$Port)
+
+  $session = Get-SolaraSession -Port $Port
+  return $null -ne $session -and $session.managed -eq $true
+}
+
+function Remove-StaleSessionRecord {
+  param([string]$Path)
+  Remove-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
+}
+
+function Get-LiveSessions {
+  New-Item -ItemType Directory -Path $instancesDirectory -Force | Out-Null
+  $live = @()
+  foreach ($file in Get-ChildItem -LiteralPath $instancesDirectory -Filter "*.json" -File -ErrorAction SilentlyContinue) {
+    try {
+      $record = Get-Content -LiteralPath $file.FullName -Raw | ConvertFrom-Json
+      $validShape =
+        $record.format -eq "solara-local-session" -and
+        [int]$record.version -eq 1 -and
+        $record.managed -eq $true -and
+        $record.projectRoot -eq $projectRoot -and
+        [int]$record.port -ge 1 -and
+        [int]$record.port -le 65535 -and
+        $record.sessionId -match '^[a-zA-Z0-9_-]{8,128}$' -and
+        -not [string]::IsNullOrWhiteSpace([string]$record.shutdownToken)
+      if (-not $validShape) {
+        throw "Registro inválido."
+      }
+      if (Test-SolaraManagedSession -Port ([int]$record.port) -SessionId ([string]$record.sessionId)) {
+        $live += $record
+      } else {
+        Remove-StaleSessionRecord -Path $file.FullName
+      }
+    } catch {
+      Remove-StaleSessionRecord -Path $file.FullName
+    }
+  }
+  return @($live | Sort-Object @{ Expression = { [int]$_.port } }, startedAt)
+}
+
+function Get-LegacyServerUrl {
+  if (-not (Test-Path -LiteralPath $legacyRuntimeFile)) {
+    return $null
+  }
+  try {
+    $legacy = Get-Content -LiteralPath $legacyRuntimeFile -Raw | ConvertFrom-Json
+    if (
+      $legacy.projectRoot -eq $projectRoot -and
+      [int]$legacy.port -ge 1 -and
+      [int]$legacy.port -le 65535 -and
+      (Test-SolaraManagedLegacyServer -Port ([int]$legacy.port))
+    ) {
+      return "http://127.0.0.1:$([int]$legacy.port)"
+    }
+  } catch {
+    # El registro legacy es regenerable; un JSON roto nunca bloquea el arranque.
+  }
+  Remove-Item -LiteralPath $legacyRuntimeFile -Force -ErrorAction SilentlyContinue
+  return $null
 }
 
 function Test-PortAvailable {
@@ -51,6 +123,26 @@ function Test-PortAvailable {
     return $false
   } finally {
     $listener.Stop()
+  }
+}
+
+function Write-LaunchResult {
+  param(
+    [string]$SessionId,
+    [int]$Port,
+    [string]$Url
+  )
+
+  if ($Json) {
+    [pscustomobject]@{
+      sessionId = $SessionId
+      port = $Port
+      url = $Url
+    } | ConvertTo-Json -Compress | Write-Output
+  } elseif ($NoBrowser) {
+    Write-Output $Url
+  } else {
+    Start-Process $Url
   }
 }
 
@@ -73,8 +165,12 @@ try {
   }
 
   if (-not (Test-Path -LiteralPath (Join-Path $projectRoot "node_modules\.modules.yaml"))) {
-    Write-Host "Preparando dependencias por primera vez..." -ForegroundColor Cyan
-    & corepack pnpm install --frozen-lockfile
+    Write-LauncherStatus "Preparando dependencias por primera vez..."
+    if ($Json) {
+      & corepack pnpm install --frozen-lockfile *> $null
+    } else {
+      & corepack pnpm install --frozen-lockfile
+    }
     if ($LASTEXITCODE -ne 0) {
       throw "La instalación de dependencias no pudo completarse."
     }
@@ -97,44 +193,42 @@ try {
   }
 
   if ($needsBuild) {
-    Write-Host "Actualizando SolaraCommerce..." -ForegroundColor Cyan
-    & corepack pnpm --filter "@solara/studio" build
+    Write-LauncherStatus "Actualizando SolaraCommerce..."
+    if ($Json) {
+      & corepack pnpm --filter "@solara/studio" build *> $null
+    } else {
+      & corepack pnpm --filter "@solara/studio" build
+    }
     if ($LASTEXITCODE -ne 0) {
       throw "No se pudo construir la aplicación."
     }
   }
 
-  if (Test-Path -LiteralPath $runtimeFile) {
-    try {
-      $existing = Get-Content -LiteralPath $runtimeFile -Raw | ConvertFrom-Json
-      $existingProcess = Get-Process -Id ([int]$existing.processId) -ErrorAction SilentlyContinue
-      if ($existingProcess -and (Test-SolaraServer -Port ([int]$existing.port))) {
-        if (Test-SolaraManagedServer -Port ([int]$existing.port)) {
-          $existingUrl = "http://127.0.0.1:$($existing.port)"
-          if ($NoBrowser) {
-            Write-Output $existingUrl
-          } else {
-            Start-Process $existingUrl
-          }
-          exit 0
-        }
-        if ($existing.projectRoot -eq $projectRoot) {
-          Stop-Process -Id $existingProcess.Id -Force -ErrorAction SilentlyContinue
-          Start-Sleep -Milliseconds 150
-        }
-      }
-    } catch {
-      # Un registro viejo no debe impedir iniciar una instancia nueva.
+  $liveSessions = @(Get-LiveSessions)
+  if (-not $NewSession -and $liveSessions.Count -gt 0) {
+    $existing = $liveSessions[0]
+    $existingUrl = "http://127.0.0.1:$([int]$existing.port)"
+    Write-LaunchResult -SessionId ([string]$existing.sessionId) -Port ([int]$existing.port) -Url $existingUrl
+    exit 0
+  }
+
+  if (-not $NewSession) {
+    $legacyUrl = Get-LegacyServerUrl
+    if ($legacyUrl) {
+      $legacyPort = [int]([Uri]$legacyUrl).Port
+      Write-LaunchResult -SessionId "legacy" -Port $legacyPort -Url $legacyUrl
+      exit 0
     }
-    Remove-Item -LiteralPath $runtimeFile -Force -ErrorAction SilentlyContinue
   }
 
   $port = 4173..4180 | Where-Object { Test-PortAvailable -Port $_ } | Select-Object -First 1
   if ($null -eq $port) {
     throw "Los puertos locales 4173 a 4180 están ocupados."
   }
+  $port = [int]$port
 
   $nodePath = (Get-Command node).Source
+  $sessionId = [Guid]::NewGuid().ToString("N")
   $random = [System.Security.Cryptography.RandomNumberGenerator]::Create()
   try {
     $tokenBytes = New-Object byte[] 32
@@ -148,7 +242,8 @@ try {
     "`"$studioDist`"",
     "$port",
     "`"$shutdownToken`"",
-    "`"$projectRoot`""
+    "`"$projectRoot`"",
+    "`"$sessionId`""
   )
   $serverProcess = Start-Process `
     -FilePath $nodePath `
@@ -157,16 +252,6 @@ try {
     -WindowStyle Hidden `
     -PassThru
 
-  New-Item -ItemType Directory -Path $runtimeDirectory -Force | Out-Null
-  @{
-    processId = $serverProcess.Id
-    port = $port
-    projectRoot = $projectRoot
-    managed = $true
-  } |
-    ConvertTo-Json |
-    Set-Content -LiteralPath $runtimeFile -Encoding UTF8
-
   $ready = $false
   for ($attempt = 0; $attempt -lt 40; $attempt++) {
     Start-Sleep -Milliseconds 250
@@ -174,7 +259,7 @@ try {
     if ($serverProcess.HasExited) {
       break
     }
-    if (Test-SolaraServer -Port $port) {
+    if (Test-SolaraManagedSession -Port $port -SessionId $sessionId) {
       $ready = $true
       break
     }
@@ -182,21 +267,21 @@ try {
 
   if (-not $ready) {
     if (-not $serverProcess.HasExited) {
-      Stop-Process -Id $serverProcess.Id -Force
+      Stop-Process -Id $serverProcess.Id -Force -ErrorAction SilentlyContinue
     }
-    Remove-Item -LiteralPath $runtimeFile -Force -ErrorAction SilentlyContinue
+    Remove-StaleSessionRecord -Path (Join-Path $instancesDirectory "$sessionId.json")
     throw "El servidor local no respondió a tiempo."
   }
 
   $url = "http://127.0.0.1:$port"
-  if ($NoBrowser) {
-    Write-Output $url
-  } else {
-    Start-Process $url
-  }
+  Write-LaunchResult -SessionId $sessionId -Port $port -Url $url
   exit 0
 } catch {
-  Write-Host ""
-  Write-Host "ERROR: $($_.Exception.Message)" -ForegroundColor Red
+  if ($Json) {
+    [Console]::Error.WriteLine($_.Exception.Message)
+  } else {
+    Write-Host ""
+    Write-Host "ERROR: $($_.Exception.Message)" -ForegroundColor Red
+  }
   exit 1
 }

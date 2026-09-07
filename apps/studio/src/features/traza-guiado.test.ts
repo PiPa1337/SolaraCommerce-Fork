@@ -22,8 +22,6 @@ type StudioTab = (typeof studioTabs)[number];
 const scopes: ContentRequirementScope[] = [
   "identity",
   "home",
-  "about",
-  "contact",
   "navigation",
   "category",
   "product",
@@ -35,8 +33,6 @@ const scopes: ContentRequirementScope[] = [
 const expectedDestination: Record<ContentRequirementScope, StudioTab> = {
   identity: "overview",
   home: "builder",
-  about: "overview",
-  contact: "overview",
   navigation: "overview",
   category: "catalog",
   product: "catalog",

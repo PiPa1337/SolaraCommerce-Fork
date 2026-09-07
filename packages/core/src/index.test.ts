@@ -152,7 +152,8 @@ describe("reduceProject", () => {
     );
   });
 
-  it("ajusta precios masivos con enteros y redondeo estable", () => {    expect(adjustPrice(10_001, { type: "percentage", basisPoints: 1_250 })).toBe(11_251);
+  it("ajusta precios masivos con enteros y redondeo estable", () => {
+    expect(adjustPrice(10_001, { type: "percentage", basisPoints: 1_250 })).toBe(11_251);
     expect(adjustPrice(50, { type: "percentage", basisPoints: -5_000 })).toBe(25);
     expect(adjustPrice(50, { type: "amount", cents: -100 })).toBe(0);
 
@@ -550,14 +551,14 @@ describe("contrato Builder → gate de secciones", () => {
     expect(parsed?.settings.title).toBe("Título editado");
   });
 
-  it("acepta payloads de secciones en páginas (spread de pages como envía Builder)", () => {
+  it("acepta payloads de secciones en Home (spread de pages como envía Builder)", () => {
     const source = demoStore.sections.find((section) => section.slot === "content");
     if (source === undefined) throw new Error("La demo debe tener una sección de contenido.");
     const pageSection: StoreSection = { ...structuredClone(source), id: newSectionId() };
     const payload: StoreProjectV1 = {
       ...demoStore,
       pages: demoStore.pages.map((page) =>
-        page.kind === "about" ? { ...page, sections: [pageSection] } : page,
+        page.kind === "home" ? { ...page, sections: [pageSection] } : page,
       ),
       updatedAt: demoStore.updatedAt,
     };
@@ -566,7 +567,7 @@ describe("contrato Builder → gate de secciones", () => {
     expect(result.success).toBe(true);
     expect(
       result.data?.pages
-        .find((page) => page.kind === "about")
+        .find((page) => page.kind === "home")
         ?.sections.map((section) => section.id),
     ).toEqual([pageSection.id]);
   });

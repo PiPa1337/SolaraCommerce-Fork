@@ -71,7 +71,9 @@ async function transcodeInBrowser(
     captureStream?: () => MediaStream;
   };
   const source = videoWithCaptureStream.captureStream?.();
-  source?.getAudioTracks().forEach((track: MediaStreamTrack) => output.addTrack(track));
+  source?.getAudioTracks().forEach((track: MediaStreamTrack) => {
+    output.addTrack(track);
+  });
   const recorder = new MediaRecorder(output, {
     mimeType,
     videoBitsPerSecond: target.bitsPerSecond,
@@ -139,8 +141,12 @@ async function transcodeInBrowser(
     });
   } finally {
     URL.revokeObjectURL(objectUrl);
-    output.getTracks().forEach((track: MediaStreamTrack) => track.stop());
-    source?.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+    output.getTracks().forEach((track: MediaStreamTrack) => {
+      track.stop();
+    });
+    source?.getTracks().forEach((track: MediaStreamTrack) => {
+      track.stop();
+    });
   }
 }
 
@@ -175,12 +181,7 @@ export async function optimizeProductVideoSource(
   const mimeType = outputMimeType(selectedMime);
   if (!mimeType) return undefined;
   try {
-    const blob = await (deps.transcode ?? transcodeInBrowser)(
-      file,
-      metadata,
-      target,
-      mimeType,
-    );
+    const blob = await (deps.transcode ?? transcodeInBrowser)(file, metadata, target, mimeType);
     if (blob.size === 0 || blob.size > PRODUCT_VIDEO_MAX_BYTES) return undefined;
     const dimensions = scaledDimensions(metadata.width, metadata.height, target.maxSide);
     return { blob, mimeType, ...dimensions };

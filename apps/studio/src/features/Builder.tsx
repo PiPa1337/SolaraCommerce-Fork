@@ -473,24 +473,13 @@ export function Builder({
               value={pageKind}
               onChange={(event) => {
                 const next = event.target.value as EditablePageKind;
-                // En páginas secundarias sólo existen los slots catalog/content;
-                // si el valor previo (elegido en Home) no está disponible, se
-                // recorta al primer slot válido (catalog) para que el select
-                // mostrado coincida con el estado.
-                const allowedSlots = (Object.keys(slotLabels) as StoreSection["slot"][]).filter(
-                  (slot) => next === "home" || slot === "catalog" || slot === "content",
-                );
+                const allowedSlots = Object.keys(slotLabels) as StoreSection["slot"][];
                 setPageKind(next);
-                onPreviewRouteChange?.(
-                  next === "home" ? "/" : next === "about" ? "/nosotros/" : "/contacto/",
-                );
+                onPreviewRouteChange?.("/");
                 setSlotToAdd((current) => (allowedSlots.includes(current) ? current : "catalog"));
                 setPickerOpen(false);
                 setPickerQuery("");
-                const nextPage = project.pages.find((page) => page.kind === next);
-                const nextSections =
-                  next === "home" ? project.sections : (nextPage?.sections ?? []);
-                setSelectedId(nextSections[0]?.id ?? "");
+                setSelectedId(project.sections[0]?.id ?? "");
               }}
             >
               <option value="home">Home</option>

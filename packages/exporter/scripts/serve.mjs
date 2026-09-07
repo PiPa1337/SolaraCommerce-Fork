@@ -1,13 +1,16 @@
 /** Adaptador HTTP local para el handler compartido de SolaraCommerce. */
+import { randomUUID } from "node:crypto";
 import { createServer } from "node:http";
 import { resolve } from "node:path";
 import { ensureLocalLayout, resolveLocalLayout } from "./local-layout.mjs";
+import { removeSessionRecord, writeSessionRecord } from "./session-registry.mjs";
 import { createSolaraRequestHandler } from "./solara-request-handler.mjs";
 
 const root = resolve(process.argv[2] ?? "site");
 const port = Number(process.argv[3] ?? process.env.SOLARA_PORT ?? "4174");
 const shutdownToken = process.argv[4] ?? "";
 const applicationRoot = resolve(process.argv[5] ?? process.cwd());
+const sessionId = process.argv[6] || randomUUID().replaceAll("-", "");
 const layout = resolveLocalLayout({ applicationRoot });
 const serverOrigin = `http://127.0.0.1:${port}`;
 let server;
@@ -21,6 +24,7 @@ async function start() {
     projectsRoot: layout.projectsRoot,
     transactionRoot: layout.transactionRoot,
     shutdownToken,
+    sessionId,
     origin: serverOrigin,
     onShutdown: stopServer,
   });
@@ -70,10 +74,28 @@ async function start() {
     });
     server.listen(port, "127.0.0.1", resolveListening);
   });
+
+  try {
+    await writeSessionRecord(layout, {
+      format: "solara-local-session",
+      version: 1,
+      sessionId,
+      processId: process.pid,
+      port,
+      projectRoot: layout.applicationRoot,
+      startedAt: new Date().toISOString(),
+      managed: true,
+      shutdownToken,
+    });
+  } catch (error) {
+    await new Promise((resolveClose) => server.close(() => resolveClose()));
+    throw error;
+  }
   console.log(`Solara export disponible en http://localhost:${port}`);
 
   async function shutdown() {
     await handler.close();
+    await removeSessionRecord(layout, sessionId).catch(() => {});
     server.close(() => process.exit(0));
     server.closeAllConnections?.();
     setTimeout(() => process.exit(0), 1000).unref();
@@ -84,6 +106,9 @@ async function start() {
     shuttingDown = true;
     void shutdown();
   }
+
+  process.once("SIGINT", stopServer);
+  process.once("SIGTERM", stopServer);
 }
 
 start().catch((error) => {

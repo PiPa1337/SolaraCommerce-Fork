@@ -1,3 +1,42 @@
+### Cierre de hallazgos deficientes de auditoría (2026-09-07)
+
+**Changed**
+
+- `whatsapp.includeSku` queda únicamente como campo legado tolerado por
+  compatibilidad de `StoreProjectV2`; Studio, exporter y runtime activo no lo
+  exponen ni dependen de él.
+- El hero V2 conserva correctamente el encuadre mobile y el carousel respeta
+  autoplay/reduced motion sin hacer visibles slides marcados como `hidden`.
+- La integración Windows para abrir sitio/carpeta valida mejor las rutas y queda
+  cubierta por tests deterministas del request handler.
+
+**Fixed**
+
+- Se corrigen los errores de formato/diagnóstico que afectaban al editor de
+  productos y al helper de optimización de video.
+- Se agrega cobertura browser para installability/recarga offline del Studio y
+  se estabiliza `nojs-coverage` esperando la red inactiva antes de navegar a la
+  siguiente ruta, evitando falsos `ERR_ABORTED` sin ocultar fallos HTTP reales.
+- Se ajustan las regresiones responsive, galería móvil y foco por teclado al
+  contrato visual vigente. El smoke full de cierre pasa 163/163.
+
+### Tema único y páginas públicas simplificadas (2026-09-06)
+
+**Removed**
+
+- Se elimina la capacidad `auto/light/dark` y su UI: la tienda usa un único
+  tema editable mediante tokens y presets.
+- Se retiran definitivamente las páginas/rutas independientes de Compra,
+  Nosotros y Contacto, junto con sus módulos, inventarios y pruebas activas.
+
+**Changed**
+
+- Contacto queda como sección de Inicio mediante `#contact-form` y
+  `contact-channels`. El flujo de carrito, datos del cliente y pedido por
+  WhatsApp se conserva sin una página `/compra/`.
+- La lectura de proyectos heredados descarta campos de modo de color y normaliza
+  enlaces antiguos a las superficies vigentes.
+
 ### Borrado físico de categorías por agente (2026-09-06)
 
 **Added**
@@ -6,6 +45,21 @@
   `ELIMINAR_CATEGORIA`. Sólo elimina categorías ocultas, vacías y sin
   subcategorías, y expone el borrado en `diff.categories.removed` antes del
   commit.
+
+### Launcher opcional en tray para Windows (2026-09-06)
+
+**Added**
+
+- Se incorpora `Abrir SolaraCommerce.exe`, un tray WinForms/.NET Framework
+  liviano que convive con el `.cmd` sin empaquetar nuevamente la aplicación ni
+  agregar dependencias de runtime. Permite abrir sesiones, abrir su localhost,
+  cerrar una o todas y salir sólo cuando no queden sesiones activas.
+- Las sesiones gestionadas se registran en
+  `.solara-runtime/instances/<sessionId>.json`; el tray valida identidad por HTTP
+  antes de actuar y usa el shutdown loopback autenticado, sin matar procesos por
+  el PID informativo del registro.
+- `corepack pnpm build:tray` genera el EXE con el icono existente y
+  `corepack pnpm test:tray` ejecuta el smoke multi-sesión en una raíz temporal.
 
 ### Runtime único Node/navegador (2026-09-06)
 
@@ -16,9 +70,10 @@
 
 **Changed**
 
-- `Abrir SolaraCommerce.cmd` queda como única entrada operativa: Node 24,
-  servidor loopback y navegador del sistema, con `proyectos/` raíz como única
-  fuente comercial de verdad.
+- El runtime operativo queda centralizado en Node 24, servidor loopback y
+  navegador del sistema, con `proyectos/` raíz como única fuente comercial de
+  verdad. `Abrir SolaraCommerce.cmd` es el launcher clásico y el tray EXE es una
+  entrada alternativa sobre el mismo runtime y almacenamiento.
 - `SolaraCommerce-Agent.cmd` ejecuta el agente directamente con Node; JSONL es
   el modo predeterminado y `--mcp` selecciona MCP stdio.
 - Las protecciones de paths/instancia pasan al layout local y CI/release quedan

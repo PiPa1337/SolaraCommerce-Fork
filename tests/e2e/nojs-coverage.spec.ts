@@ -44,7 +44,6 @@ function routesFor(project: (typeof projects)[keyof typeof projects]): string[] 
     "/buscar/",
     "/carrito/",
   ];
-  if (exported.files.has("compra/index.html")) routes.push("/compra/");
   return routes;
 }
 
@@ -137,9 +136,7 @@ test("E1/C2: rutas útiles sin JavaScript y sin errores de consola/red", async (
           if (route === "/carrito/") {
             expect(bodyText, `${fixtureName} carrito`).toMatch(/vacío|agregaste/i);
           }
-          if (route === "/compra/") {
-            await expect(page.locator('input[name="name"]').first()).toBeVisible();
-          }
+          await page.waitForLoadState("networkidle");
         }
         await page.close();
         await context.close();

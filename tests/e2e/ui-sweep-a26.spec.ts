@@ -369,16 +369,12 @@ test("resumen real: los toggles commitean y el status badge reacciona al teléfo
   await phone.fill("5491122334455");
   await expect(phoneBadge).toBeVisible({ timeout: 5_000 });
 
-  const skuToggle = page.getByRole("switch", { name: "Incluir SKU en el mensaje", exact: true });
-  const initial = await skuToggle.getAttribute("aria-checked");
-  expect(initial).not.toBeNull();
-  await skuToggle.click();
-  await expect(skuToggle).toHaveAttribute("aria-checked", initial === "true" ? "false" : "true");
+  await expect(
+    page.getByRole("switch", { name: "Incluir SKU en el mensaje", exact: true }),
+  ).toHaveCount(0);
   await expect(page.getByTestId("ui-save-indicator")).toContainText("Sin guardar", {
     timeout: 5_000,
   });
-  await skuToggle.click();
-  await expect(skuToggle).toHaveAttribute("aria-checked", initial === "true" ? "true" : "false");
 });
 
 test("studio real: el tooltip del encabezado aparece al pasar el mouse", async ({ page }) => {

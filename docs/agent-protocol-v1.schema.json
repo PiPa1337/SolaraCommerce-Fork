@@ -152,7 +152,11 @@
             "type": { "const": "store.updateWhatsapp" },
             "phone": { "type": "string", "pattern": "^\\d{0,15}$" },
             "greeting": { "type": "string" },
-            "includeSku": { "type": "boolean" }
+            "includeSku": {
+              "type": "boolean",
+              "deprecated": true,
+              "description": "Campo legado aceptado por compatibilidad. No modifica el mensaje de WhatsApp."
+            }
           },
           "anyOf": [
             { "required": ["phone"] },

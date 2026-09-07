@@ -179,8 +179,8 @@ rechazan un proyecto inválido antes de guardarlo o exportarlo.
 
 Studio y el storefront de referencia comparten una dirección editorial cálida:
 marfil, tinta, verde musgo, títulos serif y controles sans. El sistema conserva
-modo oscuro, foco visible, movimiento reducido y layouts responsive sin fuentes
-ni recursos externos.
+foco visible, movimiento reducido y layouts responsive sin fuentes ni recursos
+externos.
 
 El hero audiovisual admite imagen, carrusel y video local; los tratamientos
 editorial y compacto de grilla ofrecen ritmos realmente distintos sobre el mismo contenido.
@@ -190,11 +190,12 @@ fixture de escala muestra 12 productos en una grilla compacta de cuatro, tres o
 dos columnas según el viewport. Las categorías mantienen páginas de 24 productos
 para explorar catálogos extensos sin convertir la home en una lista interminable.
 
-El storefront moderno usa una navbar curada con Inicio, Categorías, Contacto,
-Nosotros, búsqueda y carrito. El hero puede trabajar con imagen, carrusel o
-video local autocontenido. La home prioriza recién llegados, más elegidos y categorías;
-el exporter genera también `/contacto/`, `/nosotros/`, `/buscar/`, `/carrito/` y
-`/compra/`, manteniendo HTML útil sin JavaScript.
+El storefront moderno usa una navbar curada con Inicio, Categorías, búsqueda,
+carrito y acceso a la sección de Contacto incluida en la Home. El hero puede
+trabajar con imagen, carrusel o video local autocontenido. La home prioriza recién
+llegados, más elegidos y categorías; el exporter genera las rutas de catálogo,
+`/buscar/`, `/carrito/`, checkout y legales manteniendo HTML útil sin JavaScript.
+No existen páginas independientes de Compra, Nosotros ni Contacto.
 
 Los módulos anteriores quedan registrados como `legacy-editorial-v1` y sólo se
 conservan para abrir o editar proyectos existentes. La familia

@@ -483,7 +483,6 @@ export const catalogModernStore = StoreProjectV2Schema.parse({
     description: "Indumentaria y accesorios para todos los días, con compra directa por WhatsApp.",
   },
   theme: {
-    colorMode: "light",
     colors: {
       background: "#fcfcfb",
       surface: "#f0f0ee",
@@ -521,25 +520,6 @@ export const catalogModernStore = StoreProjectV2Schema.parse({
       title: "Vestite con lo que te representa.",
       seoTitle: "Tienda Referencia | Vestite con lo que te representa",
       seoDescription: "Indumentaria y accesorios para todos los días, elegidos para acompañarte.",
-      sections: [],
-    },
-    {
-      id: "page-about",
-      kind: "about",
-      slug: "nosotros",
-      title: "Una selección pensada para moverte.",
-      seoTitle: "Nosotros | Tienda Referencia",
-      seoDescription:
-        "Conocé la mirada detrás de la tienda de referencia y las prendas que elegimos.",
-      sections: [],
-    },
-    {
-      id: "page-contact",
-      kind: "contact",
-      slug: "contacto",
-      title: "Estamos para ayudarte.",
-      seoTitle: "Contacto | Tienda Referencia",
-      seoDescription: "Escribinos por WhatsApp, email o teléfono para coordinar tu pedido.",
       sections: [],
     },
   ],
@@ -814,7 +794,7 @@ export const catalogModernStore = StoreProjectV2Schema.parse({
         title: "Recibí las próximas novedades",
         body: "Escribinos y te avisamos cuando llegue una nueva selección.",
         actionLabel: "Escribir por WhatsApp",
-        actionHref: "/contacto/",
+        actionHref: "#contact-form",
       },
       motion: motion("none"),
     },

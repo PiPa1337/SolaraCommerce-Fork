@@ -6,8 +6,8 @@ import {
   buildWhatsAppUrl,
   formatMoney,
   orderFingerprint,
-  splitOrderParts,
   STOREFRONT_RUNTIME_JS,
+  splitOrderParts,
 } from "./index";
 
 function makeProduct(overrides: Partial<CartLine> = {}): CartLine {
@@ -30,7 +30,12 @@ function makeStore(overrides: any = {}) {
     publicCopy: { ...referenceStore.publicCopy, ...(overrides.publicCopy || {}) },
   };
 }
-const customer = { name: "Malena Ortiz", phone: "11 5555 0142", address: "Av. Forest 842", notes: "" };
+const customer = {
+  name: "Malena Ortiz",
+  phone: "11 5555 0142",
+  address: "Av. Forest 842",
+  notes: "",
+};
 const PHONE = "5491123456789";
 
 describe("WhatsApp multiparte - builder v2", () => {
@@ -119,7 +124,7 @@ describe("WhatsApp multiparte - split", () => {
     expect(parts[0]).toMatch(/\*Pedido #[0-9A-F]{4} · Parte 1 de 2\*/);
     expect(parts[1]).toMatch(/\*Pedido #[0-9A-F]{4} · Parte 2 de 2\*/);
     const fp = (parts[0] as string).match(/Pedido #([0-9A-F]{4})/)?.[1];
-    expect((parts[1] as string)).toContain(`Pedido #${fp}`);
+    expect(parts[1] as string).toContain(`Pedido #${fp}`);
     const sub1 = lines.slice(0, 50).reduce((s, l) => s + l.unitPrice * l.quantity, 0);
     const sub2 = total - sub1;
     expect(parts[0]).toContain("Subtotal de esta parte: " + formatMoney(sub1));
@@ -136,7 +141,14 @@ describe("WhatsApp multiparte - split", () => {
   });
   it("tope de 12 partes: el excedente vuelve a renglon de resumen", () => {
     const lines = Array.from({ length: 2000 }, (_, i) =>
-      makeProduct({ productId: `q${i}`, variantId: `w${i}`, title: "X", variantTitle: "Única", unitPrice: 100, quantity: 1 }),
+      makeProduct({
+        productId: `q${i}`,
+        variantId: `w${i}`,
+        title: "X",
+        variantTitle: "Única",
+        unitPrice: 100,
+        quantity: 1,
+      }),
     );
     const parts = splitOrderParts(makeStore() as any, lines, customer);
     expect(parts.length).toBe(12);
@@ -147,9 +159,18 @@ describe("WhatsApp multiparte - split", () => {
     }
   });
   it("orderFingerprint estable ante reorden y sensible a cambios", () => {
-    const a = [makeProduct({ quantity: 1 }), makeProduct({ productId: "p2", variantId: "v2", quantity: 2 })];
-    const b = [makeProduct({ productId: "p2", variantId: "v2", quantity: 2 }), makeProduct({ quantity: 1 })];
-    const c = [makeProduct({ quantity: 3 }), makeProduct({ productId: "p2", variantId: "v2", quantity: 2 })];
+    const a = [
+      makeProduct({ quantity: 1 }),
+      makeProduct({ productId: "p2", variantId: "v2", quantity: 2 }),
+    ];
+    const b = [
+      makeProduct({ productId: "p2", variantId: "v2", quantity: 2 }),
+      makeProduct({ quantity: 1 }),
+    ];
+    const c = [
+      makeProduct({ quantity: 3 }),
+      makeProduct({ productId: "p2", variantId: "v2", quantity: 2 }),
+    ];
     expect(orderFingerprint(a)).toMatch(/^[0-9A-F]{4}$/);
     expect(orderFingerprint(a)).toBe(orderFingerprint(b));
     expect(orderFingerprint(a)).not.toBe(orderFingerprint(c));

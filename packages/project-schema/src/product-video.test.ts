@@ -21,14 +21,8 @@ describe("product-video", () => {
   });
 
   test("liviano sólo si ≤2MB y ≤720p", () => {
-    expect(isProductVideoLightEnough({ size: 1_000_000, width: 640, height: 360 })).toBe(
-      true,
-    );
-    expect(isProductVideoLightEnough({ size: 5_000_000, width: 640, height: 360 })).toBe(
-      false,
-    );
-    expect(isProductVideoLightEnough({ size: 1_000_000, width: 1920, height: 1080 })).toBe(
-      false,
-    );
+    expect(isProductVideoLightEnough({ size: 1_000_000, width: 640, height: 360 })).toBe(true);
+    expect(isProductVideoLightEnough({ size: 5_000_000, width: 640, height: 360 })).toBe(false);
+    expect(isProductVideoLightEnough({ size: 1_000_000, width: 1920, height: 1080 })).toBe(false);
   });
 });

@@ -23,9 +23,9 @@ import {
   parseOptions,
   productActivationRequirements,
   slugify,
-  validateProductVideos,
   VARIANT_STOCK_OPTIONS,
   validateDraft,
+  validateProductVideos,
 } from "./product/productEditorModel";
 
 interface ProductEditorProps {

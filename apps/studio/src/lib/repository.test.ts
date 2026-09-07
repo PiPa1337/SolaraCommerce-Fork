@@ -54,6 +54,7 @@ import {
   getProject,
   getProjectMigration,
   getRecoveryDraft,
+  importProject,
   listProjects,
   listProjectsWithRecovery,
   markProjectMigration,
@@ -225,6 +226,22 @@ describe("repositorio local", () => {
     expect((await getProject(duplicate.id))?.status).toBe("archived");
     await setProjectArchived(duplicate.id, false);
     expect((await getProject(duplicate.id))?.status).toBe("active");
+  });
+
+  it("importa un respaldo como una tienda nueva sin sobrescribir el origen", async () => {
+    await saveProject(referenceStore);
+
+    const imported = await importProject(referenceStore);
+
+    expect(imported.id).not.toBe(referenceStore.id);
+    expect(imported.name).toBe(referenceStore.name);
+    expect(imported.products).toHaveLength(referenceStore.products.length);
+    expect(imported.products.map((product) => product.id)).not.toEqual(
+      referenceStore.products.map((product) => product.id),
+    );
+    expect(imported.origin?.seed).toBe("duplicate");
+    expect(imported.whatsapp.phone).toBe(referenceStore.whatsapp.phone);
+    expect(await getProject(referenceStore.id)).toEqual(referenceStore);
   });
 
   it("elimina una tienda con sus borradores y protege la plantilla base", async () => {

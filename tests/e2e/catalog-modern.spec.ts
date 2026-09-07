@@ -393,20 +393,7 @@ test("las cards, el bento y la búsqueda moderna usan contenido real", async ({ 
   await expect(page.locator("[data-search-results] .solara-search-result").first()).toBeVisible();
   await expect(dialog).toBeHidden();
 
-  await page.goto(storeUrl("/nosotros/"));
-  await expect(page.locator(".solara-editorial-page .solara-story-grid")).toBeVisible();
-  expect(
-    await page
-      .locator(".solara-editorial-page .solara-story-grid")
-      .evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(" ").length),
-  ).toBe(2);
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(storeUrl("/nosotros/"));
-  expect(
-    await page
-      .locator(".solara-editorial-page .solara-story-grid")
-      .evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(" ").length),
-  ).toBe(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(
     false,
   );
@@ -438,7 +425,6 @@ test("captura la matriz visual de Catalog Modern", async ({ page }) => {
     { name: "category", path: "/categorias/remeras/" },
     { name: "product", path: "/productos/remera-esencial-de-algodon/" },
     { name: "search", path: "/buscar/" },
-    { name: "about", path: "/nosotros/" },
   ];
   const viewports = [
     { name: "desktop", width: 1440, height: 900 },

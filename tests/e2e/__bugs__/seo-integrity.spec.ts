@@ -50,8 +50,6 @@ const ROUTES = [
   "/categorias/remeras/",
   "/productos/remera-esencial-de-algodon/",
   "/colecciones/recien-llegados/",
-  "/contacto/",
-  "/nosotros/",
   "/privacidad/",
 ];
 

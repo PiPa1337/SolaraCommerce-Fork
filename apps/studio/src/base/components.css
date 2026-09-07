@@ -556,6 +556,13 @@
   flex-wrap: wrap;
 }
 
+.confirm-dialog__actions-inline {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
 /* --- Toast --- */
 
 .toast-region {

@@ -121,7 +121,9 @@ test("mobile 390px: stage mínimo cuadrado y retrato visible", async ({ page }) 
   expect(box!.height).toBeGreaterThanOrEqual(box!.width - 8);
   // Sin recorte: la media activa usa contain en mobile.
   const fit = await page
-    .locator('[data-gallery-media-id][data-gallery-active="true"] img, [data-gallery-media-id][data-gallery-active="true"] video')
+    .locator(
+      '[data-gallery-media-id][data-gallery-active="true"] img, [data-gallery-media-id][data-gallery-active="true"] video',
+    )
     .first()
     .evaluate((element) => getComputedStyle(element).objectFit);
   expect(fit).toBe("contain");

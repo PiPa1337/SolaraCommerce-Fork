@@ -102,9 +102,7 @@ test("el logo aparece al cargar con el preset del header", async ({ page }) => {
     await expect(
       page.locator('[data-solara-module="catalog-header"][data-motion-visible="true"]'),
     ).toBeAttached();
-    const logo = page
-      .locator('[data-solara-module="catalog-header"] img.solara-logo')
-      .first();
+    const logo = page.locator('[data-solara-module="catalog-header"] img.solara-logo').first();
     await expect(logo).toHaveAttribute("data-solara-loaded", "true");
     await expect(logo).toBeVisible();
     // La animación tarda duración de la sección: esperar el estado final.
@@ -144,9 +142,7 @@ test("con preset none el logo queda visible sin marca de load", async ({ page })
   await site.start();
   try {
     await page.goto(site.url("/"));
-    const logo = page
-      .locator('[data-solara-module="catalog-header"] img.solara-logo')
-      .first();
+    const logo = page.locator('[data-solara-module="catalog-header"] img.solara-logo').first();
     await expect(logo).toBeVisible();
     await expect(logo).not.toHaveAttribute("data-solara-loaded", "true");
     expect(await logo.evaluate((element) => getComputedStyle(element).opacity)).toBe("1");

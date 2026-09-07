@@ -46,7 +46,6 @@ describe("paridad Preview ↔ Export", () => {
   ];
 
   const routesFor = (project: typeof catalogModernV2Store): string[] => {
-    const isV2 = project.commerceTemplates.designFamily === "catalog-modern-v2";
     const firstCat = project.categories.find((c) => !c.parentId);
     const firstChild = project.categories.find((c) => !!c.parentId);
     const firstProd = project.products[0];
@@ -57,9 +56,6 @@ describe("paridad Preview ↔ Export", () => {
       firstProd ? `/productos/${firstProd.slug}/` : null,
       "/buscar/",
       "/carrito/",
-      isV2 ? null : "/contacto/",
-      isV2 ? null : "/nosotros/",
-      isV2 ? null : "/compra/",
     ].filter(Boolean) as string[];
     // paginación y 404
     const pagCat = project.categories.find(

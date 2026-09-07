@@ -5,7 +5,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
-import { createSolaraRequestHandler } from "../scripts/solara-request-handler.mjs";
+import {
+  createSolaraRequestHandler,
+  openFolderInExplorerOnWindows,
+} from "../scripts/solara-request-handler.mjs";
 
 vi.mock("node:fs", async (importActual) => {
   const actual = await importActual();
@@ -106,6 +109,27 @@ describe("handler: retiro de referencias legacy", () => {
 });
 
 describe("handler: abrir carpeta de una tienda", () => {
+  it("confirma que Explorer arrancó antes de informar éxito", async () => {
+    const unref = vi.fn();
+    const child = {
+      once: vi.fn((event, listener) => {
+        if (event === "spawn") queueMicrotask(listener);
+        return child;
+      }),
+      unref,
+    };
+    const spawnProcess = vi.fn(() => child);
+
+    await expect(
+      openFolderInExplorerOnWindows("C:\\sitios\\prueba", { platform: "win32", spawnProcess }),
+    ).resolves.toBe(true);
+    expect(spawnProcess).toHaveBeenCalledWith("explorer", ["C:\\sitios\\prueba"], {
+      detached: true,
+      stdio: "ignore",
+    });
+    expect(unref).toHaveBeenCalledOnce();
+  });
+
   it("abre la carpeta de una tienda existente con la cookie de sesión", async () => {
     const root = await mkdtemp(join(tmpdir(), "solara-handler-folder-"));
     try {
@@ -151,6 +175,33 @@ describe("handler: abrir carpeta de una tienda", () => {
         request("POST", `/__solara/storage/projects/${projectId}/open-folder`),
       );
       expect(unauthorized.status).toBe(403);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("responde error si Windows no puede iniciar Explorer", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-handler-folder-"));
+    try {
+      const openFolderInExplorer = vi.fn(() => false);
+      const handler = createSolaraRequestHandler({
+        applicationRoot: root,
+        shutdownToken: "token-test",
+        openFolderInExplorer,
+        onShutdown: () => {},
+      });
+      await createProject(handler);
+      const response = await handler.handle(
+        request("POST", `/__solara/storage/projects/${projectId}/open-folder`, {
+          cookie: `${shutdownCookieName}=token-test`,
+        }),
+      );
+      expect(response.status).toBe(500);
+      expect(JSON.parse(response.body)).toEqual({
+        ok: false,
+        error: "Windows no pudo abrir la carpeta de la tienda.",
+      });
+      expect(openFolderInExplorer).toHaveBeenCalledOnce();
     } finally {
       await rm(root, { recursive: true, force: true });
     }

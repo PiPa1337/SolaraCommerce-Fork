@@ -476,10 +476,7 @@ export function buildLlmsFullTxt(project: StoreProjectV1): string {
       (item) =>
         `- [${clean(item.title)}](${absoluteUrl(project, item.canonicalPath)}): ${clean(item.description)}`,
     );
-  const contactPath =
-    project.commerceTemplates.designFamily === "catalog-modern-v2"
-      ? "/#contact-form"
-      : "/contacto/";
+  const contactPath = "/#contact-form";
   const whatsappPhone = project.whatsapp.phone.replace(/\D/g, "");
   const contactLines = [
     clean(project.identity.email) ? `- Email: ${clean(project.identity.email)}` : "",

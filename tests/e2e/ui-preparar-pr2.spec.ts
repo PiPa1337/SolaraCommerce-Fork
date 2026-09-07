@@ -611,7 +611,11 @@ test("paridad: una imagen de plantilla sigue pendiente si solo se corrige su alt
       '[data-testid="ui-guided-requirement"][data-requirement-id^="asset."][data-requirement-status="placeholder"]',
     ),
   ).toHaveCount(placeholderAssetCount ?? 0);
-  if ((await page.locator('section.guided-checklist > ul > [data-testid="ui-guided-requirement"]').count()) > 12) {
+  if (
+    (await page
+      .locator('section.guided-checklist > ul > [data-testid="ui-guided-requirement"]')
+      .count()) > 12
+  ) {
     await expect(page.locator(".guided-checklist__more")).toHaveText("Mostrar menos");
   } else {
     await expect(page.locator(".guided-checklist__more")).toHaveCount(0);

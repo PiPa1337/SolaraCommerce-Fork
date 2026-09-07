@@ -327,7 +327,7 @@ test("URL pública: validación inline y persistencia en baseUrl (capa 1+2+3)", 
     .poll(async () => (await storedProject(page, store))?.project.baseUrl)
     .toBe(initialUrl);
 
-  await urlInput.fill("/contacto/");
+  await urlInput.fill("/buscar/");
   await expect(domainSection(page).getByTestId("ui-field-error")).toContainText(
     "Ingresá una URL válida con http(s).",
   );

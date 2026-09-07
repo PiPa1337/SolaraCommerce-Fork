@@ -20,10 +20,14 @@ import {
 } from "react";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { ToastProvider } from "./components/Toast";
-import { InlineError } from "./components/Ui";
+import { Button, InlineError } from "./components/Ui";
 import { Dashboard } from "./features/Dashboard";
 import type { LocalStorageStatus } from "./lib/localStorage";
 import { downloadBlob } from "./lib/projectArchive";
+import {
+  type RecoveryDraftDecision,
+  resolveRecoveryDraftDecision,
+} from "./lib/recoveryDraftDecision";
 import {
   clearRecoveryDraft,
   consumeStorageResetNotice,
@@ -37,6 +41,7 @@ import {
   getProject,
   getProjectMigration,
   getRecoveryDraft,
+  importProject,
   listProjectsWithRecovery,
   markProjectMigration,
   migrateCatalogModernDemo,
@@ -195,7 +200,10 @@ function StudioShell() {
     projectId: string;
     draft: StoreProjectV1;
   } | null>(null);
-  const pendingRecoverResolverRef = useRef<((recover: boolean) => void) | null>(null);
+  const [pendingRecoverDiscard, setPendingRecoverDiscard] = useState(false);
+  const pendingRecoverResolverRef = useRef<((decision: RecoveryDraftDecision) => void) | null>(
+    null,
+  );
   const storageModeRef = useRef(false);
 
   const refreshBrowser = useCallback(async () => {
@@ -765,6 +773,33 @@ function StudioShell() {
               throw new Error(message);
             }
           }}
+          onImport={async (file) => {
+            setError("");
+            try {
+              const project = await importProject(await readProjectArchiveInWorker(file));
+              let activeProject = project;
+              if (storageModeRef.current) {
+                const saved = await persistToDisk(project, null);
+                setActiveDiskVersion(saved.receipt.version);
+                setActiveDiskBaseProject(project);
+                const refreshed = await refresh();
+                const refreshedProject = refreshed.projects.find((item) => item.id === project.id);
+                if (refreshedProject) {
+                  activeProject = refreshedProject.project;
+                  setActiveDiskVersion(refreshedProject.diskVersion ?? saved.receipt.version);
+                  setActiveDiskBaseProject(refreshedProject.project);
+                }
+              } else {
+                await refresh();
+              }
+              setActive(activeProject);
+            } catch (reason) {
+              const message =
+                reason instanceof Error ? reason.message : "No se pudo importar la tienda.";
+              setError(message);
+              throw new Error(message);
+            }
+          }}
           onOpen={(id) =>
             void guard(async () => {
               let project: StoreProjectV1 | undefined;
@@ -798,17 +833,20 @@ function StudioShell() {
                 if (diskProject) {
                   const draft = await getRecoveryDraft(diskProject.id);
                   if (draft && JSON.stringify(draft.project) !== JSON.stringify(diskProject)) {
-                    const recover = await new Promise<boolean>((resolve) => {
+                    const recoveryDecision = await new Promise<RecoveryDraftDecision>((resolve) => {
                       pendingRecoverResolverRef.current = resolve;
                       setPendingRecover({ projectId: diskProject.id, draft: draft.project });
                     });
-                    if (recover) {
-                      project = draft.project;
+                    project = await resolveRecoveryDraftDecision(
+                      recoveryDecision,
+                      diskProject,
+                      draft.project,
+                      clearRecoveryDraft,
+                    );
+                    if (recoveryDecision === "recover") {
                       setNotice(
                         "Se recuperó el borrador local. Guardalo para confirmarlo en disco.",
                       );
-                    } else {
-                      await clearRecoveryDraft(diskProject.id);
                     }
                   }
                 }
@@ -918,19 +956,62 @@ function StudioShell() {
           onShutdownTerminal={setShutdownTerminal}
         />
 
-        {pendingRecover ? (
+        {pendingRecover && pendingRecoverDiscard ? (
+          <ConfirmDialog
+            title="Descartar borrador"
+            body="Esta acción elimina el borrador de recuperación del navegador. La versión guardada en disco se conserva."
+            confirmLabel="Descartar definitivamente"
+            cancelLabel="Volver"
+            danger
+            onConfirm={() => {
+              pendingRecoverResolverRef.current?.("discard");
+              pendingRecoverResolverRef.current = null;
+              setPendingRecoverDiscard(false);
+              setPendingRecover(null);
+            }}
+            onCancel={() => setPendingRecoverDiscard(false)}
+          />
+        ) : pendingRecover ? (
           <ConfirmDialog
             title="Recuperar borrador"
-            body="Hay un borrador sin guardar de esta tienda. ¿Querés recuperarlo? Si lo descartás, se borra del navegador y se abre la versión del disco."
+            body={
+              <>
+                <p>
+                  Hay un borrador sin guardar de esta tienda. Podés recuperarlo, exportar una copia
+                  antes de decidir o cerrar este diálogo sin borrar nada.
+                </p>
+                <div className="confirm-dialog__actions-inline">
+                  <Button
+                    variant="quiet"
+                    onClick={() =>
+                      void guard(async () => {
+                        const archive = await createProjectArchiveInWorker(pendingRecover.draft);
+                        downloadBlob(
+                          archive,
+                          `${pendingRecover.draft.slug}-recovery.solara.json`,
+                          "application/vnd.solara.project+json",
+                        );
+                        setNotice("Se exportó una copia del borrador de recuperación.");
+                      })
+                    }
+                  >
+                    Exportar borrador
+                  </Button>
+                  <Button variant="danger" onClick={() => setPendingRecoverDiscard(true)}>
+                    Descartar borrador
+                  </Button>
+                </div>
+              </>
+            }
             confirmLabel="Recuperar borrador"
-            cancelLabel="Descartar borrador"
+            cancelLabel="Cerrar sin borrar"
             onConfirm={() => {
-              pendingRecoverResolverRef.current?.(true);
+              pendingRecoverResolverRef.current?.("recover");
               pendingRecoverResolverRef.current = null;
               setPendingRecover(null);
             }}
             onCancel={() => {
-              pendingRecoverResolverRef.current?.(false);
+              pendingRecoverResolverRef.current?.("keep");
               pendingRecoverResolverRef.current = null;
               setPendingRecover(null);
             }}

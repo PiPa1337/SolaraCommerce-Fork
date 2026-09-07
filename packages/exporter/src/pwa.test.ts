@@ -104,39 +104,6 @@ describe("service worker", () => {
     expect(new Set(precacheUrls).size).toBe(precacheUrls.length);
     void new Function(sw);
   });
-
-  it("precachea también la CSS de home cuando diverge de la CSS del resto del sitio", () => {
-    const project = structuredClone(catalogModernStore);
-    const aboutPage = project.pages.find((page) => page.kind === "about");
-    if (!aboutPage) throw new Error("Fixture sin página nosotros");
-    const trustSection = referenceStore.sections.find(
-      (section) => section.moduleId === "trust-strip",
-    );
-    if (!trustSection) throw new Error("Fixture sin sección trust-strip");
-    aboutPage.sections = [structuredClone(trustSection)];
-
-    const result = exportProject(project, { mode: "production" });
-    const cssPaths = [...result.files.keys()].filter((path) =>
-      /^assets\/storefront[^/]*\.css$/.test(path),
-    );
-    expect(cssPaths).toHaveLength(2);
-
-    const home = String(result.files.get("index.html"));
-    const homeHrefs = stylesheetHrefs(home);
-    expect(homeHrefs.length).toBeGreaterThan(0);
-    const sw = String(result.files.get("sw.js"));
-    const precacheUrls = extractPrecacheUrls(sw);
-
-    for (const href of homeHrefs) {
-      expect(precacheUrls).toContain(href);
-      expect(result.files.has(href.slice(1))).toBe(true);
-    }
-    for (const path of cssPaths) {
-      expect(precacheUrls).toContain(`/${path}`);
-    }
-    expect(new Set(precacheUrls).size).toBe(precacheUrls.length);
-    void new Function(sw);
-  });
 });
 
 interface ParsedPng {

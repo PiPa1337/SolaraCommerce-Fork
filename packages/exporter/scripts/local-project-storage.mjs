@@ -19,11 +19,7 @@ import {
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { parseJsonBytesChunked } from "../src/json-stream.mjs";
 import { createAgentLockStore } from "./agent-lock.mjs";
-import {
-  assertNoReparsePoints,
-  resolveLocalLayout,
-  resolveLocalPath,
-} from "./local-layout.mjs";
+import { assertNoReparsePoints, resolveLocalLayout, resolveLocalPath } from "./local-layout.mjs";
 
 const MANIFEST_FORMAT = "solara-local-project";
 const MANIFEST_VERSION = 2;

@@ -98,6 +98,40 @@ test("service worker: cache v3 y asset cache separada, no fixtures", async ({ pa
   expect(swInfo.hasFixture).toBeFalsy();
 });
 
+test("PWA: manifest instalable y service worker controlan Studio", async ({ page }) => {
+  await openStudio(page);
+  const pwa = await page.evaluate(async () => {
+    const manifestHref =
+      document.querySelector<HTMLLinkElement>('link[rel="manifest"]')?.href ?? "";
+    const manifest = manifestHref
+      ? ((await (await fetch(manifestHref)).json()) as {
+          name?: string;
+          start_url?: string;
+          display?: string;
+          icons?: Array<{ sizes?: string }>;
+        })
+      : {};
+    const registration = await navigator.serviceWorker.getRegistration();
+    return {
+      manifestHref,
+      name: manifest.name,
+      startUrl: manifest.start_url,
+      display: manifest.display,
+      iconSizes: manifest.icons?.map((icon) => icon.sizes) ?? [],
+      serviceWorkerActive: Boolean(registration?.active),
+      serviceWorkerControlled: Boolean(navigator.serviceWorker.controller),
+    };
+  });
+  expect(pwa.manifestHref).toMatch(/\/manifest\.webmanifest$/);
+  expect(pwa.name).toBe("SolaraCommerce Studio");
+  expect(pwa.startUrl).toBe("/");
+  expect(pwa.display).toBe("standalone");
+  expect(pwa.iconSizes).toContain("192x192");
+  expect(pwa.iconSizes).toContain("512x512");
+  expect(pwa.serviceWorkerActive).toBe(true);
+  expect(pwa.serviceWorkerControlled).toBe(true);
+});
+
 test("cache vieja despues de actualizar Studio: shell nuevo no sirve assets viejos", async ({
   page,
 }) => {

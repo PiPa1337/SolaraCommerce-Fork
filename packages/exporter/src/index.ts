@@ -16,8 +16,8 @@ import {
   getModuleDefinition,
   MODULE_STYLE_BLOCKS,
   moduleRegistry,
-  PRODUCT_GALLERY_MOBILE_FIX,
   type PageRenderContext,
+  PRODUCT_GALLERY_MOBILE_FIX,
   renderSections,
   STORE_BASE_STYLES,
   STORE_THEME_TOKEN_STYLES,
@@ -191,11 +191,8 @@ export interface PageDescriptor {
     | "category"
     | "collection"
     | "product"
-    | "about"
-    | "contact"
     | "search"
     | "cart"
-    | "checkout"
     | "legal"
     | "not-found";
   body: string;
@@ -1022,13 +1019,10 @@ function isModernProject(project: StoreProjectV1): boolean {
 }
 
 function isPublishedEditablePage(
-  project: StoreProjectV1,
+  _project: StoreProjectV1,
   page: StoreProjectV1["pages"][number],
 ): boolean {
-  return !(
-    project.commerceTemplates.designFamily === "catalog-modern-v2" &&
-    (page.kind === "about" || page.kind === "contact")
-  );
+  return page.kind === "home";
 }
 
 function modernProjectClass(project: StoreProjectV1): string {
@@ -1684,10 +1678,6 @@ function renderDocument(
   const structuredData = page.structuredData
     .map((data) => `<script type="application/ld+json">${jsonForScript(data)}</script>`)
     .join("\n");
-  const colorMode =
-    project.theme.colorMode === "auto"
-      ? ""
-      : ` data-theme="${escapeAttribute(project.theme.colorMode)}"`;
   const baseHref = baseUrlPathname(project.baseUrl);
   const baseHrefAttribute = baseHref ? ` data-base-href="${escapeAttribute(baseHref)}"` : "";
   const serviceWorkerAttribute =
@@ -1700,12 +1690,12 @@ function renderDocument(
     { storeName: project.identity.brandName },
   );
   const whatsAppAttributes = whatsAppPhone
-    ? ` data-whatsapp="${escapeAttribute(whatsAppPhone)}" data-whatsapp-greeting="${escapeAttribute(personalizeWhatsAppGreeting(whatsappGreeting, project.identity.brandName))}" data-whatsapp-include-sku="${String(project.whatsapp.includeSku)}"`
+    ? ` data-whatsapp="${escapeAttribute(whatsAppPhone)}" data-whatsapp-greeting="${escapeAttribute(personalizeWhatsAppGreeting(whatsappGreeting, project.identity.brandName))}"`
     : "";
   // Sólo el runtime necesita estos grupos; el resto del copy ya está renderizado
   // en HTML y repetirlo en cada página de un catálogo grande infla la salida.
   const runtimeCopy =
-    page.pageType === "product" || page.pageType === "cart" || page.pageType === "checkout"
+    page.pageType === "product" || page.pageType === "cart"
       ? {
           whatsapp: {
             total: copy.whatsapp.total,
@@ -1822,7 +1812,7 @@ function renderDocument(
     : `<meta name="twitter:card" content="summary">`;
 
   return `<!doctype html>
-<html lang="${escapeAttribute(project.locale)}" data-store-id="${escapeAttribute(project.id)}" data-currency="${escapeAttribute(project.currency)}" data-price-fraction-display="${escapeAttribute((project as any).priceFractionDisplay ?? "always")}"${whatsAppAttributes}${publicCopyAttribute} data-solara-runtime-features="${escapeAttribute((manifest?.runtimeFeatures ?? []).join(","))}"${colorMode}${baseHrefAttribute}${serviceWorkerAttribute}>
+<html lang="${escapeAttribute(project.locale)}" data-store-id="${escapeAttribute(project.id)}" data-currency="${escapeAttribute(project.currency)}" data-price-fraction-display="${escapeAttribute((project as any).priceFractionDisplay ?? "always")}"${whatsAppAttributes}${publicCopyAttribute} data-solara-runtime-features="${escapeAttribute((manifest?.runtimeFeatures ?? []).join(","))}"${baseHrefAttribute}${serviceWorkerAttribute}>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1870,7 +1860,7 @@ function renderDocument(
 </head>
 <body>
   <a class="solara-skip-link" href="#solara-main">${escapeHtml(copy.export.skipToContent)}</a>
-  <div class="solara-page${modernProjectClass(project)}" data-solara-store data-design-family="${escapeHtml(project.commerceTemplates.designFamily ?? "legacy-editorial-v1")}" data-page-type="${page.pageType}" data-color-mode="${project.theme.colorMode}">${bodyWithConsumerRights.replace("<main", '<main id="solara-main"')}</div>
+  <div class="solara-page${modernProjectClass(project)}" data-solara-store data-design-family="${escapeHtml(project.commerceTemplates.designFamily ?? "legacy-editorial-v1")}" data-page-type="${page.pageType}">${bodyWithConsumerRights.replace("<main", '<main id="solara-main"')}</div>
   <script src="${escapeAttribute(assetHref(project, runtimeAssets.js))}" defer></script>
 </body>
 </html>`;
@@ -2086,6 +2076,7 @@ function buildPages(
     mediaUsage?: PublicMediaUsage;
   } = {},
 ): PageDescriptor[] {
+  const isV2Design = project.commerceTemplates.designFamily === "catalog-modern-v2";
   const renderPageSections = (
     sections: readonly StoreSection[],
     pageContext: Parameters<typeof renderProjectSections>[2],
@@ -2430,112 +2421,11 @@ function buildPages(
     };
   });
 
-  const aboutConfig = project.pages.find((page) => page.kind === "about");
-  const contactConfig = project.pages.find((page) => page.kind === "contact");
-  const editableSections = (kind: "about" | "contact") =>
-    project.pages.find((page) => page.kind === kind)?.sections ?? [];
-  const isV2Design = project.commerceTemplates.designFamily === "catalog-modern-v2";
-  const isAboutV2 = isV2Design;
-  const aboutV2Sections = editableSections("about");
-  const aboutHero = aboutV2Sections.find(
-    (section) => section.moduleId === "about-hero" && section.enabled,
-  );
-  const aboutPreloadImage =
-    isAboutV2 && typeof aboutHero?.settings.imageAssetId === "string"
-      ? imageUrl(project, aboutHero.settings.imageAssetId)
-      : undefined;
-  const aboutV2Body = [
-    renderPageSections(sharedHeader, { pageType: "about" }),
-    `<main class="solara-about-page solara-container"><div class="solara-about-sections">${renderPageSections(aboutV2Sections, { pageType: "about" })}</div></main>`,
-    renderPageSections(sharedFooter, { pageType: "about" }),
-  ].join("");
-  const legacyAboutBody = [
-    renderPageSections(sharedHeader, { pageType: "about" }),
-    `<main class="solara-editorial-page solara-container"><nav class="solara-breadcrumbs" aria-label="${escapeAttribute(copy.export.breadcrumbs)}"><a href="${internalHref(project, "/")}">${escapeHtml(copy.pages.home)}</a><span aria-hidden="true">/</span><span>${escapeHtml(copy.pages.about)}</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">${escapeHtml(copy.pages.aboutEyebrow)}</p><h1>${escapeHtml(aboutConfig?.title ?? copy.pages.aboutFallbackTitle)}</h1><p>${escapeHtml(project.identity.description)}</p></header><section class="solara-story-grid"><div><h2>${escapeHtml(copy.pages.aboutGuidanceTitle)}</h2><p>${escapeHtml(project.identity.description)}</p></div><div><h2>${escapeHtml(copy.pages.aboutInformationTitle)}</h2><p>${escapeHtml(project.policies.shipping.summary)}</p><a class="solara-secondary-action" href="${escapeAttribute(internalHref(project, "/contacto/"))}">${escapeHtml(copy.pages.aboutContactAction)}</a></div></section><section class="solara-values-grid"><article><h2>${escapeHtml(copy.pages.aboutSelectionTitle)}</h2><p>${escapeHtml(project.collections.find((collection) => collection.status !== "hidden")?.description ?? copy.pages.aboutSelectionFallback)}</p></article><article><h2>${escapeHtml(copy.pages.aboutDeliveryTitle)}</h2><p>${escapeHtml(project.policies.shipping.summary)}</p></article><article><h2>${escapeHtml(copy.pages.aboutDirectTitle)}</h2><p>${escapeHtml(project.identity.email || project.identity.phone || copy.pages.aboutDirectFallback)}</p></article></section></main>`,
-    editableSections("about").length
-      ? renderPageSections(editableSections("about"), { pageType: "about" })
-      : "",
-    renderPageSections(sharedFooter, { pageType: "about" }),
-  ].join("");
-  const aboutPage: PageDescriptor = {
-    path: "nosotros/index.html",
-    title: aboutConfig?.seoTitle ?? `Nosotros | ${project.identity.brandName}`,
-    description: aboutConfig?.seoDescription ?? project.identity.description,
-    canonicalPath: "/nosotros/",
-    pageType: "about",
-    body: isAboutV2 ? aboutV2Body : legacyAboutBody,
-    structuredData: [
-      {
-        "@context": "https://schema.org",
-        "@type": "AboutPage",
-        name: aboutConfig?.title ?? copy.pages.about,
-        url: absoluteUrl(project, "/nosotros/"),
-        description: aboutConfig?.seoDescription ?? project.identity.description,
-      },
-      breadcrumbData(project, [
-        { name: copy.pages.home, path: "/" },
-        { name: copy.pages.about, path: "/nosotros/" },
-      ]),
-    ],
-    ...(socialImage ? { image: socialImage } : {}),
-    ...(aboutPreloadImage ? { preloadImage: aboutPreloadImage } : {}),
-  };
-
   const copyValues = { storeName: project.identity.brandName };
   const whatsAppContactLink = buildWhatsAppLink(
     project,
     interpolatePublicCopy(copy.whatsapp.ask, copyValues),
   );
-  const whatsAppPurchaseLink = buildWhatsAppLink(
-    project,
-    interpolatePublicCopy(copy.whatsapp.purchase, copyValues),
-  );
-  const isContactV2 = project.commerceTemplates.designFamily === "catalog-modern-v2";
-  const contactV2Body = [
-    renderPageSections(sharedHeader, { pageType: "contact" }),
-    `<main class="solara-contact-page solara-container"><div class="solara-contact-sections">${renderPageSections(editableSections("contact"), { pageType: "contact" })}</div></main>`,
-    renderPageSections(sharedFooter, { pageType: "contact" }),
-  ].join("");
-  const contactPage: PageDescriptor = {
-    path: "contacto/index.html",
-    title: contactConfig?.seoTitle ?? `Contacto | ${project.identity.brandName}`,
-    description: contactConfig?.seoDescription ?? defaultSeoDescription,
-    canonicalPath: "/contacto/",
-    pageType: "contact",
-    body: isContactV2
-      ? contactV2Body
-      : [
-          renderPageSections(sharedHeader, { pageType: "contact" }),
-          `<main class="solara-contact-page solara-container"><nav class="solara-breadcrumbs" aria-label="${escapeAttribute(copy.export.breadcrumbs)}"><a href="${internalHref(project, "/")}">${escapeHtml(copy.pages.home)}</a><span aria-hidden="true">/</span><span>${escapeHtml(copy.pages.contact)}</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">${escapeHtml(copy.pages.contactEyebrow)}</p><h1>${escapeHtml(contactConfig?.title ?? copy.pages.contactFallbackTitle)}</h1><p>${escapeHtml(copy.pages.contactDescription)}</p></header><section class="solara-contact-grid"><div class="solara-contact-details">${project.identity.email ? `<a href="mailto:${escapeAttribute(project.identity.email)}"><span>${escapeHtml(copy.contact.email)}</span><strong>${escapeHtml(project.identity.email)}</strong></a>` : ""}${project.identity.phone ? `<a href="tel:${escapeAttribute(project.identity.phone)}"><span>${escapeHtml(copy.contact.phone)}</span><strong>${escapeHtml(project.identity.phone)}</strong></a>` : ""}${whatsAppContactLink ? `<a href="${escapeAttribute(whatsAppContactLink)}" target="_blank" rel="noopener noreferrer"><span>${escapeHtml(copy.contact.whatsapp)}</span><strong>${escapeHtml(copy.contact.whatsappAction)}</strong></a>` : ""}${project.identity.address ? `<div><span>${escapeHtml(copy.contact.address)}</span><strong>${escapeHtml(project.identity.address)}</strong></div>` : ""}</div><aside class="solara-contact-cta"><h2>${escapeHtml(copy.pages.contactPurchaseTitle)}</h2><p>${escapeHtml(copy.pages.contactPurchaseDescription)}</p>${whatsAppPurchaseLink ? `<a class="solara-primary-action" href="${escapeAttribute(whatsAppPurchaseLink)}" target="_blank" rel="noopener noreferrer">${escapeHtml(copy.contact.whatsappAction)}</a>` : ""}</aside></section></main>`,
-          editableSections("contact").length
-            ? renderPageSections(editableSections("contact"), { pageType: "contact" })
-            : "",
-          renderPageSections(sharedFooter, { pageType: "contact" }),
-        ].join(""),
-    structuredData: [
-      {
-        "@context": "https://schema.org",
-        "@type": "ContactPage",
-        name: contactConfig?.title ?? copy.pages.contact,
-        url: absoluteUrl(project, "/contacto/"),
-        mainEntity: {
-          "@type": "Organization",
-          name: project.identity.brandName,
-          email: project.identity.email || undefined,
-          telephone: project.identity.phone || undefined,
-          ...(project.identity.address ? { address: project.identity.address } : {}),
-        },
-      },
-      breadcrumbData(project, [
-        { name: copy.pages.home, path: "/" },
-        { name: copy.pages.contact, path: "/contacto/" },
-      ]),
-      // FAQ de politicas: rich snippets expandibles en busquedas informativas.
-      faqPageData(project),
-    ],
-    ...(socialImage ? { image: socialImage } : {}),
-  };
-
   const searchControls = `<form class="solara-search-form" role="search" action="/buscar/" method="get"><label for="solara-search-input">${escapeHtml(copy.search.title)}</label><div><input id="solara-search-input" name="q" type="search" autocomplete="off" placeholder="${escapeAttribute(copy.search.placeholder)}"><button class="solara-primary-action" type="submit">${escapeHtml(copy.search.submit)}</button></div></form>`;
   const searchProducts = activeProducts;
   const searchFilters = modernCategoryFilters(
@@ -2571,10 +2461,8 @@ function buildPages(
   const emptyCartHref = firstRootCategory
     ? internalHref(project, `/categorias/${firstRootCategory.slug}/`)
     : internalHref(project, "/buscar/");
-  const cartContinueHref = isV2Design
-    ? internalHref(project, "/#contact-form")
-    : internalHref(project, "/compra/");
-  const cartContinueLabel = isV2Design ? copy.checkout.coordinate : copy.checkout.continue;
+  const cartContinueHref = internalHref(project, "/#contact-form");
+  const cartContinueLabel = copy.checkout.coordinate;
   const cartPage: PageDescriptor = {
     path: "carrito/index.html",
     title: `Carrito | ${project.identity.brandName}`,
@@ -2589,21 +2477,6 @@ function buildPages(
     `<a data-cart-cta href="${escapeAttribute(emptyCartHref)}"><span class="solara-primary-action">${escapeHtml(copy.cart.exploreCategories)}</span></a><a data-cart-cta href="${escapeAttribute(cartContinueHref)}" hidden><span class="solara-primary-action">${escapeHtml(cartContinueLabel)}</span></a>`,
   );
 
-  const checkoutFields = `<label for="solara-customer-name">${escapeHtml(copy.cart.name)}</label><input id="solara-customer-name" name="name" autocomplete="name" required><label for="solara-customer-phone">${escapeHtml(copy.cart.phone)}</label><input id="solara-customer-phone" name="phone" autocomplete="tel" inputmode="tel" pattern="[\\d\\+\\(\\)\\- ]{8,}" title="${escapeAttribute(copy.cart.phoneInvalid)}" required><label for="solara-customer-address">${escapeHtml(copy.cart.address)}</label><textarea id="solara-customer-address" name="address" autocomplete="street-address" required></textarea><label for="solara-customer-locality">${escapeHtml(copy.cart.locality)}</label><input id="solara-customer-locality" name="locality" autocomplete="address-level2" required><label for="solara-customer-postal-code">${escapeHtml(copy.cart.postalCode)}</label><input id="solara-customer-postal-code" name="postalCode" autocomplete="postal-code" required><label for="solara-customer-notes">${escapeHtml(copy.cart.notes)}</label><textarea id="solara-customer-notes" name="notes"></textarea><button class="solara-primary-action" type="submit">${escapeHtml(copy.checkout.submit)}</button><p data-order-verification-warning role="note">${escapeHtml(copy.checkout.verificationWarning)}</p>`;
-  const checkoutForm =
-    project.commerceTemplates.designFamily === "catalog-modern-v2"
-      ? `<form class="solara-checkout-form solara-checkout-form-v2" data-checkout-form><div class="solara-checkout-fields">${checkoutFields}</div><aside class="solara-checkout-order-panel" aria-labelledby="solara-order-summary-title"><p class="solara-eyebrow">${escapeHtml(copy.checkout.selection)}</p><h2 id="solara-order-summary-title">${escapeHtml(copy.checkout.summary)}</h2><p>${escapeHtml(copy.checkout.prepare)}</p><pre data-order-preview aria-live="polite"></pre></aside></form>`
-      : `<form class="solara-checkout-form" data-checkout-form>${checkoutFields}<pre data-order-preview aria-live="polite"></pre></form>`;
-  const checkoutPage: PageDescriptor = {
-    path: "compra/index.html",
-    title: `${copy.pages.checkout} por WhatsApp | ${project.identity.brandName}`,
-    description: defaultSeoDescription,
-    canonicalPath: "/compra/",
-    pageType: "checkout",
-    body: `${renderPageSections(sharedHeader, { pageType: "checkout" })}<main class="solara-checkout-page solara-container"><nav class="solara-breadcrumbs" aria-label="${escapeAttribute(copy.export.breadcrumbs)}"><a href="${internalHref(project, "/")}">${escapeHtml(copy.pages.home)}</a><span aria-hidden="true">/</span><a href="/carrito/">${escapeHtml(copy.pages.cart)}</a><span aria-hidden="true">/</span><span>${escapeHtml(copy.pages.checkout)}</span></nav><header class="solara-page-intro"><p class="solara-eyebrow">${escapeHtml(copy.hero.directOrder)}</p><h1>${escapeHtml(copy.checkout.coordinate)}</h1><p>${escapeHtml(copy.checkout.prepare)}</p></header>${checkoutForm}</main>${renderPageSections(sharedFooter, { pageType: "checkout" })}`,
-    structuredData: [],
-  };
-
   const formatPolicyDays = (minimum: number, maximum: number) =>
     minimum === maximum
       ? `${minimum} ${minimum === 1 ? "día" : "días"}`
@@ -2612,7 +2485,7 @@ function buildPages(
     formatLegalCountryCoverage(project, countries);
   const policyContactAction = whatsAppContactLink
     ? `<a class="solara-primary-action" href="${escapeAttribute(whatsAppContactLink)}" target="_blank" rel="noopener noreferrer">${escapeHtml(copy.product.askWhatsApp)}</a>`
-    : `<a class="solara-secondary-action" href="${escapeAttribute(internalHref(project, isV2Design ? "/#contact-form" : "/contacto/"))}">${escapeHtml(isV2Design ? copy.hero.contact : copy.pages.contact)}</a>`;
+    : `<a class="solara-secondary-action" href="${escapeAttribute(internalHref(project, "/#contact-form"))}">${escapeHtml(copy.hero.contact)}</a>`;
   const renderV2PolicyPage = (
     title: string,
     eyebrow: string,
@@ -3045,10 +2918,8 @@ Podemos actualizar estos Términos para reflejar cambios operativos o legales. L
 
   return [
     home,
-    ...(isV2Design ? [] : [aboutPage, contactPage]),
     ...(project.commerceTemplates.search.enabled ? [searchPage] : []),
     ...(project.commerceTemplates.cart.enabled ? [cartPage] : []),
-    ...(project.commerceTemplates.checkout.enabled && !isV2Design ? [checkoutPage] : []),
     notFoundPage,
     ...categories,
     ...collections,

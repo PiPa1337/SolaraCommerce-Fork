@@ -205,36 +205,6 @@ test("picker nativo de color actualiza el texto y el preview", async ({ page }) 
   await expect.poll(previewBackground(page), { timeout: 15_000 }).toBe("rgb(30, 42, 58)");
 });
 
-test("colorMode: Sistema cambia el preview y Oscuro está deshabilitado con aviso", async ({
-  page,
-}) => {
-  await setupCleanStore(page, "A16 colorMode");
-  await openThemeTab(page);
-
-  const modeSelect = page.getByLabel("Modo de color", { exact: true });
-  const modeField = fieldsetOf(modeSelect);
-  // La tienda nueva (fixture Catalog Modern) inicia en "light".
-  await expect(modeSelect).toHaveValue("light");
-
-  // Opción deshabilitada: feedback del control sobre su propia limitación.
-  const darkOption = modeSelect.locator("option[value='dark']");
-  await expect(darkOption).toBeDisabled();
-  await expect(modeField.getByText(/Oscuro está deshabilitado/)).toBeVisible();
-
-  await modeSelect.selectOption("auto");
-  await expect(modeSelect).toHaveValue("auto");
-  await expect
-    .poll(() => previewPage(page).getAttribute("data-color-mode"), { timeout: 15_000 })
-    .toBe("auto");
-
-  // "light" sigue funcionando tras tocar el selector.
-  await modeSelect.selectOption("light");
-  await expect(modeSelect).toHaveValue("light");
-  await expect
-    .poll(() => previewPage(page).getAttribute("data-color-mode"), { timeout: 15_000 })
-    .toBe("light");
-});
-
 test("tipografía: familias y escala llegan a los tokens del preview", async ({ page }) => {
   await setupCleanStore(page, "A16 tipografía");
   await openThemeTab(page);

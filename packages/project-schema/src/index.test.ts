@@ -249,7 +249,7 @@ describe("StoreProjectV2Schema", () => {
     expect(() => StoreProjectV2Schema.parse(invalidHero)).toThrow("Recurso de la sección");
 
     const invalidPage = invalidProject((project) => {
-      const page = project.pages.find((candidate) => candidate.kind === "about");
+      const page = project.pages.find((candidate) => candidate.kind === "home");
       const source = project.sections.find((section) => section.slot === "content");
       if (page && source) {
         page.sections = [{ ...structuredClone(source), settings: { imageId: "missing-image" } }];
@@ -285,12 +285,8 @@ describe("StoreProjectV2Schema", () => {
       updatedAt: "2026-09-04T00:00:00.000Z",
     };
     expect(ProductSchema.parse({ ...base }).videoIds).toEqual([]);
-    expect(ProductSchema.parse({ ...base, videoIds: ["video-1"] }).videoIds).toEqual([
-      "video-1",
-    ]);
-    expect(() =>
-      ProductSchema.parse({ ...base, videoIds: ["a", "b", "c", "d"] }),
-    ).toThrow();
+    expect(ProductSchema.parse({ ...base, videoIds: ["video-1"] }).videoIds).toEqual(["video-1"]);
+    expect(() => ProductSchema.parse({ ...base, videoIds: ["a", "b", "c", "d"] })).toThrow();
   });
 
   it("proyecto viejo sin videoIds sigue válido (back-compat)", () => {

@@ -57,10 +57,7 @@ const PAGES = [
   "/categorias/remeras/",
   "/productos/remera-esencial-de-algodon/",
   "/colecciones/recien-llegados/",
-  "/contacto/",
-  "/nosotros/",
   "/carrito/",
-  "/checkout/",
 ];
 
 test("todo link interno responde sin 404 ni redirect", async ({ page }) => {
@@ -86,8 +83,8 @@ test("todo link interno responde sin 404 ni redirect", async ({ page }) => {
 test("rutas solo existen con trailing slash (sin duplicados)", async ({ page }) => {
   // En hosting estatico cada ruta es una carpeta: la version sin slash no
   // existe como archivo y NO debe existir una copia .html paralela.
-  // En V2, /contacto/ y /nosotros/ no existen como paginas independientes
-  // (son secciones del home); validar solo rutas que el contrato V2 publica.
+  // En V2, /contacto/ y /nosotros/ no existen como paginas independientes.
+  // Contacto vive en el Home; Nosotros fue retirado. Validar solo rutas publicadas.
   const routes = [
     "/categorias/remeras",
     "/productos/remera-esencial-de-algodon",

@@ -27,13 +27,10 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { useToast } from "../components/Toast";
 import { Button, EmptyState, InlineError } from "../components/Ui";
 import {
-  auditStoreHealth,
   type DashboardSort,
   type DashboardStatusFilter,
   filterDashboardProjects,
-  getDashboardStats,
   getProjectMetrics,
-  type HealthAuditCacheEntry,
   partitionPinnedProjects,
   storeFaviconSrc,
   storeMark,
@@ -60,11 +57,11 @@ import { CreateStoreDialog } from "./dashboard/CreateStoreDialog";
 import { DashboardToolbar } from "./dashboard/DashboardToolbar";
 import { DuplicateDialog } from "./dashboard/DuplicateDialog";
 import { formatCompactDate, ProjectCard, statusLabel } from "./dashboard/ProjectCard";
-import { QaStatusCard } from "./QaStatusCard";
 
 interface DashboardProps {
   projects: StoredProject[];
   onCreate(input: { name: string; brandName: string; email: string; phone: string }): Promise<void>;
+  onImport(file: File): Promise<void>;
   onOpen(id: string): void;
   onDuplicate(id: string, name?: string): Promise<void>;
   onArchive(id: string, archived: boolean): Promise<void>;
@@ -197,6 +194,7 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
 export function Dashboard({
   projects,
   onCreate,
+  onImport,
   onOpen,
   onDuplicate,
   onArchive,
@@ -234,8 +232,6 @@ export function Dashboard({
   const [archivingId, setArchivingId] = useState<string>();
   const [deletingId, setDeletingId] = useState<string>();
   const [backingUp, setBackingUp] = useState<string>();
-  const [criticalIssues, setCriticalIssues] = useState<number | null>(null);
-  const [auditSkipped, setAuditSkipped] = useState(0);
   const shutdownDialogRef = useRef<HTMLDialogElement>(null);
   const shutdownTerminalRef = useRef(shutdownTerminal === true);
   const selectedPanelRef = useRef<HTMLElement>(null);
@@ -248,8 +244,6 @@ export function Dashboard({
   const selectionInitializedRef = useRef(false);
   const focusCardOnSelectRef = useRef(false);
   const actionNoticeTimerRef = useRef<number | undefined>(undefined);
-  const healthAuditCacheRef = useRef(new Map<string, HealthAuditCacheEntry>());
-  const dashboardTitleId = useId();
   const libraryTitleId = useId();
   const shutdownTitleId = useId();
   const pinnedGroupTitleId = useId();
@@ -258,7 +252,6 @@ export function Dashboard({
     () => filterDashboardProjects(projects, query, statusFilter, sort),
     [projects, query, sort, statusFilter],
   );
-  const stats = useMemo(() => getDashboardStats(projects), [projects]);
   const selected = projects.find((record) => record.id === selectedId);
   const { pinned: pinnedVisible, rest: restVisible } = useMemo(
     () => partitionPinnedProjects(visible, pinnedIds),
@@ -270,13 +263,6 @@ export function Dashboard({
   );
   const isShutdownTerminal = shutdownTerminal === true || shutdownState === "closed";
   const managed = shutdownState === "available" && !isShutdownTerminal;
-  const outdatedStores = useMemo(
-    () =>
-      projects.filter(
-        (record) => record.status === "active" && record.diskSiteStatus === "site-outdated",
-      ),
-    [projects],
-  );
   const comparePair = useMemo(() => {
     if (compareIds.length !== 2) return undefined;
     const left = projects.find((record) => record.id === compareIds[0]);
@@ -644,56 +630,6 @@ export function Dashboard({
     pendingArchiveId,
   ]);
 
-  useEffect(() => {
-    let cancelled = false;
-    let idleId: number | undefined;
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
-    setAuditSkipped(0);
-    setCriticalIssues(null);
-    const active = projects.filter((record) => record.status === "active");
-    if (active.length === 0) {
-      setCriticalIssues(0);
-      return;
-    }
-    const runAudit = () => {
-      void import("@solara/exporter")
-        .then(({ auditProject }) => {
-          const { critical, skipped } = auditStoreHealth(
-            active,
-            (project) =>
-              auditProject(project).filter((issue) => issue.severity === "critical").length,
-            300,
-            () => performance.now(),
-            healthAuditCacheRef.current,
-          );
-          if (cancelled) return;
-          setCriticalIssues(critical);
-          setAuditSkipped(skipped);
-        })
-        .catch(() => {
-          if (!cancelled) setAuditSkipped(active.length);
-        });
-    };
-    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-      idleId = (
-        window as unknown as {
-          requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number;
-        }
-      ).requestIdleCallback(runAudit, { timeout: 2000 });
-    } else {
-      timeoutId = globalThis.setTimeout(runAudit, 600);
-    }
-    return () => {
-      cancelled = true;
-      if (idleId !== undefined && "cancelIdleCallback" in window) {
-        (window as unknown as { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(
-          idleId,
-        );
-      }
-      if (timeoutId !== undefined) globalThis.clearTimeout(timeoutId);
-    };
-  }, [projects]);
-
   const requestShutdown = async () => {
     if (shutdownTerminalRef.current) return;
     setShutdownState("closing");
@@ -846,89 +782,6 @@ export function Dashboard({
   return (
     <main id={"tiendas"} tabIndex={-1} className="dashboard-page dashboard-cosmic">
       <div className="dashboard-wrap dashboard-cosmic__content">
-        <section className="dashboard-cosmic-hero" aria-labelledby={dashboardTitleId}>
-          <div className="dashboard-cosmic-hero__copy">
-            <div className="dashboard-cosmic-hero__heading">
-              <span className="dashboard-cosmic-kicker">Espacio local</span>
-              <h1 id={dashboardTitleId}>Tus tiendas</h1>
-              <p>Gestioná proyectos, catálogos y respaldos desde un solo lugar.</p>
-            </div>
-            <Button ref={createButtonRef} variant="primary" icon={Plus} onClick={openCreate}>
-              Nueva tienda
-            </Button>
-          </div>
-          <section className="dashboard-cosmic-metrics" aria-label="Resumen de tiendas">
-            <div>
-              <strong>{stats.totalStores}</strong>
-              <span>Tiendas totales</span>
-            </div>
-            <div>
-              <strong>{stats.activeStores}</strong>
-              <span>Tiendas activas</span>
-            </div>
-            <div>
-              <strong>{stats.activeProducts.toLocaleString("es-AR")}</strong>
-              <span>Productos activos</span>
-            </div>
-            <div>
-              <strong>{stats.archivedStores}</strong>
-              <span>Archivadas</span>
-            </div>
-          </section>
-        </section>
-
-        <section
-          className="dashboard-cosmic-health"
-          aria-label="Salud de las tiendas"
-          data-testid="ui-dashboard-health"
-        >
-          <div className="dashboard-cosmic-health__title">
-            <span className="dashboard-cosmic-kicker">Salud</span>
-            <strong>Sitios y auditoría</strong>
-          </div>
-          <div className="dashboard-cosmic-health__stats">
-            <div className={outdatedStores.length > 0 ? "is-warn" : ""}>
-              <strong>{outdatedStores.length}</strong>
-              <span>Sitios desactualizados</span>
-            </div>
-            <div className={criticalIssues !== null && criticalIssues > 0 ? "is-warn" : ""}>
-              <strong>{criticalIssues ?? "…"}</strong>
-              <span>
-                {auditSkipped > 0
-                  ? `Auditoría omitida en ${auditSkipped} ${auditSkipped === 1 ? "tienda" : "tiendas"} (catálogo grande)`
-                  : "Errores críticos"}
-              </span>
-            </div>
-          </div>
-          {outdatedStores.length > 0 ? (
-            <ul
-              className="dashboard-cosmic-health__chips"
-              aria-label="Tiendas con sitio desactualizado"
-            >
-              {outdatedStores.map((record) => (
-                <li key={record.id}>
-                  <button
-                    type="button"
-                    data-testid="ui-health-chip"
-                    onClick={() => {
-                      // Los chips listan tiendas activas: para que la selección
-                      // no sea anulada por el efecto de sincronización con la
-                      // lista visible, se limpian búsqueda y filtro y se pasa
-                      // por el mismo receptor que las cards (persistencia).
-                      setQuery("");
-                      setStatusFilter("active");
-                      selectCard(record.id, { focusCard: true });
-                    }}
-                  >
-                    {record.name}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          <QaStatusCard />
-        </section>
-
         {isShutdownTerminal ? (
           <output className="shutdown-status shutdown-status--cosmic">
             <CheckCircle aria-hidden size={18} />
@@ -941,12 +794,16 @@ export function Dashboard({
         <section className="dashboard-cosmic-library" aria-labelledby={libraryTitleId}>
           <header className="dashboard-cosmic-library__header">
             <div>
-              <span className="dashboard-cosmic-kicker">Biblioteca</span>
-              <h2 id={libraryTitleId}>Proyectos guardados</h2>
+              <h1 id={libraryTitleId}>Tus tiendas</h1>
             </div>
-            <span className="dashboard-cosmic-count" aria-live="polite" aria-atomic="true">
-              {visible.length} visibles
-            </span>
+            <div className="dashboard-cosmic-library__header-actions">
+              <span className="dashboard-cosmic-count" aria-live="polite" aria-atomic="true">
+                {visible.length} visibles
+              </span>
+              <Button ref={createButtonRef} variant="primary" icon={Plus} onClick={openCreate}>
+                Nueva tienda
+              </Button>
+            </div>
           </header>
 
           <DashboardToolbar
@@ -1100,7 +957,12 @@ export function Dashboard({
         </section>
       </div>
 
-      <CreateStoreDialog open={creating} onCreate={onCreate} onClose={closeCreate} />
+      <CreateStoreDialog
+        open={creating}
+        onCreate={onCreate}
+        onImport={onImport}
+        onClose={closeCreate}
+      />
 
       <dialog
         ref={shutdownDialogRef}

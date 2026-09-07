@@ -34,8 +34,6 @@ interface GuidedOverviewProps {
 const scopeLabels: Record<ContentRequirement["scope"], string> = {
   identity: "Marca",
   home: "Inicio",
-  about: "Nosotros",
-  contact: "Contacto",
   navigation: "Navegación",
   category: "Categorías",
   product: "Productos",

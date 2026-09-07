@@ -44,7 +44,6 @@ export function siteStatusLabel(record: StoredProject): string {
 const THEME_TOKEN_LABELS: Array<
   [label: string, read: (project: StoredProject["project"]) => string]
 > = [
-  ["Modo de color", (project) => project.theme.colorMode],
   ["Color de fondo", (project) => project.theme.colors.background],
   ["Color de superficie", (project) => project.theme.colors.surface],
   ["Color de texto", (project) => project.theme.colors.text],

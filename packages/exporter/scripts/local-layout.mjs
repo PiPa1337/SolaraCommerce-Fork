@@ -27,6 +27,7 @@ export function resolveLocalLayout({ applicationRoot = process.cwd() } = {}) {
     applicationRoot: resolvedApplicationRoot,
     projectsRoot: join(resolvedApplicationRoot, "proyectos"),
     runtimeRoot,
+    instancesRoot: join(runtimeRoot, "instances"),
     logsRoot: join(runtimeRoot, "logs"),
     transactionRoot: join(runtimeRoot, "transactions"),
   });
@@ -105,7 +106,7 @@ export function relativeLocalPath(root, pathname) {
   return result;
 }
 
-async function writeJsonAtomic(pathname, value) {
+export async function writeJsonAtomic(pathname, value) {
   const temporary = `${pathname}.tmp-${randomBytes(8).toString("hex")}`;
   await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, "utf8");
   // Windows puede rechazar el rename con EPERM/EBUSY transitorio cuando dos
@@ -128,6 +129,7 @@ export async function ensureLocalLayout(layout, { appVersion = "0.1.0" } = {}) {
   await Promise.all([
     mkdir(layout.projectsRoot, { recursive: true }),
     mkdir(layout.runtimeRoot, { recursive: true }),
+    mkdir(layout.instancesRoot, { recursive: true }),
     mkdir(layout.logsRoot, { recursive: true }),
     mkdir(layout.transactionRoot, { recursive: true }),
   ]);

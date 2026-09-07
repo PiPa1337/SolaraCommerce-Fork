@@ -235,7 +235,7 @@ test("validación 8-15 dígitos: badge y error inline cambian con cada estado", 
   await expect(phoneInput).toHaveValue("12345678");
 });
 
-test("editar número, saludo y SKU: efecto real en preview y persistencia al recargar", async ({
+test("editar número y saludo: efecto real en preview y persistencia al recargar", async ({
   page,
 }) => {
   await resetIndexedDb(page);
@@ -245,7 +245,6 @@ test("editar número, saludo y SKU: efecto real en preview y persistencia al rec
   const section = page.locator('[data-accordion-id="whatsapp"]');
   const phoneInput = page.getByLabel("Número internacional");
   const greetingInput = section.getByLabel("Saludo del pedido", { exact: true });
-  const skuToggle = page.getByRole("switch", { name: "Incluir SKU en el mensaje" });
 
   // La plantilla Predeterminado es inmutable; la copia mutable empieza sin
   // teléfono para que el flujo pruebe una edición real del proyecto.
@@ -253,15 +252,13 @@ test("editar número, saludo y SKU: efecto real en preview y persistencia al rec
   await expect(phoneInput).toHaveValue("5491123456789");
   await expect(section).toContainText("Formato correcto");
   await expect(greetingInput).toHaveValue("Hola Predeterminado, quiero hacer este pedido:");
-  await expect(skuToggle).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByRole("switch", { name: "Incluir SKU en el mensaje" })).toHaveCount(0);
 
   await phoneInput.fill(EDITED_PHONE);
   await greetingInput.fill(EDITED_GREETING);
-  await skuToggle.click();
-  await expect(skuToggle).toHaveAttribute("aria-checked", "false");
 
-  // El preview usa el mismo renderer que la exportación: los tres valores
-  // cambian los atributos data-whatsapp-* del <html> del iframe.
+  // El preview usa el mismo renderer que la exportación: número y saludo
+  // cambian sus atributos, mientras el flag legacy de SKU ya no se publica.
   await expect
     .poll(previewAttribute(page, "data-whatsapp"), { timeout: 15_000 })
     .toBe(EDITED_PHONE);
@@ -270,7 +267,7 @@ test("editar número, saludo y SKU: efecto real en preview y persistencia al rec
     .toBe(EDITED_GREETING);
   await expect
     .poll(previewAttribute(page, "data-whatsapp-include-sku"), { timeout: 15_000 })
-    .toBe("false");
+    .toBeNull();
 
   await flushSave(page);
   await page.reload();
@@ -286,10 +283,7 @@ test("editar número, saludo y SKU: efecto real en preview y persistencia al rec
   await expect(section.getByLabel("Saludo del pedido", { exact: true })).toHaveValue(
     EDITED_GREETING,
   );
-  await expect(page.getByRole("switch", { name: "Incluir SKU en el mensaje" })).toHaveAttribute(
-    "aria-checked",
-    "false",
-  );
+  await expect(page.getByRole("switch", { name: "Incluir SKU en el mensaje" })).toHaveCount(0);
 });
 
 test("utilidad: el número y el saludo editados llegan al sitio exportado (diff ANTES/DESPUÉS)", async ({
@@ -302,10 +296,10 @@ test("utilidad: el número y el saludo editados llegan al sitio exportado (diff 
   expect(beforeHome).toContain(
     'data-whatsapp-greeting="Hola Tienda Referencia, quiero hacer este pedido:"',
   );
-  expect(beforeHome).toContain('data-whatsapp-include-sku="true"');
+  expect(beforeHome).not.toContain("data-whatsapp-include-sku=");
   expect(afterHome).toContain(`data-whatsapp="${EDITED_PHONE}"`);
   expect(afterHome).toContain(`data-whatsapp-greeting="${EDITED_GREETING}"`);
-  expect(afterHome).toContain('data-whatsapp-include-sku="false"');
+  expect(afterHome).not.toContain("data-whatsapp-include-sku=");
 
   // JSON-LD del negocio: `telephone` prefiere el número de WhatsApp y cae al
   // de identidad (hallazgo R2-1, resuelto en Ola 3: exporter storeStructuredData).
@@ -366,6 +360,6 @@ test("utilidad: includeSku queda tolerado pero el runtime omite el SKU siempre",
   expect(withoutSkuMessage).not.toContain("[MS-001-NE-S]");
   expect(withoutSkuMessage).toContain("- Remera esencial de algodon (Negro / S) = $");
 
-  // El toggle sólo cambia el proyecto: el mensaje ya no depende de includeSku.
+  // El campo legacy puede diferir en proyectos persistidos, pero el mensaje ya no depende de él.
   expect(withSkuMessage).toBe(withoutSkuMessage);
 });

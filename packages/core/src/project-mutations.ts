@@ -87,11 +87,13 @@ export type TypedWhatsappChanges = Partial<
 >;
 
 export type TypedNavigationChanges = Partial<
-  Pick<StoreProjectV1["navigation"], "mode" | "catalogLabel" | "items" | "showHome" | "showContact" | "showAbout" | "showSearch" | "showCart">
+  Pick<
+    StoreProjectV1["navigation"],
+    "mode" | "catalogLabel" | "items" | "showHome" | "showSearch" | "showCart"
+  >
 >;
 
 export type TypedThemePatch = {
-  colorMode?: Theme["colorMode"];
   spacingScale?: Theme["spacingScale"];
   radius?: Theme["radius"];
   container?: Theme["container"];
@@ -430,7 +432,6 @@ function updateAsset(
 
 function updateTheme(project: StoreProjectV1, tokens: TypedThemePatch, at: string): StoreProjectV1 {
   const allowed = new Set([
-    "colorMode",
     "spacingScale",
     "radius",
     "container",

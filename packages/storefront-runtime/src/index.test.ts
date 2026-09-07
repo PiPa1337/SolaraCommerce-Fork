@@ -18,7 +18,8 @@ describe("storefront runtime", () => {
   it("serializa el selector mixto de galería en el bundle público", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("gallery-media-id");
     expect(STOREFRONT_RUNTIME_JS).toContain("galleryMediaId");
-  });  it("normaliza cualquier cantidad al rango entero 1–99", () => {
+  });
+  it("normaliza cualquier cantidad al rango entero 1–99", () => {
     const cases: Array<[unknown, number]> = [
       [undefined, 1],
       ["", 1],
@@ -299,7 +300,7 @@ describe("carrito robusto y checkout con precios frescos (C2/C3/C5/C9 + SF-B4/B5
   });
 
   it("aísla el almacenamiento local cuando el storefront está embebido", () => {
-    expect(STOREFRONT_RUNTIME_JS).toContain('const embed = parent !== window;');
+    expect(STOREFRONT_RUNTIME_JS).toContain("const embed = parent !== window;");
     expect(STOREFRONT_RUNTIME_JS).toContain("if (!embed) cart = readStoredCart();");
   });
 
@@ -464,7 +465,9 @@ describe("carrito y checkout del drawer (A29)", () => {
   it("refleja el conteo en el badge y en el aria-label del trigger", () => {
     expect(STOREFRONT_RUNTIME_JS).toContain("count > 99");
     expect(STOREFRONT_RUNTIME_JS).toContain("99+");
-    expect(STOREFRONT_RUNTIME_JS).toContain('element.setAttribute("aria-label", `${label} ${count}`)');
+    expect(STOREFRONT_RUNTIME_JS).toContain(
+      'element.setAttribute("aria-label", `${label} ${count}`)',
+    );
     expect(STOREFRONT_RUNTIME_JS).not.toContain("`${label} vacío`");
     expect(STOREFRONT_RUNTIME_JS).not.toContain("`${label}, ${count} productos`");
   });

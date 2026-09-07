@@ -145,15 +145,7 @@ function editableThemeColor(colors: Theme["colors"], key: keyof Theme["colors"])
   return colors[key] ?? (key === "accentAlt" ? colors.accent : "");
 }
 
-/**
- * Paletas curadas derivadas de los tokens existentes. Sólo aplican colores:
- * el storefront público sobreescribe fondo, superficie, texto, secundario y
- * borde con valores fijos cuando colorMode es "dark" (styles.ts), así que el
- * preview y el sitio dejarían de reflejar la paleta elegida. Por eso la opción
- * "Oscuro" del selector está deshabilitada. Las paletas oscuras usan tokens
- * oscuros directamente, sin reactivar el toggle de dark mode, y mantienen
- * contraste suficiente para texto principal, secundario y acentos.
- */
+/** Paletas curadas derivadas de los tokens existentes. */
 const THEME_PRESETS: Array<{
   id: string;
   name: string;
@@ -250,7 +242,7 @@ const THEME_PRESETS: Array<{
     name: "Rosa pétalo",
     description: "Rosas empolvados con contraste para una marca cálida.",
     colors: {
-      background: "#fff2f4",
+      background: "#fce9ed",
       surface: "#f6e0e5",
       text: "#3a2028",
       muted: "#76515c",
@@ -652,7 +644,7 @@ export function ThemeEditor({
       // texto inválido tecleado seguiría visible tras "Restaurar".
       setColorDrafts({});
       setColorErrors({});
-      updateTheme({ ...project.theme, colors: base.colors, colorMode: base.colorMode });
+      updateTheme({ ...project.theme, colors: base.colors });
       return;
     }
     if (group === "typography") {
@@ -788,27 +780,6 @@ export function ThemeEditor({
               Restaurar colores
             </Button>
           </div>
-          <Field
-            label="Modo"
-            hint="Oscuro está deshabilitado: el editor todavía no permite configurar una paleta oscura independiente. Las paletas disponibles están diseñadas para fondos claros."
-          >
-            <select
-              aria-label="Modo de color"
-              value={project.theme.colorMode}
-              onChange={(event) =>
-                updateTheme({
-                  ...project.theme,
-                  colorMode: event.target.value as Theme["colorMode"],
-                })
-              }
-            >
-              <option value="auto">Sistema</option>
-              <option value="light">Claro</option>
-              <option value="dark" disabled>
-                Oscuro
-              </option>
-            </select>
-          </Field>
           <div className="color-grid">
             {(Object.keys(colorLabels) as Array<keyof Theme["colors"]>).map((key) => (
               <Field

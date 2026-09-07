@@ -4,7 +4,6 @@ import { StoreProjectV2Schema } from "./index";
 import { applyPreset, THEME_PRESETS } from "./theme-presets";
 
 const baseTheme: Theme = {
-  colorMode: "light",
   colors: {
     background: "#fcfcfb",
     surface: "#f0f0ee",
@@ -16,7 +15,6 @@ const baseTheme: Theme = {
     sale: "#d94a55",
     rating: "#d99a12",
   },
-  darkColors: undefined,
   typography: {
     display: "Georgia, serif",
     body: "system-ui, sans-serif",

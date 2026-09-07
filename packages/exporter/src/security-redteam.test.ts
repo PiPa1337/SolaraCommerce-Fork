@@ -5,8 +5,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { safeUrl, sanitizeRichText } from "@solara/module-sdk";
 import { describe, expect, it } from "vitest";
-import { createLocalProjectStorage } from "../scripts/local-project-storage.mjs";
 import { resolveLocalPath } from "../scripts/local-layout.mjs";
+import { createLocalProjectStorage } from "../scripts/local-project-storage.mjs";
 import {
   createSolaraRequestHandler,
   resolveStaticFile,

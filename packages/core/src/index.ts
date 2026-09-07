@@ -458,7 +458,9 @@ export function reduceProject(project: StoreProjectV1, command: DomainCommand): 
       const category = project.categories.find((candidate) => candidate.id === command.categoryId);
       if (!category) throw new Error(`La categoría no existe: ${command.categoryId}.`);
       if (category.status !== "hidden") {
-        throw new Error(`La categoría debe estar oculta antes de eliminarla: ${command.categoryId}.`);
+        throw new Error(
+          `La categoría debe estar oculta antes de eliminarla: ${command.categoryId}.`,
+        );
       }
       if (project.categories.some((candidate) => candidate.parentId === category.id)) {
         throw new Error(`La categoría tiene subcategorías: ${command.categoryId}.`);

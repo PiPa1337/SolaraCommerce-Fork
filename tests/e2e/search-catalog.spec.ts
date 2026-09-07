@@ -106,11 +106,9 @@ test("el deep-link ?pagina=3 abre esa página y fuera de rango se clampea", asyn
 
 test("?pagina= profunda declara noindex,follow", async ({ page }) => {
   await page.goto(storeUrl("/buscar/?pagina=2"));
-  await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
-    "content",
-    "noindex,follow",
-    { timeout: 15_000 },
-  );
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex,follow", {
+    timeout: 15_000,
+  });
 });
 
 test("los filtros operan sobre todo el catálogo y re-paginan", async ({ page }) => {

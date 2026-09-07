@@ -118,29 +118,27 @@ describe("exporter", () => {
     expect(cart).toContain("data-solara-copy=");
   });
 
-  it("usa el copy global en páginas legacy, políticas y recuperación 404", () => {
+  it("usa el copy global en políticas y recuperación 404", () => {
     const project = structuredClone(catalogModernStore);
-    project.publicCopy.pages.aboutEyebrow = "La historia de nuestra tienda";
-    project.publicCopy.pages.contactPurchaseTitle = "Hablemos de tu pedido";
     project.publicCopy.pages.notFoundTitle = "Esta dirección no existe";
     project.publicCopy.export.policyQuestionsTitle = "¿Necesitás ayuda?";
 
     const result = exportProject(project, { mode: "production" });
-    const about = String(result.files.get("nosotros/index.html"));
-    const contact = String(result.files.get("contacto/index.html"));
     const privacy = String(result.files.get("privacidad/index.html"));
     const notFound = String(result.files.get("404.html"));
 
-    expect(about).toContain("La historia de nuestra tienda");
-    expect(contact).toContain("Hablemos de tu pedido");
     expect(privacy).toContain("¿Necesitás ayuda?");
     expect(notFound).toContain("Esta dirección no existe");
   });
 
-  it("no publica las páginas Nosotros y Contacto independientes en V2", () => {
+  it("no publica páginas independientes de Compra, Nosotros ni Contacto", () => {
     const result = exportProject(catalogModernV2Store, { mode: "production" });
+    expect(result.files.has("compra/index.html")).toBe(false);
     expect(result.files.has("nosotros/index.html")).toBe(false);
     expect(result.files.has("contacto/index.html")).toBe(false);
+    expect(renderPreviewHtml(catalogModernV2Store, "draft", "/compra/")).toContain(
+      "No encontramos esa página",
+    );
     expect(renderPreviewHtml(catalogModernV2Store, "draft", "/nosotros/")).toContain(
       "No encontramos esa página",
     );
@@ -176,15 +174,6 @@ describe("exporter", () => {
         expect(legalPage).not.toContain("solara-consumer-rights");
       }
     }
-  });
-
-  it("mantiene el fallback de Nosotros para proyectos no V2", () => {
-    const project = structuredClone(catalogModernStore);
-    const result = exportProject(project, { mode: "production" });
-    const html = String(result.files.get("nosotros/index.html"));
-    expect(html).toContain("solara-editorial-page");
-    expect(html).toContain("solara-story-grid");
-    expect(html).not.toContain('data-solara-module="about-hero"');
   });
 
   it("usa el mismo renderer del contacto final de Home en preview y exportación", () => {
@@ -347,37 +336,6 @@ describe("exporter", () => {
     expect(categoryHref).toBe(homeHref);
   });
 
-  it("mantiene dos CSS públicas cuando la home no cubre los módulos del resto del sitio", () => {
-    const project = structuredClone(catalogModernStore);
-    const aboutPage = project.pages.find((page) => page.kind === "about");
-    if (!aboutPage) throw new Error("Fixture sin página nosotros");
-    const trustSection = referenceStore.sections.find(
-      (section) => section.moduleId === "trust-strip",
-    );
-    if (!trustSection) throw new Error("Fixture sin sección trust-strip");
-    aboutPage.sections = [structuredClone(trustSection)];
-
-    const result = exportProject(project, { mode: "production" });
-    const cssPaths = [...result.files.keys()].filter((path) =>
-      /^assets\/storefront[^/]*\.css$/.test(path),
-    );
-    expect(cssPaths).toHaveLength(2);
-    expect(cssPaths.some((path) => /^assets\/storefront-home\.[a-f0-9]+\.css$/.test(path))).toBe(
-      true,
-    );
-    const home = String(result.files.get("index.html"));
-    const categoryPath = [...result.files.keys()].find((path) =>
-      /^categorias\/[^/]+\/index\.html$/.test(path),
-    );
-    if (!categoryPath) throw new Error("Fixture sin página de categoría");
-    const category = String(result.files.get(categoryPath));
-    const homeHref = /<link rel="stylesheet" href="([^"]+)"/.exec(home)?.[1];
-    const categoryHref = /<link rel="stylesheet" href="([^"]+)"/.exec(category)?.[1];
-    expect(homeHref).toMatch(/^\/assets\/storefront-home\.[a-f0-9]+\.css$/);
-    expect(categoryHref).toMatch(/^\/assets\/storefront\.[a-f0-9]+\.css$/);
-    expect(homeHref).not.toBe(categoryHref);
-  });
-
   it("mantiene PWA y precache bajo la subcarpeta con versión basada en contenido", () => {
     const project = { ...referenceStore, baseUrl: "https://example.test/tienda/" };
     const result = exportProject(project, { mode: "production" });
@@ -459,27 +417,8 @@ describe("exporter", () => {
     const home = String(
       exportProject(catalogModernStore, { mode: "production" }).files.get("index.html"),
     );
-    expect(home).toContain('data-color-mode="light"');
-  });
-
-  it("con colorMode dark el sitio exportado es identico al light (decision f4)", () => {
-    const darkProject = {
-      ...referenceStore,
-      theme: { ...referenceStore.theme, colorMode: "dark" },
-    } as typeof referenceStore;
-    const darkHtml = String(exportProject(darkProject, { mode: "draft" }).files.get("index.html"));
-    // El atributo heredado persiste en el HTML (traza T15) pero ya no consume
-    // color-scheme dark: el CSS exportado es identico al de un sitio light.
-    expect(darkHtml).toContain('data-theme="dark"');
-    const darkCss = String(
-      runtimeAsset(exportProject(darkProject, { mode: "draft" }).files, "css"),
-    );
-    const lightCss = String(
-      runtimeAsset(exportProject(referenceStore, { mode: "draft" }).files, "css"),
-    );
-    expect(darkCss).toBe(lightCss);
-    expect(darkCss).not.toContain("color-scheme:dark");
-    expect(darkCss).toContain(":root{color-scheme:light");
+    expect(home).not.toContain("data-color-mode");
+    expect(home).not.toContain("data-theme");
   });
 
   it("usa el mismo árbol semántico de módulos en preview y home exportado", () => {
@@ -610,7 +549,6 @@ describe("exporter", () => {
     const manifest = createPublicExportManifest(referenceStore);
     const search = String(result.files.get("buscar/index.html"));
     const cart = String(result.files.get("carrito/index.html"));
-    const checkout = String(result.files.get("compra/index.html"));
     const home = String(result.files.get("index.html"));
 
     expect(manifest.searchEnabled).toBe(true);
@@ -620,16 +558,16 @@ describe("exporter", () => {
     expect(home).toContain('data-solara-runtime-features="');
     expect(search).toContain('<meta name="robots" content="noindex,follow">');
     expect(cart).toContain('<meta name="robots" content="noindex,follow">');
-    expect(checkout).toContain('<meta name="robots" content="noindex,follow">');
+    expect(result.files.has("compra/index.html")).toBe(false);
   });
 
-  it("emite un pattern de teléfono válido en regex v-mode en /compra/", () => {
+  it("emite un pattern de teléfono válido en el checkout interno del carrito", () => {
     const result = exportProject(referenceStore, { mode: "production" });
-    const checkout = String(result.files.get("compra/index.html"));
-    const match = checkout.match(/name="phone"[^>]*pattern="([^"]+)"/);
+    const cart = String(result.files.get("carrito/index.html"));
+    const match = cart.match(/name="phone"[^>]*pattern="([^"]+)"/);
     const pattern = match?.[1];
     expect(pattern).toBe("[\\d\\+\\(\\)\\- ]{8,}");
-    expect(checkout).not.toContain("[0-9+ ()-]{8,}");
+    expect(cart).not.toContain("[0-9+ ()-]{8,}");
     expect(() => new RegExp(pattern ?? "", "v")).not.toThrow();
     expect(new RegExp(pattern ?? "", "v").test("11 5555-0142")).toBe(true);
   });
@@ -681,18 +619,20 @@ describe("exporter", () => {
     );
   });
 
-  it("publica rutas editoriales, catálogo reconciliable y sitemaps sin checkout", () => {
+  it("publica las rutas vigentes y mantiene fuera las páginas retiradas", () => {
     const result = exportProject(referenceStore, { mode: "production" });
     const sitemap = String(result.files.get("sitemap.xml"));
-    expect(result.files.has("nosotros/index.html")).toBe(true);
-    expect(result.files.has("contacto/index.html")).toBe(true);
+    expect(result.files.has("nosotros/index.html")).toBe(false);
+    expect(result.files.has("contacto/index.html")).toBe(false);
     expect(result.files.has("buscar/index.html")).toBe(true);
     expect(result.files.has("carrito/index.html")).toBe(true);
-    expect(result.files.has("compra/index.html")).toBe(true);
+    expect(result.files.has("compra/index.html")).toBe(false);
     expect(result.files.has("404.html")).toBe(true);
     expect(result.files.has("catalog-index.json")).toBe(true);
     expect(sitemap).not.toContain("/buscar/");
     expect(sitemap).not.toContain("/carrito/");
+    expect(sitemap).not.toContain("/contacto/");
+    expect(sitemap).not.toContain("/nosotros/");
     expect(sitemap).not.toContain("/compra/");
     expect(sitemap).not.toContain("/404.html");
   });
@@ -811,26 +751,6 @@ describe("exporter", () => {
 
     expect(category).toContain("Textiles");
     expect(product).toContain("Manta Bruma");
-  });
-
-  it("incluye estilos de las secciones editoriales en preview y exportación", () => {
-    const source = referenceStore.sections.find((section) => section.slot === "content");
-    if (!source) throw new Error("Fixture incompleto");
-    const project = {
-      ...referenceStore,
-      pages: referenceStore.pages.map((page) =>
-        page.kind === "about"
-          ? { ...page, sections: [{ ...structuredClone(source), id: "about-story" }] }
-          : page,
-      ),
-    } as typeof referenceStore;
-    const preview = renderPreviewHtml(project, "draft", "/nosotros/");
-    const exported = String(
-      exportProject(project, { mode: "draft" }).files.get("nosotros/index.html"),
-    );
-
-    expect(preview).toContain('data-solara-module="image-text-content"');
-    expect(exported).toContain('data-solara-module="image-text-content"');
   });
 
   it("mantiene el poster y el video audiovisual autocontenidos", () => {
@@ -1264,7 +1184,9 @@ describe("exporter", () => {
     expect(home).toContain('href="/tienda/productos/manta-bruma/"');
     expect(category).toContain('href="/tienda/productos/manta-bruma/"');
     expect(category).toContain('href="/tienda/buscar/"');
-    expect(cart).toContain('href="/tienda/compra/"');
+    expect(cart).toContain("data-solara-checkout");
+    expect(cart).toContain("data-checkout-form");
+    expect(cart).not.toContain('href="/tienda/compra/"');
     expect(productPage).toContain('action="/tienda/carrito/"');
     expect(home).not.toContain('href="/tienda/tienda/');
 
@@ -1479,7 +1401,7 @@ describe("exporter", () => {
     expect(String(result.files.get("index.html"))).not.toContain('href="/ai-context.json"');
   });
 
-  it("las páginas editables mandan sobre el seo global en su ruta", () => {
+  it("la Home editable manda sobre el seo global en su ruta", () => {
     const project = {
       ...referenceStore,
       seo: {
@@ -1487,27 +1409,11 @@ describe("exporter", () => {
         title: "Título global de la tienda",
         description: "Descripción global de la tienda.",
       },
-      pages: referenceStore.pages.map((page) => {
-        if (page.kind === "home")
-          return {
-            ...page,
-            seoTitle: "Título exclusivo del Home",
-            seoDescription: "Descripción exclusiva del Home.",
-          };
-        if (page.kind === "about")
-          return {
-            ...page,
-            seoTitle: "Título exclusivo de Nosotros",
-            seoDescription: "Descripción exclusiva de Nosotros.",
-          };
-        if (page.kind === "contact")
-          return {
-            ...page,
-            seoTitle: "Título exclusivo de Contacto",
-            seoDescription: "Descripción exclusiva de Contacto.",
-          };
-        return page;
-      }),
+      pages: referenceStore.pages.map((page) => ({
+        ...page,
+        seoTitle: "Título exclusivo del Home",
+        seoDescription: "Descripción exclusiva del Home.",
+      })),
     };
     const result = exportProject(project as typeof referenceStore, { mode: "production" });
 
@@ -1517,12 +1423,8 @@ describe("exporter", () => {
     expect(String(result.files.get("index.html"))).toContain(
       '<meta name="description" content="Descripción exclusiva del Home.">',
     );
-    expect(String(result.files.get("nosotros/index.html"))).toContain(
-      "<title>Título exclusivo de Nosotros</title>",
-    );
-    expect(String(result.files.get("contacto/index.html"))).toContain(
-      "<title>Título exclusivo de Contacto</title>",
-    );
+    expect(result.files.has("nosotros/index.html")).toBe(false);
+    expect(result.files.has("contacto/index.html")).toBe(false);
     expect(String(result.files.get("index.html"))).not.toContain("Título global de la tienda");
   });
 
@@ -1570,11 +1472,9 @@ describe("exporter", () => {
       expect(homeHtml, `home ${mode}`).not.toContain("data-whatsapp-include-sku=");
       const store = onlineStoreJsonLd(homeHtml);
       expect(store.telephone).toBe(referenceStore.identity.phone);
-      const contactHtml = String(result.files.get("contacto/index.html"));
-      expect(contactHtml, `contacto ${mode}`).not.toContain("wa.me");
-      expect(contactHtml, `contacto ${mode}`).not.toContain("wa.me");
-      const checkoutHtml = String(result.files.get("compra/index.html"));
-      expect(checkoutHtml, `compra ${mode}`).not.toContain("data-whatsapp-link");
+      expect(result.files.has("contacto/index.html"), `contacto ${mode}`).toBe(false);
+      expect(result.files.has("nosotros/index.html"), `nosotros ${mode}`).toBe(false);
+      expect(result.files.has("compra/index.html"), `compra ${mode}`).toBe(false);
       const cartHtml = String(result.files.get("carrito/index.html"));
       expect(cartHtml, `carrito ${mode}`).not.toContain("wa.me");
       const productHtml = String(result.files.get("productos/manta-bruma/index.html"));
@@ -1583,17 +1483,24 @@ describe("exporter", () => {
     }
   });
 
-  it("con teléfono válido el sitio expone data-whatsapp y los enlaces de contacto", () => {
-    const result = exportProject(referenceStore, { mode: "draft" });
+  it("con teléfono válido la Home expone contacto y el carrito conserva el checkout interno", () => {
+    const phone = "5491123456789";
+    const project = {
+      ...catalogModernV2Store,
+      whatsapp: { ...catalogModernV2Store.whatsapp, phone },
+    };
+    const result = exportProject(project as typeof catalogModernV2Store, { mode: "draft" });
     const homeHtml = String(result.files.get("index.html"));
-    expect(homeHtml).toContain(`data-whatsapp="${referenceStore.whatsapp.phone}"`);
-    expect(homeHtml).toContain(`data-whatsapp-greeting="${referenceStore.whatsapp.greeting}"`);
-    const contactHtml = String(result.files.get("contacto/index.html"));
-    expect(contactHtml).toContain(`wa.me/${referenceStore.whatsapp.phone}`);
-    expect(contactHtml).toContain("Escribir por WhatsApp");
-    const checkoutHtml = String(result.files.get("compra/index.html"));
-    expect(checkoutHtml).toContain("data-checkout-form");
-    expect(checkoutHtml).not.toContain("data-whatsapp-link");
+    expect(homeHtml).toContain(`data-whatsapp="${phone}"`);
+    expect(homeHtml).toContain(
+      `data-whatsapp-greeting="${catalogModernV2Store.whatsapp.greeting}"`,
+    );
+    expect(homeHtml).toContain(`wa.me/${phone}`);
+    expect(homeHtml).toContain("Escribir por WhatsApp");
+    const cartHtml = String(result.files.get("carrito/index.html"));
+    expect(cartHtml).toContain("data-cart-checkout-panel");
+    expect(cartHtml).toContain("data-cart-checkout-next");
+    expect(result.files.has("compra/index.html")).toBe(false);
   });
 
   it("la meta description de Home prefiere la página y el seo global antes que la identidad", () => {
@@ -1632,41 +1539,33 @@ describe("exporter", () => {
     };
     const result = exportProject(project as typeof referenceStore, { mode: "production" });
     const html = String(result.files.get("index.html"));
-    const aboutHtml = String(result.files.get("nosotros/index.html"));
 
     expect(html).toContain('<meta name="author" content="Tienda editorial">');
     expect(html).toContain('<meta name="publisher" content="Tienda editorial SRL">');
     expect(html).toContain('<meta name="robots" content="index,follow');
     expect(html).toContain('<meta name="googlebot" content="index,follow');
-    expect(aboutHtml).toContain(
+    expect(html).toContain(
       '<meta property="og:image" content="https://tienda-referencia.example/assets/fixture-manta-fallback.png">',
     );
-    expect(aboutHtml).toContain(
+    expect(html).toContain(
       '<meta property="og:image:alt" content="Manta de algodón verde sobre un sillón claro">',
     );
-    expect(aboutHtml).not.toContain("og:updated_time");
-    expect(aboutHtml).toContain('<meta name="twitter:card" content="summary_large_image">');
+    expect(html).not.toContain("og:updated_time");
+    expect(html).toContain('<meta name="twitter:card" content="summary_large_image">');
   });
 
-  it("la meta de Home respeta la página y las rutas sin página editable caen a la identidad", () => {
-    // Contrato del schema: la Home siempre existe y define su seoDescription, así
-    // que la cadena seoDescription ?? seo.description ?? identity.description
-    // protege a proyectos sin página editable (el tramo identity.description es
-    // alcanzable en las rutas about/contact que no son obligatorias).
+  it("la meta de Home respeta la página y las rutas internas usan el SEO global", () => {
+    const globalDescription = "Descripción global de la tienda.";
     const project = {
       ...referenceStore,
       pages: referenceStore.pages.filter((page) => page.kind === "home"),
+      seo: { ...referenceStore.seo, description: globalDescription },
     };
     const result = exportProject(project as typeof referenceStore, { mode: "draft" });
     const homeHtml = String(result.files.get("index.html"));
     expect(homeMetaDescription(homeHtml)).toBe(referenceStore.pages[0]?.seoDescription);
-    const aboutHtml = String(result.files.get("nosotros/index.html"));
-    expect(aboutHtml).toContain(
-      `<meta name="description" content="${referenceStore.identity.description}">`,
-    );
-    expect(aboutHtml).not.toContain(
-      `<meta name="description" content="${referenceStore.pages[1]?.seoDescription}">`,
-    );
+    const searchHtml = String(result.files.get("buscar/index.html"));
+    expect(searchHtml).toContain(`<meta name="description" content="${globalDescription}">`);
   });
 
   it("el título de Home prefiere la página y el seo global antes que la identidad", () => {
@@ -1684,9 +1583,10 @@ describe("exporter", () => {
     expect(/<title>([\s\S]*?)<\/title>/.exec(homeHtml)?.[1]).toBe("Título de la página Home");
   });
 
-  it("conserva la configuración archivada de Contacto V2 sin publicarla", () => {
-    const contact = catalogModernV2Store.pages.find((page) => page.kind === "contact");
-    expect(contact?.sections.some((section) => section.moduleId === "contact-form")).toBe(true);
+  it("mantiene Contacto V2 dentro de Home sin publicar una ruta propia", () => {
+    expect(
+      catalogModernV2Store.sections.some((section) => section.moduleId === "contact-form"),
+    ).toBe(true);
     expect(
       exportProject(catalogModernV2Store, { mode: "production" }).files.has("contacto/index.html"),
     ).toBe(false);
@@ -1822,13 +1722,7 @@ describe("exporter", () => {
       pages: referenceStore.pages.filter((page) => page.kind === "home"),
     };
     const result = exportProject(project as typeof referenceStore, { mode: "production" });
-    for (const path of [
-      "contacto/index.html",
-      "buscar/index.html",
-      "carrito/index.html",
-      "compra/index.html",
-      "404.html",
-    ]) {
+    for (const path of ["buscar/index.html", "carrito/index.html", "404.html"]) {
       const html = String(result.files.get(path));
       expect(html).toContain(
         '<meta name="description" content="Descripción central de la tienda.">',

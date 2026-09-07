@@ -1,11 +1,11 @@
 import {
+  assetUrl,
   type CanvasBinding,
   type CanvasEditorContext,
   canvasEntityAttributes,
   canvasImageAttributes,
   canvasRepeaterItemAttributes,
   canvasTextAttributes,
-  assetUrl,
   escapeAttribute,
   escapeHtml,
   formatMoneyForProject,
@@ -221,8 +221,6 @@ export const catalogHeader: ModuleDefinition<"catalog-header", z.infer<typeof he
     const copy = context.project.publicCopy;
     const navigation = context.project.navigation;
     const isV2 = context.project.commerceTemplates.designFamily === "catalog-modern-v2";
-    const showContact = !isV2 && navigation.showContact;
-    const showAbout = !isV2 && navigation.showAbout;
     const automaticItems = context.project.categories
       .filter((category) => !category.parentId && category.status !== "hidden")
       .map((category) => ({
@@ -336,8 +334,8 @@ export const catalogHeader: ModuleDefinition<"catalog-header", z.infer<typeof he
       : searchEnabled
         ? `<a class="catalog-mobile-nav-link" href="/buscar/"><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("categories")}</span><span>${escapeHtml(catalogLabel)}</span>${forwardChevron}</a>`
         : "";
-    const nav = `${navigation.showHome ? `<a href="/"${current(["home"])}>${escapeHtml(copy.navigation.home)}</a>` : ""}${catalog}${showContact ? `<a href="/contacto/"${current(["contact"])}>${escapeHtml(copy.navigation.contact)}</a>` : ""}${showAbout ? `<a href="/nosotros/"${current(["about"])}>${escapeHtml(copy.navigation.about)}</a>` : ""}`;
-    const mobileNav = `${navigation.showHome ? `<a class="catalog-mobile-nav-link" href="/"${current(["home"])}><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("home")}</span><span>${escapeHtml(copy.navigation.home)}</span>${forwardChevron}</a>` : ""}${mobileCategories}${showContact ? `<a class="catalog-mobile-nav-link" href="/contacto/"${current(["contact"])}><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("contact")}</span><span>${escapeHtml(copy.navigation.contact)}</span>${forwardChevron}</a>` : ""}${showAbout ? `<a class="catalog-mobile-nav-link" href="/nosotros/"${current(["about"])}><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("about")}</span><span>${escapeHtml(copy.navigation.about)}</span>${forwardChevron}</a>` : ""}`;
+    const nav = `${navigation.showHome ? `<a href="/"${current(["home"])}>${escapeHtml(copy.navigation.home)}</a>` : ""}${catalog}`;
+    const mobileNav = `${navigation.showHome ? `<a class="catalog-mobile-nav-link" href="/"${current(["home"])}><span class="catalog-mobile-nav-icon" aria-hidden="true">${icon("home")}</span><span>${escapeHtml(copy.navigation.home)}</span>${forwardChevron}</a>` : ""}${mobileCategories}`;
     const search = searchEnabled
       ? `<button class="catalog-search-link" type="button" data-catalog-search-open aria-controls="catalog-search-dialog" aria-expanded="false" aria-label="${escapeAttribute(context.settings.searchLabel || copy.navigation.search)}"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg><span${canvasTextAttributes(canvasContext(context), "searchLabel", 80)}>${escapeHtml(context.settings.searchLabel || copy.navigation.search)}</span></button><noscript><a class="catalog-search-noscript" href="/buscar/">${escapeHtml(context.settings.searchLabel || copy.navigation.search)}</a></noscript>`
       : "";
@@ -1845,7 +1843,7 @@ const newsletterSettings = z.object({
   title: z.string().default("Recibí las próximas novedades"),
   body: z.string().default("Escribinos y te avisamos cuando llegue una nueva selección."),
   actionLabel: z.string().default("Escribir por WhatsApp"),
-  actionHref: z.string().default("/contacto/"),
+  actionHref: z.string().default("#contact-form"),
 });
 
 export const catalogNewsletterCta: ModuleDefinition<
@@ -2003,9 +2001,7 @@ export const catalogFooter: ModuleDefinition<
     const openCartLink = cartEnabled
       ? `<a class="catalog-footer-cart-link" href="/carrito/" data-solara-cart-open data-open-cart data-cart-label="${escapeAttribute(copy.navigation.cart)}" aria-controls="solara-cart" aria-expanded="false" aria-haspopup="dialog">${escapeHtml(copy.navigation.cart)}</a>`
       : "";
-    const helpPageLinks = isV2
-      ? ""
-      : `<a href="/contacto/">${escapeHtml(copy.pages.contact)}</a><a href="/nosotros/">${escapeHtml(copy.pages.about)}</a>`;
+    const helpPageLinks = "";
     return moduleRoot(
       "catalog-footer",
       context.section,

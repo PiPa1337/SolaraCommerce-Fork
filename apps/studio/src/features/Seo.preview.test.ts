@@ -44,30 +44,6 @@ describe("homepageSeoPreview: contrato con el exporter (ruta /)", () => {
     expect(homepageSeoPreview(project).title).toBe(PAGE_TITLE);
   });
 
-  it("la página de About no participa del preview de Home", () => {
-    const project = withSeo(
-      referenceStore.pages.map((page) => {
-        if (page.kind === "about") {
-          return {
-            ...page,
-            seoTitle: "Título de Nosotros",
-            seoDescription: "Descripción de Nosotros.",
-          };
-        }
-        if (page.kind === "home") {
-          const { seoTitle: _homeTitle, seoDescription: _homeDescription, ...home } = page;
-          return home;
-        }
-        return page;
-      }),
-      { title: GLOBAL_TITLE, description: GLOBAL_DESCRIPTION },
-    );
-    expect(homepageSeoPreview(project)).toEqual({
-      title: GLOBAL_TITLE,
-      description: GLOBAL_DESCRIPTION,
-    });
-  });
-
   it("sin página de Home cae al seo global", () => {
     expect(
       homepageSeoPreview(withSeo([], { title: GLOBAL_TITLE, description: GLOBAL_DESCRIPTION })),

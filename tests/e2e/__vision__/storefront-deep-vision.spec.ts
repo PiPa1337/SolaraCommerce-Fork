@@ -52,9 +52,6 @@ const PAGES = [
   { dir: "coleccion-recien-llegados", path: "/colecciones/recien-llegados/" },
   { dir: "busqueda", path: "/buscar/?q=remera" },
   { dir: "carrito-vacio", path: "/carrito/" },
-  { dir: "checkout", path: "/checkout/" },
-  { dir: "contacto", path: "/contacto/" },
-  { dir: "nosotros", path: "/nosotros/" },
   { dir: "privacidad", path: "/privacidad/" },
   { dir: "404", path: "/ruta-inexistente/" },
 ] as const;

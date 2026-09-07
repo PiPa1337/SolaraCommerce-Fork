@@ -119,8 +119,6 @@ export const NavigationConfigSchema = z.object({
   items: z.array(NavigationItemSchema).max(20).default([]),
   mode: z.enum(["automatic", "curated"]).default("curated"),
   showHome: z.boolean().default(true),
-  showContact: z.boolean().default(true),
-  showAbout: z.boolean().default(true),
   showSearch: z.boolean().default(true),
   showCart: z.boolean().default(true),
 });
@@ -340,39 +338,11 @@ export const PublicCopySchema = z.object({
       categories: z.string().min(1).default("Categorías"),
       search: z.string().min(1).default("Buscar"),
       cart: z.string().min(1).default("Carrito"),
-      checkout: z.string().min(1).default("Compra"),
-      about: z.string().min(1).default("Nosotros"),
-      contact: z.string().min(1).default("Contacto"),
       shipping: z.string().min(1).default("Envíos"),
       returns: z.string().min(1).default("Cambios y devoluciones"),
       privacy: z.string().min(1).default("Privacidad"),
       terms: z.string().min(1).default("Términos"),
       notFound: z.string().min(1).default("Página no encontrada"),
-      aboutEyebrow: z.string().min(1).default("Nuestra mirada"),
-      aboutFallbackTitle: z.string().min(1).default("Elegimos objetos para vivirlos."),
-      aboutGuidanceTitle: z.string().min(1).default("Lo que nos guía"),
-      aboutInformationTitle: z.string().min(1).default("Información clara"),
-      aboutContactAction: z.string().min(1).default("Conocé cómo contactarnos"),
-      aboutSelectionTitle: z.string().min(1).default("Selección"),
-      aboutSelectionFallback: z.string().min(1).default("Conocé nuestras colecciones."),
-      aboutDeliveryTitle: z.string().min(1).default("Entrega"),
-      aboutDirectTitle: z.string().min(1).default("Atención directa"),
-      aboutDirectFallback: z.string().min(1).default("Escribinos para recibir asesoramiento."),
-      contactEyebrow: z.string().min(1).default("Hablemos"),
-      contactFallbackTitle: z.string().min(1).default("Estamos para ayudarte."),
-      contactDescription: z
-        .string()
-        .min(1)
-        .default(
-          "Respondemos consultas, disponibilidad y detalles de entrega por canales directos.",
-        ),
-      contactPurchaseTitle: z.string().min(1).default("Coordinemos tu compra"),
-      contactPurchaseDescription: z
-        .string()
-        .min(1)
-        .default(
-          "Si ya elegiste una pieza, podés escribirnos y te confirmamos disponibilidad, envío y pago.",
-        ),
       notFoundEyebrow: z.string().min(1).default("Página no encontrada"),
       notFoundTitle: z.string().min(1).default("No encontramos esa página."),
       notFoundDescription: z
@@ -459,7 +429,7 @@ export type PublicCopy = z.infer<typeof PublicCopySchema>;
 
 export const EditablePageSchema = z.object({
   id: z.string().min(1),
-  kind: z.enum(["home", "about", "contact"]),
+  kind: z.literal("home"),
   slug: SlugSchema,
   title: z.string().min(1),
   seoTitle: z.string().min(1).max(70),
@@ -630,16 +600,6 @@ export const ThemeColorsSchema = z.object({
   rating: z.string().default("#d99a12"),
 });
 
-export const DarkColorsSchema = z.object({
-  background: z.string().default("#0d0d0f"),
-  surface: z.string().default("#1a1a1e"),
-  text: z.string().default("#e8e8ea"),
-  muted: z.string().default("#8a8a8e"),
-  accent: z.string().default(""),
-  accentText: z.string().default(""),
-  border: z.string().default(""),
-});
-
 export const ThemeTypographySchema = z.object({
   display: z.string(),
   body: z.string(),
@@ -691,9 +651,7 @@ export const ThemeBackgroundSchema = z.object({
 });
 
 export const ThemeSchema = z.object({
-  colorMode: z.enum(["auto", "light", "dark"]),
   colors: ThemeColorsSchema,
-  darkColors: DarkColorsSchema.optional(),
   typography: ThemeTypographySchema,
   spacingScale: z.number().min(0.75).max(1.5),
   spacing: ThemeSpacingSchema.optional(),
@@ -781,8 +739,6 @@ const StoreProjectV2ShapeSchema = z.object({
     items: [],
     mode: "curated",
     showHome: true,
-    showContact: true,
-    showAbout: true,
     showSearch: true,
     showCart: true,
   }),
@@ -1155,10 +1111,9 @@ export const StoreProjectV2Schema = StoreProjectV2ShapeSchema.superRefine((proje
   const validInternalDestination = (href: string): boolean => {
     if (!href.startsWith("/") || href.startsWith("//")) return true;
     const pathname = href.split(/[?#]/, 1)[0] ?? "/";
-    if (pathname === "/" || pathname === "/contacto/" || pathname === "/nosotros/") return true;
+    if (pathname === "/") return true;
     if (pathname === "/buscar/") return project.commerceTemplates.search.enabled;
     if (pathname === "/carrito/") return project.commerceTemplates.cart.enabled;
-    if (pathname === "/compra/") return project.commerceTemplates.checkout.enabled;
     if (["/envios/", "/devoluciones/", "/privacidad/", "/terminos/"].includes(pathname))
       return true;
     const categoryMatch = /^\/categorias\/([^/]+)\/$/.exec(pathname);
@@ -1396,23 +1351,6 @@ export function getCategoryBreadcrumb(
   return category ? [...getCategoryAncestors(project, categoryId), category] : [];
 }
 
-export {
-  aboutDefaultExperience,
-  aboutDefaultHistoryParagraphs,
-  aboutDefaultPrinciples,
-  aboutDefaultProcess,
-  aboutDefaultStats,
-  aboutDefaultTeam,
-  defaultAboutV2Sections,
-} from "./catalog-modern-about";
-export {
-  contactDefaultFaqItems,
-  contactDefaultHelpItems,
-  contactDefaultPurchaseItems,
-  contactDefaultQuickLinks,
-  contactDefaultReasons,
-  defaultContactV2Sections,
-} from "./catalog-modern-contact";
 export * from "./catalog-modern-guidance";
 export {
   isProductVideoLightEnough,
@@ -1428,9 +1366,79 @@ export {
   productVideoTarget,
 } from "./product-video.js";
 
+const legacyStandalonePath = (href: unknown): string | null => {
+  if (typeof href !== "string") return null;
+  const pathname = href.split(/[?#]/, 1)[0]?.toLowerCase().replace(/\/$/, "") ?? "";
+  if (pathname === "/contacto" || pathname === "/compra") return "contact";
+  if (pathname === "/nosotros") return "about";
+  return null;
+};
+
+function normalizeLegacyStandaloneLinks(value: unknown): unknown {
+  if (typeof value === "string") {
+    const legacy = legacyStandalonePath(value);
+    if (legacy === "contact") return "/#contact-form";
+    if (legacy === "about") return "/";
+    return value;
+  }
+  if (Array.isArray(value)) return value.map(normalizeLegacyStandaloneLinks);
+  if (typeof value !== "object" || value === null) return value;
+  return Object.fromEntries(
+    Object.entries(value).map(([key, entry]) => [key, normalizeLegacyStandaloneLinks(entry)]),
+  );
+}
+
+/**
+ * Lee proyectos v2 históricos y elimina capacidades que dejaron de formar
+ * parte del producto: modo de color y páginas independientes editoriales.
+ */
+function normalizeLegacyProjectInput(input: unknown): unknown {
+  if (typeof input !== "object" || input === null) return input;
+  const normalized = normalizeLegacyStandaloneLinks(input);
+  if (typeof normalized !== "object" || normalized === null || Array.isArray(normalized)) {
+    return normalized;
+  }
+
+  const project = { ...(normalized as Record<string, unknown>) };
+  if (
+    typeof project.theme === "object" &&
+    project.theme !== null &&
+    !Array.isArray(project.theme)
+  ) {
+    const {
+      colorMode: _colorMode,
+      darkColors: _darkColors,
+      ...theme
+    } = project.theme as Record<string, unknown>;
+    project.theme = theme;
+  }
+  if (
+    typeof project.navigation === "object" &&
+    project.navigation !== null &&
+    !Array.isArray(project.navigation)
+  ) {
+    const {
+      showContact: _showContact,
+      showAbout: _showAbout,
+      ...navigation
+    } = project.navigation as Record<string, unknown>;
+    project.navigation = navigation;
+  }
+  if (Array.isArray(project.pages)) {
+    project.pages = project.pages.filter(
+      (page) =>
+        typeof page === "object" &&
+        page !== null &&
+        !Array.isArray(page) &&
+        (page as Record<string, unknown>).kind === "home",
+    );
+  }
+  return project;
+}
+
 /** Valida una entrada desconocida y agrega contexto al error de schema. */
 export function parseProject(input: unknown): StoreProjectV2 {
-  return StoreProjectV2Schema.parse(input);
+  return StoreProjectV2Schema.parse(normalizeLegacyProjectInput(input));
 }
 
 export function migrateProject(input: unknown): StoreProjectV2 {

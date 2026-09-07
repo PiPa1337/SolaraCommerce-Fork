@@ -264,12 +264,28 @@ tocar proyectos confirmados.
 
 Los tests del servidor, storage, layout y agente deben usar directorios
 temporales o fixtures explícitas. Nunca deben sembrar, reemplazar ni modificar el
-`proyectos/` raíz, que contiene la data comercial activa de
-`Abrir SolaraCommerce.cmd`.
+`proyectos/` raíz, que contiene la data comercial activa de los launchers
+`Abrir SolaraCommerce.cmd` y `Abrir SolaraCommerce.exe`.
 
 Las protecciones de traversal, rutas absolutas, nombres reservados y reparse
 points se validan en los tests de `local-layout.mjs`, storage y seguridad del
 exporter. JSONL/MCP se validan contra el host Node de `scripts/agent-host.mjs`.
+
+El tray Windows tiene un gate reproducible propio:
+
+```bash
+corepack pnpm test:tray
+```
+
+Ese comando compila `Abrir SolaraCommerce.exe` con el `csc.exe` de .NET
+Framework disponible y ejecuta `scripts/tray-smoke.mjs`. El smoke usa una raíz
+en `%TEMP%`, nunca el `proyectos/` real, y cubre sesiones preexistentes, 1/2/5
+sesiones, cierre individual y total, registros corruptos, puerto reasignado,
+`sessionId` exacto, rechazo de shutdown sin fallback a PID, retirada del registro
+al cerrar el servidor y ocupación de los puertos 4173–4180 con fallo limpio de
+una novena sesión. Los tests unitarios de apoyo viven en
+`packages/exporter/scripts/session-registry.test.mjs` y
+`session-handler.test.mjs`.
 
 La evidencia histórica de suites Electron/portable anteriores a la migración se
 conserva en documentos fechados y no forma parte de los gates activos.

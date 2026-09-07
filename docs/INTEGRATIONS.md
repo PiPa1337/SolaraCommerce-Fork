@@ -6,17 +6,25 @@ que siguen son locales o están incluidas en el sitio exportado.
 
 ## Servidor local gestionado
 
-`Abrir SolaraCommerce.cmd` inicia `packages/exporter/scripts/serve.mjs` en
-`127.0.0.1`. El proceso sirve Studio, archivos estáticos y la API de persistencia
-en disco. La cookie `solara_shutdown` es `HttpOnly`; el servidor verifica
-origen, método y token de sesión. El servidor no se expone a la red y no forma
-parte del sitio público.
+`Abrir SolaraCommerce.cmd` y el tray opcional `Abrir SolaraCommerce.exe` inician
+`packages/exporter/scripts/serve.mjs` en `127.0.0.1`. El proceso sirve Studio,
+archivos estáticos y la API de persistencia en disco. Cada servidor gestionado
+tiene un `sessionId` propio y registra su estado efímero en
+`.solara-runtime/instances/<sessionId>.json`. La cookie `solara_shutdown` es
+`HttpOnly`; el servidor verifica origen, método y token de sesión. El servidor no
+se expone a la red y no forma parte del sitio público.
+
+El tray consulta esos registros, pero valida cada candidato contra
+`GET /__solara/session` y exige que el `sessionId` coincida exactamente antes de
+mostrarlo o intentar cerrarlo. El PID guardado es informativo: nunca se mata un
+proceso sólo porque aparezca en un JSON. El cierre usa el endpoint autenticado
+existente y no agrega una API administrativa general.
 
 ### Sesión y estado
 
 | Método | Ruta | Uso | Respuesta esperada |
 | --- | --- | --- | --- |
-| GET | `/__solara/session` | Detectar servidor gestionado | Estado de sesión local |
+| GET | `/__solara/session` | Detectar servidor gestionado | `managed: true` + `sessionId` exacto |
 | GET | `/__solara/storage/status` | Comprobar permisos y rutas | `managed`, `writable`, raíces |
 | GET | `/__solara/storage/projects` | Listar tiendas desde manifests | Resúmenes sin datos comerciales completos |
 | GET | `/__solara/storage/projects/{projectId}/current` | Leer el archivo actual | Proyecto validable + versión |
@@ -82,6 +90,11 @@ El servidor de sitio temporal sólo expone la carpeta pública seleccionada. Las
 rutas permanecen separadas del editor. `open-folder` sólo devuelve la carpeta
 que el propio servidor administra; nunca acepta una ruta enviada por el
 navegador.
+
+Para cerrar desde el tray se envía `POST /__solara/shutdown` con la cookie
+`solara_shutdown=<token>` del registro y `Origin`/`Referer` de la misma URL
+loopback. Si la autenticación o el cierre fallan, la sesión se conserva como
+activa y el tray no intenta terminar el PID por fuera de este contrato.
 
 ## Persistencia del navegador
 

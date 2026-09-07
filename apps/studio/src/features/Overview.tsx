@@ -278,28 +278,10 @@ const PUBLIC_COPY_FIELDS = [
   { group: "pages", key: "categories", label: "Página de categorías" },
   { group: "pages", key: "search", label: "Página de búsqueda" },
   { group: "pages", key: "cart", label: "Página de carrito" },
-  { group: "pages", key: "checkout", label: "Página de compra" },
-  { group: "pages", key: "about", label: "Página nosotros" },
-  { group: "pages", key: "contact", label: "Página de contacto" },
   { group: "pages", key: "shipping", label: "Página de envíos" },
   { group: "pages", key: "returns", label: "Página de cambios" },
   { group: "pages", key: "privacy", label: "Página de privacidad" },
   { group: "pages", key: "terms", label: "Página de términos" },
-  { group: "pages", key: "aboutEyebrow", label: "Nosotros: introducción" },
-  { group: "pages", key: "aboutFallbackTitle", label: "Nosotros: título" },
-  { group: "pages", key: "aboutGuidanceTitle", label: "Nosotros: guía" },
-  { group: "pages", key: "aboutInformationTitle", label: "Nosotros: información" },
-  { group: "pages", key: "aboutContactAction", label: "Nosotros: contacto" },
-  { group: "pages", key: "aboutSelectionTitle", label: "Nosotros: selección" },
-  { group: "pages", key: "aboutSelectionFallback", label: "Nosotros: colección vacía" },
-  { group: "pages", key: "aboutDeliveryTitle", label: "Nosotros: entrega" },
-  { group: "pages", key: "aboutDirectTitle", label: "Nosotros: atención" },
-  { group: "pages", key: "aboutDirectFallback", label: "Nosotros: contacto vacío" },
-  { group: "pages", key: "contactEyebrow", label: "Contacto: introducción" },
-  { group: "pages", key: "contactFallbackTitle", label: "Contacto: título" },
-  { group: "pages", key: "contactDescription", label: "Contacto: descripción" },
-  { group: "pages", key: "contactPurchaseTitle", label: "Contacto: CTA" },
-  { group: "pages", key: "contactPurchaseDescription", label: "Contacto: ayuda" },
   { group: "pages", key: "notFoundEyebrow", label: "404: introducción" },
   { group: "pages", key: "notFound", label: "404: título de página" },
   { group: "pages", key: "notFoundTitle", label: "404: título" },
@@ -435,7 +417,7 @@ function isValidUrl(value: string): boolean {
   }
 }
 
-/** Destino de navegación: ruta interna (ej. /contacto/, nunca //) o URL http(s), mailto o tel.
+/** Destino de navegación: ruta interna (ej. /buscar/, nunca //) o URL http(s), mailto o tel.
  *  Espeja la validación del schema (`validateHref`): mailto:/tel: sólo si el commit lo acepta. */
 function isValidDestination(value: string): boolean {
   const trimmed = value.trim();
@@ -466,7 +448,7 @@ function slugValidationError(value: string): string | undefined {
 
 function destinationError(href: string): string | undefined {
   return href.trim() !== "" && !isValidDestination(href)
-    ? "Usá http(s) o una ruta interna (ej. /contacto/)."
+    ? "Usá http(s) o una ruta interna (ej. /buscar/)."
     : undefined;
 }
 
@@ -1107,15 +1089,6 @@ export function Overview({
                 }
               />
             </Field>
-            <Toggle
-              checked={project.whatsapp.includeSku}
-              onChange={(checked) =>
-                commit({
-                  whatsapp: { ...latestProjectRef.current.whatsapp, includeSku: checked },
-                })
-              }
-              label="Incluir SKU en el mensaje"
-            />
           </div>
         </AccordionSection>
 

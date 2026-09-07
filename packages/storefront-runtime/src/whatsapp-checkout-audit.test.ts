@@ -7,9 +7,9 @@ import {
   formatMoney,
   parseCart,
   reconcileCartLines,
-  splitOrderParts,
   STOREFRONT_RUNTIME_CSS,
   STOREFRONT_RUNTIME_JS,
+  splitOrderParts,
 } from "./index";
 
 function makeProduct(overrides: Partial<CartLine> = {}): CartLine {

@@ -5,8 +5,7 @@ import { defineConfig, devices } from "@playwright/test";
 // explícita para que un nuevo barrido interno del editor no triplique por
 // accidente el gate release ni convierta diferencias del browser del Studio en
 // supuestas regresiones del storefront.
-const publicStorefrontSpecs =
-  /[/\\](exported-store|exporter-sentinel|storefront-nojs)\.spec\.ts$/;
+const publicStorefrontSpecs = /[/\\](exported-store|exporter-sentinel|storefront-nojs)\.spec\.ts$/;
 const ciVisualSpecs = [
   /[/\\]__vision__[/\\]/,
   /[/\\](?:qa-visual(?:-[^/\\]+)?|quality-forge-visual|studio-visual|theme-preset-visual|visual-break)\.spec\.ts$/,

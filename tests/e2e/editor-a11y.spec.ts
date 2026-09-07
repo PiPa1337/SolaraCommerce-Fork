@@ -934,9 +934,7 @@ test("el diálogo 409 cierra con Escape conservando el borrador y el fondo es in
     await expect(pageA.locator("[data-studio-save]")).toBeFocused();
     await expect(pageA.locator(".studio-shell")).not.toHaveAttribute("inert", "");
     await pageA.getByRole("tab", { name: "Resumen", exact: true }).click();
-    await expect(pageA.getByLabel("Nombre de la tienda")).toHaveValue(
-      "A11y A (borrador local)",
-    );
+    await expect(pageA.getByLabel("Nombre de la tienda")).toHaveValue("A11y A (borrador local)");
   } finally {
     await stopManagedServer(managed);
   }

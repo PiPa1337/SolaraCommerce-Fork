@@ -2,8 +2,8 @@
 
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createLocalProjectStorage } from "../packages/exporter/scripts/local-project-storage.mjs";
 import { resolveLocalLayout } from "../packages/exporter/scripts/local-layout.mjs";
+import { createLocalProjectStorage } from "../packages/exporter/scripts/local-project-storage.mjs";
 import { runAgentHost } from "./agent-host.mjs";
 
 function resolveScopes() {
@@ -20,7 +20,9 @@ function resolveScopes() {
 
 async function main() {
   const scriptDirectory = dirname(fileURLToPath(import.meta.url));
-  const applicationRoot = resolve(process.env.SOLARA_APPLICATION_ROOT ?? resolve(scriptDirectory, ".."));
+  const applicationRoot = resolve(
+    process.env.SOLARA_APPLICATION_ROOT ?? resolve(scriptDirectory, ".."),
+  );
   const layout = resolveLocalLayout({ applicationRoot });
   const storage = createLocalProjectStorage({
     applicationRoot: layout.applicationRoot,

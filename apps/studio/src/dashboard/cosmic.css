@@ -123,26 +123,6 @@
   width: min(1540px, 100%);
 }
 
-.dashboard-cosmic-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(560px, 1.1fr);
-  align-items: center;
-  gap: clamp(28px, 4vw, 64px);
-  padding-bottom: 12px;
-}
-
-.dashboard-cosmic-hero__copy {
-  display: flex;
-  min-width: 0;
-  align-items: end;
-  justify-content: space-between;
-  gap: 24px;
-}
-
-.dashboard-cosmic-hero__heading {
-  min-width: 0;
-}
-
 .dashboard-cosmic-kicker {
   display: block;
   margin-bottom: 4px;
@@ -152,32 +132,6 @@
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }
-
-.dashboard-cosmic-hero h1 {
-  margin: 0 0 4px;
-  color: var(--cosmic-ink);
-  font-family: var(--font-display);
-  font-size: clamp(2rem, 2.6vw, 2.65rem);
-  font-weight: 600;
-  letter-spacing: -0.07em;
-  line-height: 1.04;
-}
-
-.dashboard-cosmic-hero p {
-  max-width: 46ch;
-  margin: 0;
-  color: var(--cosmic-muted);
-  font-size: 13px;
-  line-height: 1.45;
-}
-
-.dashboard-cosmic-hero__copy > .button {
-  flex: 0 0 auto;
-  min-height: 40px;
-}
-
-/* Viewports bajos: el hero cede el espacio al panel de tiendas. (Las reglas
- * compactas viven al final del archivo para ganar la cascada.) */
 
 .dashboard-cosmic .button--primary {
   border-color: #f3c35e;
@@ -189,43 +143,6 @@
   border-color: #ffe09a;
   background: #ffdb7c;
   color: #1e1305;
-}
-
-.dashboard-cosmic-metrics {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  min-height: 96px;
-  align-self: center;
-  padding: 0;
-  border: 1px solid var(--cosmic-line-strong);
-  border-radius: 14px;
-  background: rgb(12 15 22 / 0.98);
-  contain: layout paint;
-}
-
-.dashboard-cosmic-metrics > div {
-  display: grid;
-  min-height: 82px;
-  align-content: center;
-  gap: 4px;
-  padding: 14px 18px;
-  border-right: 1px solid var(--cosmic-line);
-}
-
-.dashboard-cosmic-metrics > div:last-child {
-  border-right: 0;
-}
-
-.dashboard-cosmic-metrics strong {
-  color: var(--cosmic-ink);
-  font-size: clamp(1.35rem, 1.6vw, 1.75rem);
-  font-weight: 650;
-  letter-spacing: -0.04em;
-}
-
-.dashboard-cosmic-metrics span {
-  color: var(--cosmic-muted);
-  font-size: 12px;
 }
 
 .shutdown-status--cosmic {
@@ -262,6 +179,7 @@
   border-bottom: 1px solid var(--cosmic-line);
 }
 
+.dashboard-cosmic-library__header h1,
 .dashboard-cosmic-library__header h2 {
   margin: 0;
   color: var(--cosmic-ink);
@@ -270,6 +188,16 @@
   font-weight: 650;
   letter-spacing: -0.035em;
   line-height: 1.2;
+}
+
+.dashboard-cosmic-library__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dashboard-cosmic-library__header-actions > .button {
+  min-height: 34px;
 }
 
 .dashboard-cosmic-library__header .dashboard-cosmic-kicker {
@@ -1701,6 +1629,27 @@
   line-height: 1.55;
 }
 
+.create-store__import {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border: 1px solid var(--cosmic-line);
+  border-radius: 10px;
+  background: rgb(5 7 12 / 0.44);
+}
+
+.create-store__import .dashboard-cosmic-dialog__summary {
+  margin: 0;
+}
+
+.create-store__import .button {
+  flex: 0 0 auto;
+  min-height: 34px;
+}
+
 .dashboard-cosmic-dialog__actions {
   display: flex;
   justify-content: flex-end;
@@ -1714,142 +1663,6 @@
 
 .shutdown-dialog--cosmic form > p:not(.shutdown-dialog__eyebrow) {
   color: var(--cosmic-muted);
-}
-
-/* Salud de tiendas (T2.7): franja de sumario sobre la biblioteca. */
-.dashboard-cosmic-health {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px 22px;
-  margin: 0 0 10px;
-  padding: 8px 14px;
-  border: 1px solid var(--cosmic-line);
-  border-radius: 12px;
-  background: rgb(8 10 16 / 0.96);
-  contain: layout paint;
-}
-
-.dashboard-cosmic-health__title {
-  display: grid;
-  gap: 2px;
-  min-width: 148px;
-}
-
-.dashboard-cosmic-health__title .dashboard-cosmic-kicker {
-  margin-bottom: 0;
-  color: var(--cosmic-faint);
-}
-
-.dashboard-cosmic-health__title strong {
-  font-size: 14px;
-}
-
-.dashboard-cosmic-health__stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 22px;
-}
-
-.dashboard-cosmic-health__stats > div {
-  display: grid;
-  gap: 2px;
-}
-
-.dashboard-cosmic-health__stats strong {
-  font-size: 15px;
-  font-variant-numeric: tabular-nums;
-}
-
-.dashboard-cosmic-health__stats span {
-  color: var(--cosmic-muted);
-  font-size: 12px;
-}
-
-.dashboard-cosmic-health__stats > div.is-warn strong {
-  color: var(--cosmic-yellow);
-}
-
-.dashboard-cosmic-health__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.dashboard-cosmic-health__chips button {
-  min-height: 24px;
-  padding: 3px 10px;
-  border: 1px solid rgb(246 199 94 / 0.45);
-  border-radius: 999px;
-  background: rgb(246 199 94 / 0.1);
-  color: var(--cosmic-yellow);
-  font-size: 11px;
-  font-weight: 650;
-  cursor: pointer;
-}
-
-.dashboard-cosmic-health__chips button:hover {
-  border-color: rgb(246 199 94 / 0.85);
-  background: rgb(246 199 94 / 0.2);
-}
-
-.qa-status-card {
-  display: grid;
-  grid-template-columns: auto minmax(120px, 1fr) auto;
-  align-items: center;
-  gap: 2px 14px;
-  min-width: 0;
-  margin-left: auto;
-  padding-left: 20px;
-  border-left: 1px solid var(--cosmic-line);
-}
-
-.qa-status-card h2,
-.qa-status-card p {
-  margin: 0;
-}
-
-.qa-status-card h2 {
-  color: var(--cosmic-faint);
-  font-family: var(--font-ui);
-  font-size: 10px;
-  font-weight: 750;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.qa-status-card__state {
-  overflow: hidden;
-  color: var(--cosmic-ink);
-  font-size: 12px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.qa-status-card__counts {
-  display: flex;
-  gap: 12px;
-  color: var(--cosmic-muted);
-  font-size: 11px;
-  white-space: nowrap;
-}
-
-.qa-status-card__counts span {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 4px;
-}
-
-.qa-status-card__counts strong {
-  color: var(--cosmic-ink);
-  font-size: 14px;
-  font-variant-numeric: tabular-nums;
 }
 
 /* Acciones rápidas del dashboard (T2.8/T2.9): comparar y respaldar todo. */
@@ -2025,13 +1838,9 @@
 }
 
 @media (max-width: 560px) {
-  .dashboard-cosmic-health {
+  .create-store__import {
     align-items: stretch;
-  }
-
-  .dashboard-cosmic-health__stats {
-    flex: 1;
-    justify-content: space-between;
+    flex-direction: column;
   }
 
   .dashboard-cosmic-actions {
@@ -2053,27 +1862,8 @@
 }
 
 @media (max-width: 1120px) {
-  .dashboard-cosmic-hero {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .dashboard-cosmic-metrics {
-    max-width: 760px;
-  }
-
   .dashboard-cosmic-results {
     grid-template-columns: minmax(0, 1fr) 238px;
-  }
-}
-
-@media (max-width: 900px) {
-  .qa-status-card {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    width: 100%;
-    margin-left: 0;
-    padding: 8px 0 0;
-    border-top: 1px solid var(--cosmic-line);
-    border-left: 0;
   }
 }
 
@@ -2137,53 +1927,6 @@
     padding: 28px 12px 32px;
   }
 
-  .dashboard-cosmic-hero__copy {
-    align-items: stretch;
-    flex-direction: column;
-    gap: 14px;
-  }
-
-  .dashboard-cosmic-hero__copy > .button {
-    align-self: start;
-  }
-
-  .dashboard-cosmic-hero h1 {
-    font-size: clamp(2.5rem, 13vw, 3.75rem);
-  }
-
-  .dashboard-cosmic-hero p {
-    font-size: 13px;
-  }
-
-  .dashboard-cosmic-metrics {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    padding: 8px;
-  }
-
-  .dashboard-cosmic-metrics > div {
-    min-height: 62px;
-    padding: 8px 10px;
-    border-right: 1px solid var(--cosmic-line);
-    border-bottom: 1px solid var(--cosmic-line);
-  }
-
-  .qa-status-card {
-    grid-template-columns: 1fr;
-    gap: 4px;
-  }
-
-  .qa-status-card__counts {
-    justify-content: space-between;
-  }
-
-  .dashboard-cosmic-metrics > div:nth-child(2n) {
-    border-right: 0;
-  }
-
-  .dashboard-cosmic-metrics > div:nth-last-child(-n + 2) {
-    border-bottom: 0;
-  }
-
   .dashboard-cosmic-library__header,
   .dashboard-cosmic-toolbar,
   .dashboard-cosmic-results {
@@ -2193,6 +1936,11 @@
   .dashboard-cosmic-library__header {
     align-items: start;
     flex-direction: column;
+  }
+
+  .dashboard-cosmic-library__header-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .dashboard-cosmic-toolbar {
@@ -2276,22 +2024,6 @@
  * se compactan para que todo el contenido quepa sin scroll de página.
  * Va al final del archivo para ganar la cascada sobre las reglas base. */
 @media (max-height: 820px) and (min-width: 700px) {
-  .dashboard-cosmic-hero {
-    padding-bottom: 8px;
-  }
-
-  .dashboard-cosmic-hero .dashboard-cosmic-kicker {
-    margin-bottom: 2px;
-  }
-
-  .dashboard-cosmic-hero p {
-    display: none;
-  }
-
-  .dashboard-cosmic-hero h1 {
-    font-size: clamp(1.3rem, 1.9vw, 1.6rem);
-  }
-
   .dashboard-cosmic-results {
     padding: 5px;
   }
@@ -2303,10 +2035,6 @@
   .dashboard-cosmic-search,
   .dashboard-cosmic-select {
     min-height: 30px;
-  }
-
-  .dashboard-cosmic-health {
-    padding: 6px 12px;
   }
 
   .dashboard-store-detail {
@@ -2606,20 +2334,6 @@
 }
 
 @media (max-width: 560px) {
-  /* Salud compacta en móvil: menos alto antes de las cards de tiendas. */
-  .dashboard-cosmic-health {
-    gap: 6px 14px;
-    padding: 8px 10px;
-  }
-
-  .dashboard-cosmic-health__stats {
-    gap: 4px 16px;
-  }
-
-  .dashboard-cosmic-health__title {
-    min-width: 120px;
-  }
-
   .guided-stats > div {
     padding: 13px 10px;
   }

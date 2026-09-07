@@ -70,11 +70,11 @@ describe("assetUses", () => {
 
   it("cuenta una imagen referenciada en una sección de una página editable", () => {
     const project = structuredClone(catalogModernStore);
-    const about = project.pages.find((page) => page.kind === "about");
-    if (!about) throw new Error("la fixture demo debe tener una página about");
+    const page = project.pages[0];
+    if (!page) throw new Error("la fixture demo debe tener una página editable");
     const hero = project.sections.find((section) => section.slot === "hero");
     if (!hero) throw new Error("la fixture demo debe tener un hero");
-    about.sections.push({
+    page.sections.push({
       ...structuredClone(hero),
       id: "asset-uses-test-page-section" as typeof hero.id,
       settings: { imageId: topLevelAsset },
@@ -87,10 +87,10 @@ describe("assetUses", () => {
 
   it("el guard cubre toda referencia que el schema rechaza al eliminar el asset", () => {
     const project = structuredClone(catalogModernStore);
-    const about = project.pages.find((page) => page.kind === "about");
+    const page = project.pages[0];
     const hero = project.sections.find((section) => section.slot === "hero");
-    if (!about || !hero) throw new Error("la fixture demo debe tener página about y hero");
-    about.sections.push({
+    if (!page || !hero) throw new Error("la fixture demo debe tener página editable y hero");
+    page.sections.push({
       ...structuredClone(hero),
       id: "asset-uses-test-page-section" as typeof hero.id,
       settings: { imageId: topLevelAsset },

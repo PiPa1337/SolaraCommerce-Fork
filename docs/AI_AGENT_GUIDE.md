@@ -148,7 +148,9 @@ El conjunto es cerrado: `store.create`, `store.updateIdentity`,
 `theme.updateTokens`.
 
 `store.updateWhatsapp` es la vía para configurar el teléfono de pedidos de una
-tienda existente (dígitos internacionales sin `+`, greeting y `includeSku`).
+tienda existente (dígitos internacionales sin `+` y `greeting`). El campo
+`includeSku` se conserva sólo por compatibilidad con operaciones antiguas y se
+ignora.
 Sin él, `whatsapp.phone` queda vacío y el sitio se exporta sin enlaces de
 WhatsApp. `store.updateNavigation` ajusta el modo, la etiqueta del catálogo y
 los items curados; los hrefs internos se validan contra destinos existentes.

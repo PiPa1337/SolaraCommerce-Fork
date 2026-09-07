@@ -80,6 +80,7 @@ async function openPopulatedCart(page: import("@playwright/test").Page): Promise
   await waitForStorefrontReady(page);
   await page.locator("button[data-solara-cart-open]").first().click();
   await expect(page.locator(".catalog-cart-drawer")).toHaveAttribute("data-open", "true");
+  await expect(page.locator(".catalog-cart-items .solara-cart-line")).toHaveCount(cartLines.length);
 }
 
 test("separa revisión y checkout sin cambiar el submit de WhatsApp", async ({ page }) => {

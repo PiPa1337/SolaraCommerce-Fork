@@ -32,22 +32,25 @@ function jsonBytes(value: unknown): Uint8Array {
 
 async function gzip(bytes: Uint8Array): Promise<Uint8Array> {
   const stream = new CompressionStream("gzip");
+  // Consumir la salida mientras se escribe evita backpressure con respaldos grandes.
+  const output = new Response(stream.readable).arrayBuffer();
   const writer = stream.writable.getWriter();
   const buffer = new ArrayBuffer(bytes.byteLength);
   new Uint8Array(buffer).set(bytes);
   await writer.write(buffer);
   await writer.close();
-  return new Uint8Array(await new Response(stream.readable).arrayBuffer());
+  return new Uint8Array(await output);
 }
 
 async function gunzip(bytes: Uint8Array): Promise<Uint8Array> {
   const stream = new DecompressionStream("gzip");
+  const output = new Response(stream.readable).arrayBuffer();
   const writer = stream.writable.getWriter();
   const buffer = new ArrayBuffer(bytes.byteLength);
   new Uint8Array(buffer).set(bytes);
   await writer.write(buffer);
   await writer.close();
-  return new Uint8Array(await new Response(stream.readable).arrayBuffer());
+  return new Uint8Array(await output);
 }
 
 async function buildRecoveryFiles(

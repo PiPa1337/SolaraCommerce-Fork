@@ -18,7 +18,6 @@ const routes = [
   product ? `/${product.slice(0, -"index.html".length)}` : "/",
   category ? `/${category.slice(0, -"index.html".length)}` : "/",
   "/carrito/",
-  "/compra/",
 ];
 
 test("P8-3: capturas del sitio catalogModern para auditoria visual", async ({ browser }) => {

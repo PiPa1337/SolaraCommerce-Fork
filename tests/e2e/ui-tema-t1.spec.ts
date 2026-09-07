@@ -90,7 +90,7 @@ const PRESET_COLORS: Record<string, ThemeColors> = {
     border: "#d8c9e7",
   },
   "Rosa pétalo": {
-    background: "#fff2f4",
+    background: "#fce9ed",
     surface: "#f6e0e5",
     text: "#3a2028",
     muted: "#76515c",

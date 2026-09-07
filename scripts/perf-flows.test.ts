@@ -1,15 +1,12 @@
 import { performance } from "node:perf_hooks";
 import { describe, it } from "vitest";
-import {
-  createProjectArchive,
-  readProjectArchive,
-} from "../apps/studio/src/lib/projectArchive";
+import { createProjectArchive, readProjectArchive } from "../apps/studio/src/lib/projectArchive";
 import { generatePerformanceFixture } from "../packages/core/src/performance";
 import { auditProject } from "../packages/exporter/src/audit";
 import { exportProject, renderPreviewHtml } from "../packages/exporter/src/index";
-import { catalogScaleStore } from "../packages/project-schema/src/scale-fixture";
-import type { StoreProjectV1 } from "../packages/project-schema/src/index";
 import { ensureCatalogModernV2Sections } from "../packages/project-schema/src/catalog-modern-template";
+import type { StoreProjectV1 } from "../packages/project-schema/src/index";
+import { catalogScaleStore } from "../packages/project-schema/src/scale-fixture";
 import { optimizeProject } from "../packages/site-optimizer/src/index";
 
 function bytesToBase64(bytes: Uint8Array): string {
@@ -76,18 +73,13 @@ async function profile(name: string, project: StoreProjectV1, withPreview = true
   ) as string;
   console.log(`      -> archivo .solara.json: ${fmtBytes(archive.length)}`);
 
-  const reparsed = measure(
-    "apertura: readProjectArchive (JSON.parse + Zod safeParse)",
-    () => readProjectArchive(archive),
+  const reparsed = measure("apertura: readProjectArchive (JSON.parse + Zod safeParse)", () =>
+    readProjectArchive(archive),
   ) as StoreProjectV1;
 
-  measure("apertura: ensureCatalogModernV2Sections", () =>
-    ensureCatalogModernV2Sections(reparsed),
-  );
+  measure("apertura: ensureCatalogModernV2Sections", () => ensureCatalogModernV2Sections(reparsed));
 
-  measure("apertura: Zod parse extra (saveProject a IndexedDB)", () =>
-    readProjectArchive(archive),
-  );
+  measure("apertura: Zod parse extra (saveProject a IndexedDB)", () => readProjectArchive(archive));
 
   // --- FLUJO GUARDADO ---
   const archive2 = measure("guardar: createProjectArchive (Zod + stringify pretty)", () =>
@@ -115,21 +107,18 @@ async function profile(name: string, project: StoreProjectV1, withPreview = true
 }
 
 describe("perf flows", () => {
-  it(
-    "perfila apertura/guardado/exportación por escala",
-    async () => {
-      console.log("\n========== PERFIL POR FLUJO ==========");
+  it("perfila apertura/guardado/exportación por escala", async () => {
+    console.log("\n========== PERFIL POR FLUJO ==========");
 
-      const scale50 = structuredClone(catalogScaleStore) as unknown as StoreProjectV1;
-      await profile("catalogScaleStore", scale50);
+    const scale50 = structuredClone(catalogScaleStore) as unknown as StoreProjectV1;
+    await profile("catalogScaleStore", scale50);
 
-      for (const n of [200, 1000, 2000]) {
-        const project = generatePerformanceFixture(n);
-        (project as unknown as { commerceTemplates: { designFamily: string } })
-          .commerceTemplates.designFamily = "catalog-modern-v2";
-        await profile(`fixture ${n}`, project, n <= 1000);
-      }
-    },
-    600_000,
-  );
+    for (const n of [200, 1000, 2000]) {
+      const project = generatePerformanceFixture(n);
+      (
+        project as unknown as { commerceTemplates: { designFamily: string } }
+      ).commerceTemplates.designFamily = "catalog-modern-v2";
+      await profile(`fixture ${n}`, project, n <= 1000);
+    }
+  }, 600_000);
 });

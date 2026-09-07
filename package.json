@@ -15,6 +15,8 @@
     "audit:performance:rm:browser": "node scripts/rm-performance-browser.mjs",
     "audit:performance:rm:merge": "node scripts/rm-performance-merge.mjs",
     "build": "corepack pnpm --filter @solara/studio build",
+    "build:tray": "powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File scripts/build-tray.ps1",
+    "test:tray": "corepack pnpm build:tray && node scripts/tray-smoke.mjs",
     "check:budgets": "node scripts/check-budgets.mjs && vitest run scripts/storefront-runtime-budget.test.ts scripts/public-storefront-budget.test.ts",
     "check:image-budget": "node scripts/check-image-budget.mjs",
     "check:optimization": "vitest run scripts/site-optimizer-check.test.ts scripts/optimization-baseline.test.ts",

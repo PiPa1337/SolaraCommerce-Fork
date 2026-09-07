@@ -457,7 +457,10 @@ function resolveWhatsAppGreeting(project: WhatsAppMessageProject): string {
   return greeting;
 }
 
-function renderWhatsAppCustomer(project: WhatsAppMessageProject, customer: CustomerDetails): string[] {
+function renderWhatsAppCustomer(
+  project: WhatsAppMessageProject,
+  customer: CustomerDetails,
+): string[] {
   const copy = project.publicCopy.whatsapp;
   const pub = project.publicCopy;
   return [
@@ -540,13 +543,21 @@ export function splitOrderParts(
   // Margen exacto: el footer real (total + cliente + disclaimer + fin) menos la
   // cola de parte intermedia. Así TODA parte cabe aunque sea la última, sin
   // adivinar longitudes. Asume subtotal de parte < $99.999.999,99.
-  const nonLastTail = ["*Subtotal de esta parte: $99.999.999,99*", "Sigue en la parte 99 →"].join("\n");
+  const nonLastTail = ["*Subtotal de esta parte: $99.999.999,99*", "Sigue en la parte 99 →"].join(
+    "\n",
+  );
   const probeMargin = Math.max(
     0,
-    encodeURIComponent(renderLastBlock(99).join("\n")).length - encodeURIComponent(nonLastTail).length,
+    encodeURIComponent(renderLastBlock(99).join("\n")).length -
+      encodeURIComponent(nonLastTail).length,
   );
   const chunkBudget = messageBudget - probeMargin;
-  const renderPart = (chunk: CartLine[], part: number, parts: number, summarized: boolean): string => {
+  const renderPart = (
+    chunk: CartLine[],
+    part: number,
+    parts: number,
+    summarized: boolean,
+  ): string => {
     const head = header(part, parts);
     if (summarized) {
       return [
@@ -1494,7 +1505,8 @@ function storefrontBoot(): void {
       }
       if (stored !== null && stored.fp === fingerprint && stored.sent >= parts.length) {
         submitButton.textContent = defaultSubmitLabel;
-        note.textContent = "Pedido completo enviado por WhatsApp. Para un pedido nuevo, modificá el carrito.";
+        note.textContent =
+          "Pedido completo enviado por WhatsApp. Para un pedido nuevo, modificá el carrito.";
         note.hidden = false;
         restartButton.hidden = false;
         return;
@@ -1797,11 +1809,11 @@ function storefrontBoot(): void {
     });
     modernMenuOpen.setAttribute("aria-expanded", "true");
     document.documentElement.classList.add("catalog-mobile-menu-open");
+    modernMenuClose?.focus();
     modernMenu.getBoundingClientRect();
     window.requestAnimationFrame(() => {
       if (modernMenu.hidden) return;
       modernMenu.dataset.state = "open";
-      modernMenuClose?.focus();
     });
   });
   modernMenuClose?.addEventListener("click", closeModernMenu);
@@ -2489,9 +2501,7 @@ function storefrontBoot(): void {
       render();
       pageStatus.focus({ preventScroll: true });
       grid.scrollIntoView({
-        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-          ? "auto"
-          : "smooth",
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
         block: "start",
       });
     };
@@ -2587,7 +2597,9 @@ function storefrontBoot(): void {
     const markBrandLoaded = (image: HTMLImageElement): void => {
       image.dataset.solaraLoaded = "true";
       image
-        .closest("[data-hero-media], figure.solara-hero-media, .solara-hero-media, .catalog-hero-media")
+        .closest(
+          "[data-hero-media], figure.solara-hero-media, .solara-hero-media, .catalog-hero-media",
+        )
         ?.setAttribute("data-solara-loaded", "true");
     };
     const markBrandBroken = (image: HTMLImageElement): void => {

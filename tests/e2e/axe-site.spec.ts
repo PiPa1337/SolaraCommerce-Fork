@@ -33,9 +33,7 @@ function routesFor(project: (typeof projects)[keyof typeof projects]): string[] 
     product ? `/${product.slice(0, -"index.html".length)}` : "/productos/",
     category ? `/${category.slice(0, -"index.html".length)}` : "/categorias/",
     "/carrito/",
-    "/compra/",
     "/buscar/",
-    "/nosotros/",
   ];
 }
 

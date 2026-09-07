@@ -244,8 +244,6 @@ function routeDescriptors(project: typeof StoreProjectV2Schema._output): PageDes
     descriptor("/buscar/", "search"),
     descriptor("/carrito/", "cart"),
     descriptor("/checkout/", "checkout"),
-    descriptor("/contacto/", "contact"),
-    descriptor("/nosotros/", "about"),
     descriptor("/privacidad/", "legal"),
     descriptor("/terminos/", "legal"),
   );
@@ -632,7 +630,6 @@ describe("auditoría de rendimiento read-only de RM Descartables", () => {
           ["search", "/buscar/"],
           ["cart", "/carrito/"],
           ["checkout", "/checkout/"],
-          ["contact", "/contacto/"],
         ];
         for (const [name, path] of previewRoutes) {
           await measureOperation(

@@ -14,9 +14,9 @@ import {
   productActivationRequirements,
   slugErrorFor,
   slugify,
-  validateProductVideos,
   VARIANT_STOCK_OPTIONS,
   validateDraft,
+  validateProductVideos,
 } from "./productEditorModel";
 
 function baseProduct(overrides: Partial<Product> = {}): Product {
@@ -252,7 +252,8 @@ describe("contrato con el schema del editor (T9)", () => {
     expect(VARIANT_STOCK_OPTIONS).toEqual(VariantSchema.shape.stockStatus.options);
   });
 
-  it("el payload de guardado conserva los ids del draft y los campos del schema", () => {    const draft = baseProduct({ brand: "  Marca con espacios  " });
+  it("el payload de guardado conserva los ids del draft y los campos del schema", () => {
+    const draft = baseProduct({ brand: "  Marca con espacios  " });
     const parsed = ProductSchema.parse({
       ...draft,
       slug: draft.slug.trim(),

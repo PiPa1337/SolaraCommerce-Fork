@@ -47,7 +47,11 @@ const EDITED_RESUMEN = {
   catalogLabel: "Catálogo R8",
   navLabel: "Marcas R8",
   showSearch: false,
-  includeSku: false,
+} as const;
+
+const EXPECTED_PERSISTED_RESUMEN = {
+  ...EDITED_RESUMEN,
+  includeSku: catalogModernStore.whatsapp.includeSku,
 } as const;
 
 /** Proyecto demo en el estado PRE-upgrade: templateVersion 1 y sin la
@@ -311,8 +315,7 @@ async function applyResumenEdits(page: Page): Promise<void> {
   await page.getByLabel("Enlace 1", { exact: true }).fill(EDITED_RESUMEN.navLabel);
   const searchSwitch = page.getByRole("switch", { name: "Mostrar búsqueda" });
   if ((await searchSwitch.getAttribute("aria-checked")) === "true") await searchSwitch.click();
-  const skuSwitch = page.getByRole("switch", { name: "Incluir SKU en el mensaje" });
-  if ((await skuSwitch.getAttribute("aria-checked")) === "true") await skuSwitch.click();
+  await expect(page.getByRole("switch", { name: "Incluir SKU en el mensaje" })).toHaveCount(0);
 }
 
 /** Lee el Resumen completo desde los inputs del panel (contrato de datos UI). */
@@ -330,10 +333,6 @@ async function readResumen(page: Page): Promise<typeof EDITED_RESUMEN> {
     showSearch:
       (await page
         .getByRole("switch", { name: "Mostrar búsqueda" })
-        .getAttribute("aria-checked")) === "true",
-    includeSku:
-      (await page
-        .getByRole("switch", { name: "Incluir SKU en el mensaje" })
         .getAttribute("aria-checked")) === "true",
   } as typeof EDITED_RESUMEN;
 }
@@ -474,7 +473,7 @@ test("persistencia: Guardar (Ctrl+S) conserva los campos tras recargar la app (I
   await flushSave(page);
 
   const stored = await readProjectRecord(page, projectId);
-  expect(stored).toEqual({ ...EDITED_RESUMEN });
+  expect(stored).toEqual({ ...EXPECTED_PERSISTED_RESUMEN });
 
   await page.reload();
   await openStore(page, projectId);
@@ -528,7 +527,7 @@ test("persistencia: el respaldo .solara.json descargado contiene los valores edi
   expect(envelope.project.identity.email).toBe(EDITED_RESUMEN.email);
   expect(envelope.project.whatsapp.phone).toBe(EDITED_RESUMEN.phone);
   expect(envelope.project.whatsapp.greeting).toBe(EDITED_RESUMEN.greeting);
-  expect(envelope.project.whatsapp.includeSku).toBe(false);
+  expect(envelope.project.whatsapp.includeSku).toBe(catalogModernStore.whatsapp.includeSku);
   expect(envelope.project.baseUrl).toBe(EDITED_RESUMEN.baseUrl);
   expect(envelope.project.navigation.catalogLabel).toBe(EDITED_RESUMEN.catalogLabel);
   expect(envelope.project.navigation.showSearch).toBe(false);

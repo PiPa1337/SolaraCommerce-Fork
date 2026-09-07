@@ -119,7 +119,6 @@ function fieldsetOf(input: Locator): Locator {
 
 function themeValuesFromEditor(theme: Theme): Theme {
   return {
-    colorMode: theme.colorMode,
     colors: {
       background: theme.colors.background,
       surface: theme.colors.surface,
@@ -169,9 +168,6 @@ async function readTheme(page: Page): Promise<Theme> {
     colors[key] = await page.getByTestId(`ui-color-text-${key}`).inputValue();
   }
   return {
-    colorMode: (await page
-      .getByLabel("Modo de color", { exact: true })
-      .inputValue()) as Theme["colorMode"],
     colors,
     typography: {
       display: await page.getByTestId("ui-font-display").inputValue(),
@@ -209,14 +205,12 @@ test("Restaurar colores restaura solo el grupo de colores (tipografía y geometr
 
   const opening = await readTheme(page);
 
-  await page.getByLabel("Modo de color", { exact: true }).selectOption("auto");
   await applyEdits(page);
   await expect(page.getByTestId("ui-color-text-accent")).toHaveValue(SALVIA_COLORS.accent);
 
   await page.getByTestId("ui-reset-colors").click();
 
   const restored = await readTheme(page);
-  expect(restored.colorMode).toBe(opening.colorMode);
   expect(restored.colors).toEqual(opening.colors);
   // Los otros grupos conservan la edición: el reset no los pisa.
   expect(restored.typography).toEqual(EDITED_TYPOGRAPHY);

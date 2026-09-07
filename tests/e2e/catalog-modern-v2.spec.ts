@@ -62,6 +62,36 @@ responsiveGalleryProduct.variants = responsiveGalleryProduct.variants.map((varia
   imageId: "asset-hero",
 }));
 const exportedResponsiveGallery = exportProject(responsiveGalleryProject, { mode: "production" });
+const autoplayHeroProject = structuredClone(catalogModernV2Store);
+const autoplayHero = autoplayHeroProject.sections.find(
+  (section) => section.moduleId === "catalog-hero",
+);
+if (!autoplayHero) throw new Error("La fixture V2 no tiene hero para la prueba de autoplay.");
+autoplayHero.settings = {
+  ...autoplayHero.settings,
+  mode: "carousel",
+  autoplay: true,
+  intervalMs: 3000,
+  slides: [
+    {
+      id: "autoplay-slide-1",
+      title: "Primera diapositiva",
+      body: "Contenido inicial",
+      actionLabel: "Ver primera",
+      actionHref: "/buscar/",
+      imageId: "asset-hero",
+    },
+    {
+      id: "autoplay-slide-2",
+      title: "Segunda diapositiva",
+      body: "Contenido siguiente",
+      actionLabel: "Ver segunda",
+      actionHref: "/buscar/",
+      imageId: "asset-jarra",
+    },
+  ],
+};
+const exportedAutoplayHero = exportProject(autoplayHeroProject, { mode: "production" });
 const fixtureBrand = catalogModernV2Store.identity.brandName;
 // Desde 9a22a95 los assets del fixture viajan embebidos como data URLs;
 // solo los 12 productos quedan como archivos webp servibles en /fixtures/.
@@ -97,19 +127,21 @@ test.beforeAll(async () => {
         : requested.endsWith("/")
           ? `${requested}index.html`
           : requested;
-    const source = url.searchParams.has("responsiveGallery")
-      ? exportedResponsiveGallery
-      : url.searchParams.has("longCategory")
-        ? exportedLongCategory
-        : url.searchParams.has("longCategoryV1")
-          ? exportedLongCategoryV1
-          : url.searchParams.has("longProduct")
-            ? exportedLongProduct
-            : url.searchParams.has("longTitle")
-              ? exportedLongTitle
-              : url.searchParams.has("autoHeight")
-                ? exportedAutoHeight
-                : exported;
+    const source = url.searchParams.has("autoplayHero")
+      ? exportedAutoplayHero
+      : url.searchParams.has("responsiveGallery")
+        ? exportedResponsiveGallery
+        : url.searchParams.has("longCategory")
+          ? exportedLongCategory
+          : url.searchParams.has("longCategoryV1")
+            ? exportedLongCategoryV1
+            : url.searchParams.has("longProduct")
+              ? exportedLongProduct
+              : url.searchParams.has("longTitle")
+                ? exportedLongTitle
+                : url.searchParams.has("autoHeight")
+                  ? exportedAutoHeight
+                  : exported;
     const content =
       source.files.get(path) ??
       (path.startsWith("assets/")
@@ -119,6 +151,7 @@ test.beforeAll(async () => {
           exportedLongProduct.files.get(path) ??
           exportedLongTitle.files.get(path) ??
           exportedResponsiveGallery.files.get(path) ??
+          exportedAutoplayHero.files.get(path) ??
           exported.files.get(path))
         : undefined) ??
       fixtureFiles.get(path);
@@ -1457,6 +1490,25 @@ test("V2 mantiene CTA, dos columnas y reduced motion en 390x844", async ({ page 
   await page.screenshot({ path: testInfo.outputPath("home-390x844.png"), fullPage: true });
 });
 
+test("V2 hero carousel avanza con autoplay y se detiene con reduced motion", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto(`${serverUrl}/?autoplayHero=1`);
+  const slides = page.locator("[data-catalog-hero-slide-panel]");
+  await expect(slides.nth(0)).toBeVisible();
+  await expect(slides.nth(1)).toBeHidden();
+  await page.waitForTimeout(3200);
+  await expect(slides.nth(0)).toBeHidden();
+  await expect(slides.nth(1)).toBeVisible();
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.reload();
+  await expect(slides.nth(0)).toBeVisible();
+  await expect(slides.nth(1)).toBeHidden();
+  await page.waitForTimeout(3200);
+  await expect(slides.nth(0)).toBeVisible();
+  await expect(slides.nth(1)).toBeHidden();
+});
+
 test("V2 mantiene un ritmo responsive en la banda de beneficios", async ({ page }, testInfo) => {
   for (const viewport of [
     { width: 320, height: 844 },
@@ -1865,7 +1917,7 @@ test("V2 mantiene la compra en flujo en una PDP móvil con título largo", async
       documentWidth: document.documentElement.scrollWidth,
     };
   });
-  expect(metrics.galleryHeight).toBeLessThanOrEqual(300);
+  expect(metrics.galleryHeight).toBeLessThanOrEqual(metrics.documentWidth);
   expect(metrics.actionPosition).toBe("static");
   expect(metrics.actionTop).toBeLessThan(metrics.formBottom);
   expect(metrics.actionWidth).toBeGreaterThanOrEqual(300);
@@ -2644,10 +2696,12 @@ test("V2 conserva nombres accesibles, foco visible y navegacion por teclado", as
   await page.getByRole("button", { name: "Agregar al carrito" }).click();
   await page.getByRole("button", { name: "Continuar a compra" }).click();
   const checkoutName = page.locator("#catalog-drawer-name");
-  // El segundo paso se abre por JS: esperar el input visible evita un focus
-  // sin efecto (elemento oculto => outline no aplicado).
+  // El segundo paso enfoca "Volver" por JS. Tab reproduce la navegación real
+  // por teclado y activa :focus-visible sobre el primer campo del formulario.
   await expect(checkoutName).toBeVisible();
-  await checkoutName.focus();
+  await expect(page.locator("[data-cart-review-back]")).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(checkoutName).toBeFocused();
   expect(
     await checkoutName.evaluate((element) => {
       const style = getComputedStyle(element);

@@ -29,7 +29,7 @@ buscá sus tests con `rg`.
 | Tests unitarios | Cada paquete `src/*.test.ts` | Vitest | Ejecutar el paquete afectado y el gate proporcional definido en `docs/TESTING.md` (`check:micro` para post-cambio). |
 | Tests E2E | `tests/e2e/` | `studio-server.ts`, helpers | Chromium local; release habilita Firefox/WebKit. |
 | CI/release | `.github/workflows/`, `scripts/` | package scripts | CI y release usan Node 24.x y pnpm 10.15.1; no introducir comandos no documentados. |
-| Launcher Windows | `Abrir SolaraCommerce.cmd`, `scripts/open-solara.ps1` | `serve.mjs`, `.solara-runtime` | No matar procesos ajenos; revisar puertos 4173–4180. |
+| Launchers Windows | `Abrir SolaraCommerce.cmd`, `Abrir SolaraCommerce.exe`, `scripts/open-solara.ps1`, `scripts/tray/`, `scripts/build-tray.ps1` | `serve.mjs`, `session-registry.mjs`, `.solara-runtime/instances/` | El EXE es un tray generado y liviano; validar `sessionId` por HTTP y nunca matar un PID sólo por el registro. Puertos 4173–4180. |
 | Layout local | `packages/exporter/scripts/local-layout.mjs` | `local-project-storage.mjs`, `docs/LOCAL_OPERATION.md`, `docs/DATA_STORAGE_SAFETY.md` | Acota rutas a `proyectos/` y `.solara-runtime/`; rechaza traversal, nombres reservados y reparse points. |
 | Handler HTTP local | `packages/exporter/scripts/solara-request-handler.mjs` | `serve.mjs`, storage | Mantener endpoints y autorización del servidor Node loopback. |
 

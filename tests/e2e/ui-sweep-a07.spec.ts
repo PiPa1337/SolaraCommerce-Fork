@@ -316,23 +316,21 @@ test("los acordeones y switches reflejan su estado y persisten (capa 2)", async 
   await expect(identityToggle).toHaveAttribute("aria-expanded", "true");
   await expect(identityPanel).toBeVisible();
 
-  // Switches: la plantilla limpia arranca con includeSku y búsqueda activados;
-  // alternar refleja aria-checked y el cambio persiste entre pestañas.
+  // Switches activos: búsqueda y carrito. includeSku queda sólo como campo
+  // legacy del schema y ya no se expone como control editable.
   // Nota: los nombres usan exact:true — "Mostrar carrito" es substring de
   // "Mostrar carrito lateral" y getByRole matchea por substring por defecto.
-  const skuSwitch = page.getByRole("switch", { name: "Incluir SKU en el mensaje", exact: true });
   const searchSwitch = page.getByRole("switch", { name: "Mostrar búsqueda", exact: true });
   const cartSwitch = page.getByRole("switch", { name: "Mostrar carrito", exact: true });
-  await expect(skuSwitch).toHaveAttribute("aria-checked", "true");
+  await expect(
+    page.getByRole("switch", { name: "Incluir SKU en el mensaje", exact: true }),
+  ).toHaveCount(0);
   await expect(searchSwitch).toHaveAttribute("aria-checked", "true");
-  await skuSwitch.click();
   await searchSwitch.click();
-  await expect(skuSwitch).toHaveAttribute("aria-checked", "false");
   await expect(searchSwitch).toHaveAttribute("aria-checked", "false");
 
   await openStudioTab(page, "Preparar");
   await openStudioTab(page, "Resumen");
-  await expect(skuSwitch).toHaveAttribute("aria-checked", "false");
   await expect(searchSwitch).toHaveAttribute("aria-checked", "false");
   await expect(cartSwitch).toHaveAttribute("aria-checked", "true");
 });

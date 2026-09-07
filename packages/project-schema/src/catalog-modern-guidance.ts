@@ -3,8 +3,6 @@ import type { Category, ImageAsset, Product, StoreProjectV2, StoreSection } from
 export type ContentRequirementScope =
   | "identity"
   | "home"
-  | "about"
-  | "contact"
   | "navigation"
   | "category"
   | "product"
@@ -329,32 +327,6 @@ export function getCatalogModernContentRequirements(project: StoreProjectV2): Co
       value: setting(project, "modo-section-categories", "title"),
       active: activeCategories(project).length > 0,
     }),
-    ...(project.pages.some((page) => page.kind === "about")
-      ? [
-          requirement(project, {
-            id: "about.title",
-            scope: "about" as const,
-            role: "headline" as const,
-            label: "Título de Nosotros",
-            target: "pages.about.title",
-            severity: "critical" as const,
-            value: project.pages.find((page) => page.kind === "about")?.title ?? "",
-          }),
-        ]
-      : []),
-    ...(project.pages.some((page) => page.kind === "contact")
-      ? [
-          requirement(project, {
-            id: "contact.title",
-            scope: "contact" as const,
-            role: "headline" as const,
-            label: "Título de Contacto",
-            target: "pages.contact.title",
-            severity: "critical" as const,
-            value: project.pages.find((page) => page.kind === "contact")?.title ?? "",
-          }),
-        ]
-      : []),
     requirement(project, {
       id: "seo.title",
       scope: "seo",

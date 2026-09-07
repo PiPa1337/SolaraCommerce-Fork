@@ -1,7 +1,7 @@
 import {
+  assetUrl,
   type CanvasBinding,
   type CanvasEditorContext,
-  assetUrl,
   canvasEntityAttributes,
   canvasImageAttributes,
   canvasRepeaterItemAttributes,
@@ -282,12 +282,10 @@ export const editorialHeader: ModuleDefinition<
     const canvas = legacyCanvasContext(context);
     const navigation = context.project.navigation;
     const isV2 = context.project.commerceTemplates.designFamily === "catalog-modern-v2";
-    const showContact = !isV2 && navigation.showContact;
-    const showAbout = !isV2 && navigation.showAbout;
     const publishedNavigationItems = navigation.items.flatMap((item) => {
       const normalizeHref = (href: string | undefined): string | undefined => {
-        if (isV2 && /^\/contacto\/?$/i.test(href ?? "")) return "/#contact-form";
-        if (isV2 && /^\/nosotros\/?$/i.test(href ?? "")) return undefined;
+        if (/^\/contacto\/?$/i.test(href ?? "")) return "/#contact-form";
+        if (/^\/nosotros\/?$/i.test(href ?? "")) return undefined;
         if (isV2 && /^\/compra\/?$/i.test(href ?? "")) return "/#contact-form";
         if (isV2 && /^\/(envios|devoluciones)\/?$/i.test(href ?? "")) return undefined;
         return href;
@@ -327,12 +325,8 @@ export const editorialHeader: ModuleDefinition<
     const catalogCurrent = ["category", "collection"].includes(context.pageType)
       ? ' aria-current="page"'
       : "";
-    const contactCurrent = context.pageType === "contact" ? ' aria-current="page"' : "";
-    const aboutCurrent = context.pageType === "about" ? ' aria-current="page"' : "";
     const searchCurrent = context.pageType === "search" ? ' aria-current="page"' : "";
-    const cartCurrent = ["cart", "checkout"].includes(context.pageType)
-      ? ' aria-current="page"'
-      : "";
+    const cartCurrent = context.pageType === "cart" ? ' aria-current="page"' : "";
     const catalogClass =
       publishedNavigationItems.length > 6
         ? "solara-nav-dropdown solara-nav-dropdown--wide"
@@ -340,7 +334,7 @@ export const editorialHeader: ModuleDefinition<
     const catalog = context.settings.showCategories
       ? `<details class="${catalogClass}"><summary${catalogCurrent}${canvasTextAttributes(canvas, "catalogLabel", 100)}>${escapeHtml(navigation.catalogLabel || context.settings.catalogLabel)}</summary><ul>${nestedItems || `<li><a href="${escapeAttribute(safeUrl(context.settings.catalogHref))}">${escapeHtml(context.settings.catalogLabel)}</a></li>`}</ul></details>`
       : `<a href="${escapeAttribute(safeUrl(context.settings.catalogHref))}"${catalogCurrent}${canvasTextAttributes(canvas, "catalogLabel", 100)}>${escapeHtml(navigation.catalogLabel || context.settings.catalogLabel)}</a>`;
-    const nav = `${navigation.showHome ? `<a href="/"${homeCurrent}>${escapeHtml(copy.navigation.home)}</a>` : ""}${catalog}${showContact ? `<a href="/contacto/"${contactCurrent}>${escapeHtml(copy.navigation.contact)}</a>` : ""}${showAbout ? `<a href="/nosotros/"${aboutCurrent}>${escapeHtml(copy.navigation.about)}</a>` : ""}`;
+    const nav = `${navigation.showHome ? `<a href="/"${homeCurrent}>${escapeHtml(copy.navigation.home)}</a>` : ""}${catalog}`;
     const actions = `${navigation.showSearch && context.project.commerceTemplates.search.enabled ? `<a class="solara-search-trigger" href="/buscar/" aria-label="${escapeAttribute(copy.navigation.search)}"${searchCurrent}>${escapeHtml(copy.navigation.search)}</a>` : ""}${navigation.showCart && context.project.siteShell.cart && (context.project.commerceTemplates.cart.enabled || context.project.commerceTemplates.checkout.enabled) ? `<button class="solara-cart-trigger" type="button" data-solara-cart-open data-open-cart data-cart-label="${escapeAttribute(context.settings.cartLabel || copy.navigation.cart)}" aria-controls="solara-cart" aria-expanded="false"${cartCurrent}${canvasTextAttributes(canvas, "cartLabel", 80)}>${escapeHtml(context.settings.cartLabel || copy.navigation.cart)} <span data-solara-cart-count data-cart-count aria-live="polite">0</span></button>` : ""}`;
     return moduleRoot(
       "editorial-header",

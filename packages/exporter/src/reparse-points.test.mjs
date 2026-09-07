@@ -4,8 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
-import { createLocalProjectStorage } from "../scripts/local-project-storage.mjs";
 import { assertNoReparsePoints } from "../scripts/local-layout.mjs";
+import { createLocalProjectStorage } from "../scripts/local-project-storage.mjs";
 
 const execFileAsync = promisify(execFile);
 

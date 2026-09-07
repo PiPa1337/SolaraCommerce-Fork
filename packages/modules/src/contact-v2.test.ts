@@ -3,248 +3,72 @@ import { describe, expect, it } from "vitest";
 import {
   contactChannels,
   contactChannelsSettings,
-  contactFaqSettings,
+  contactForm,
   contactFormSettings,
-  contactHelpGridSettings,
-  contactHero,
-  contactHeroSettings,
-  contactLocation,
-  contactLocationSettings,
-  contactPurchaseInfoSettings,
   contactV2ModuleIds,
   contactV2Modules,
-  contactWhatsappCtaSettings,
 } from "./contact-v2";
 import { getModuleDefinition, isModuleAvailableOnPage } from "./index";
 
-const renderSection = catalogModernV2Store.sections[0];
-if (!renderSection) throw new Error("Fixture sin sección para renderizar Contacto V2");
+const baseSection = catalogModernV2Store.sections[0];
+if (!baseSection) throw new Error("Fixture sin sección para probar contacto en Home");
 
-describe("Contacto V2 module contracts", () => {
-  it("registra los ocho módulos independientes", () => {
-    expect(contactV2Modules).toHaveLength(8);
-    expect(contactV2ModuleIds).toEqual(
-      new Set([
-        "contact-hero",
-        "contact-form",
-        "contact-channels",
-        "contact-help-grid",
-        "contact-whatsapp-cta",
-        "contact-purchase-info",
-        "contact-faq",
-        "contact-location",
-      ]),
-    );
+describe("Contacto en Home", () => {
+  it("registra únicamente formulario y canales", () => {
+    expect(contactV2Modules).toHaveLength(2);
+    expect(contactV2ModuleIds).toEqual(new Set(["contact-form", "contact-channels"]));
   });
 
-  it("conserva Contacto V2 sólo para lectura y mantiene el formulario de Home", () => {
-    const hero = getModuleDefinition("contact-hero");
+  it("expone ambos módulos sólo como secciones de Home", () => {
     const form = getModuleDefinition("contact-form");
     const channels = getModuleDefinition("contact-channels");
-    const newsletter = getModuleDefinition("catalog-newsletter-cta");
-    if (!hero || !form || !channels || !newsletter) throw new Error("Faltan módulos registrados");
-    expect(isModuleAvailableOnPage(hero, "contact", "catalog-modern-v2")).toBe(false);
-    expect(isModuleAvailableOnPage(hero, "home", "catalog-modern-v2")).toBe(false);
+    if (!form || !channels) throw new Error("Faltan módulos de contacto en Home");
     expect(isModuleAvailableOnPage(form, "home", "catalog-modern-v2")).toBe(true);
     expect(isModuleAvailableOnPage(channels, "home", "catalog-modern-v2")).toBe(true);
-    expect(isModuleAvailableOnPage(hero, "contact", "catalog-modern-v1")).toBe(false);
-    expect(isModuleAvailableOnPage(newsletter, "contact", "catalog-modern-v2")).toBe(false);
   });
 
-  it("hace que el CTA de novedades llegue al formulario desde cualquier ruta", () => {
-    const newsletter = getModuleDefinition("catalog-newsletter-cta");
-    if (!newsletter?.render) throw new Error("Falta el módulo catalog-newsletter-cta");
-    const section = {
-      ...renderSection,
-      moduleId: "catalog-newsletter-cta" as const,
-    };
+  it("mantiene los defaults comerciales del formulario", () => {
+    const defaults = contactFormSettings.parse({});
+    expect(defaults.showPhone).toBe(true);
+    expect(defaults.reasonOptions.length).toBeGreaterThan(0);
+    expect(defaults.emailActionLabel).toBe("Enviar por Email");
+    expect(defaults.whatsappActionLabel).toBe("Enviar por WhatsApp");
+    expect(contactFormSettings.safeParse({ reasonOptions: [] }).success).toBe(false);
+    expect(contactChannelsSettings.parse({}).showWhatsapp).toBe(true);
+  });
+
+  it("renderiza el formulario accesible con email y WhatsApp", () => {
+    const section = { ...baseSection, moduleId: "contact-form" as const };
     const html = String(
-      newsletter.render({
+      contactForm.render?.({
         project: catalogModernV2Store,
         section,
-        settings: newsletter.settingsSchema.parse({ actionHref: "#contact-form" }),
-        pageType: "product",
-      }),
-    );
-
-    expect(html).toContain('class="catalog-newsletter-action" href="/#contact-form"');
-    expect(html).not.toContain('href="#contact-form"');
-  });
-
-  it("aplica los defaults comerciales y los límites de repeaters", () => {
-    expect(contactHeroSettings.parse({}).title).toBe("Estamos para ayudarte.");
-    expect(contactHeroSettings.parse({}).imageAssetId).toBe("asset-contact-hero");
-    expect(contactHeroSettings.parse({}).quickLinks).toHaveLength(0);
-    expect(contactHelpGridSettings.parse({}).items).toHaveLength(4);
-    expect(contactPurchaseInfoSettings.parse({}).items).toHaveLength(3);
-    expect(contactFaqSettings.parse({}).items).toHaveLength(6);
-    expect(contactChannelsSettings.parse({}).showWhatsapp).toBe(true);
-    expect(contactFormSettings.parse({}).showPhone).toBe(true);
-    expect(contactFormSettings.parse({}).reasonOptions.length).toBeGreaterThan(0);
-    expect(contactFormSettings.safeParse({ reasonOptions: [] }).success).toBe(false);
-    expect(contactFormSettings.parse({}).emailActionLabel).toBe("Enviar por Email");
-    expect(contactFormSettings.parse({}).whatsappActionLabel).toBe("Enviar por WhatsApp");
-    expect(contactWhatsappCtaSettings.parse({}).actionLabel).toBe("Iniciar conversación");
-    expect(contactLocationSettings.parse({}).enabled).toBe(false);
-    expect(
-      contactHelpGridSettings.safeParse({ items: Array.from({ length: 5 }, () => ({})) }).success,
-    ).toBe(false);
-    expect(
-      contactPurchaseInfoSettings.safeParse({ items: Array.from({ length: 4 }, () => ({})) })
-        .success,
-    ).toBe(false);
-    expect(
-      contactFaqSettings.safeParse({ items: Array.from({ length: 9 }, () => ({})) }).success,
-    ).toBe(false);
-  });
-
-  it("usa la etiqueta global, el repeater de motivos y el fallback sin JS", () => {
-    const project = structuredClone(catalogModernV2Store);
-    project.publicCopy.contact.reasonLabel = "Tipo de consulta";
-    project.publicCopy.contact.javascriptFallback = "Consultá por los canales publicados.";
-    const form = getModuleDefinition("contact-form");
-    if (!form?.render) throw new Error("Falta el módulo contact-form");
-    const html = String(
-      form.render({
-        project,
-        section: renderSection,
         settings: contactFormSettings.parse({
           reasonOptions: [{ id: "catalog", label: "Catálogo" }],
         }),
         pageType: "home",
       }),
     );
-    expect(html).toContain("Tipo de consulta");
-    expect(html).toContain('<option value="catalog"');
-    expect(html).toContain("Consultá por los canales publicados.");
-  });
 
-  it("renderiza el hero con accesos rápidos semánticos", () => {
-    const settings = contactHeroSettings.parse({
-      quickLinks: [
-        {
-          id: "quick-test",
-          icon: "chat",
-          title: "Acceso de prueba",
-          body: "Texto de prueba",
-          href: "#contact-form",
-          actionLabel: "Consultar",
-        },
-      ],
-    });
-    const html = String(
-      contactHero.render?.({
-        project: catalogModernV2Store,
-        section: renderSection,
-        settings,
-        pageType: "contact",
-      }),
-    );
-    expect(html).toContain('data-solara-module="contact-hero"');
-    expect(html).toContain("Estamos para");
-    expect(html).toContain("ayudarte.");
-    expect(html).toContain("Acceso de prueba");
-    expect(html).toContain('data-motion-zone="items"');
-    expect(html).toContain('class="catalog-hero-inner contact-hero"');
-    expect(html).toContain('class="catalog-hero-media contact-hero-media"');
-    expect(html).toContain('class="catalog-hero-background"');
-    expect(html).not.toContain("catalog-hero-benefits--copy");
-    expect(html).not.toContain("catalog-hero-benefits--band");
-    expect(html).not.toContain("<video");
-    expect(html).toContain("images.unsplash.com");
-  });
-
-  it("omite el contenedor de accesos rápidos cuando el hero no tiene enlaces", () => {
-    const html = String(
-      contactHero.render?.({
-        project: catalogModernV2Store,
-        section: renderSection,
-        settings: contactHeroSettings.parse({}),
-        pageType: "contact",
-      }),
-    );
-    expect(html).not.toContain("contact-quick-links");
-  });
-
-  it("renderiza el formulario con destino de email y feedback accesible", () => {
-    const form = getModuleDefinition("contact-form");
-    if (!form?.render) throw new Error("Falta el módulo contact-form");
-    const html = String(
-      form.render({
-        project: catalogModernV2Store,
-        section: renderSection,
-        settings: contactFormSettings.parse({}),
-        pageType: "home",
-      }),
-    );
     expect(html).toContain("data-solara-contact-form");
     expect(html).toContain(`data-contact-email="${catalogModernV2Store.identity.email}"`);
-    expect(html).toContain(
-      `data-contact-whatsapp="${catalogModernV2Store.whatsapp.phone.replace(/\\D/g, "")}"`,
-    );
-    expect(html).toContain(`action="mailto:${catalogModernV2Store.identity.email}`);
+    expect(html).toContain('<option value="catalog"');
     expect(html).toContain('data-contact-channel="email"');
     expect(html).toContain('data-contact-channel="whatsapp"');
-    expect(html).toContain(
-      'class="catalog-primary-action solara-primary-action contact-form-whatsapp"',
-    );
-    expect(html).toContain("Enviar por Email");
-    expect(html).toContain("Enviar por WhatsApp");
-    expect(html).not.toContain("Motivo");
-    expect(html).not.toContain("N\u00famero de pedido");
     expect(html).toContain("data-contact-status");
   });
 
-  it("apunta dirección y horarios al contacto disponible en la página actual", () => {
-    const settings = contactChannelsSettings.parse({});
-    const renderChannels = (
-      project: typeof catalogModernV2Store,
-      pageType: "home" | "contact",
-    ): string =>
-      String(
-        contactChannels.render?.({
-          project,
-          section: renderSection,
-          settings,
-          pageType,
-        }),
-      );
-
-    const withoutLocation = renderChannels(catalogModernV2Store, "home");
-    expect(withoutLocation).toContain('href="#contact-form"');
-    expect(withoutLocation).not.toContain('href="#contact-location"');
-
-    const withLocation = structuredClone(catalogModernV2Store);
-    const homeLocation = withLocation.pages
-      .find((page) => page.kind === "contact")
-      ?.sections.find((section) => section.moduleId === "contact-location");
-    if (!homeLocation) throw new Error("Fixture sin sección de ubicación de contacto");
-    homeLocation.enabled = true;
-    homeLocation.settings = {
-      ...homeLocation.settings,
-      enabled: true,
-      address: "Av. de prueba 123",
-    };
-    withLocation.sections.push(structuredClone(homeLocation));
-
-    const homeWithLocation = renderChannels(withLocation, "home");
-    expect(homeWithLocation).toContain('href="#contact-location"');
-    expect(homeWithLocation).not.toContain('href="#contact-form"');
-
-    const contactWithLocation = renderChannels(withLocation, "contact");
-    expect(contactWithLocation).toContain('href="#contact-location"');
-  });
-
-  it("no renderiza ubicación desactivada ni deja markup vacío", () => {
-    const settings = contactLocationSettings.parse({});
+  it("los canales enlazan al formulario de la página actual", () => {
+    const section = { ...baseSection, moduleId: "contact-channels" as const };
     const html = String(
-      contactLocation.render?.({
+      contactChannels.render?.({
         project: catalogModernV2Store,
-        section: renderSection,
-        settings,
-        pageType: "contact",
+        section,
+        settings: contactChannelsSettings.parse({}),
+        pageType: "home",
       }),
     );
-    expect(html).toBe("");
+    expect(html).toContain('href="#contact-form"');
+    expect(html).not.toContain("/contacto/");
   });
 });

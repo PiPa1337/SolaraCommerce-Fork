@@ -30,7 +30,6 @@ const routes = [
   "/colecciones/casa-serena/",
   "/buscar/",
   "/carrito/",
-  "/compra/",
   "/ruta-inexistente/",
 ];
 

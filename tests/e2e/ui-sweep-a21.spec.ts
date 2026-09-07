@@ -309,9 +309,11 @@ async function failRendererChunk(page: Page): Promise<void> {
   // disparo: un abort no consume el bloqueo del chunk del exporter.
   const assetsDirectory = resolve("apps/studio/dist/assets");
   const entryScripts = new Set(
-    [...readFileSync(resolve("apps/studio/dist/index.html"), "utf8").matchAll(/assets\/[^"']+\.js/g)].map(
-      (match) => `/${match[0]}`,
-    ),
+    [
+      ...readFileSync(resolve("apps/studio/dist/index.html"), "utf8").matchAll(
+        /assets\/[^"']+\.js/g,
+      ),
+    ].map((match) => `/${match[0]}`),
   );
   const rendererPaths = new Set(
     readdirSync(assetsDirectory)

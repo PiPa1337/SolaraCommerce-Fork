@@ -9,7 +9,7 @@ export function destinationFor(scope: ContentRequirementScope): GuidedDestinatio
   if (scope === "asset") return "assets";
   if (scope === "seo") return "seo";
   if (scope === "domain") return "overview";
-  if (scope === "identity" || scope === "navigation" || scope === "about" || scope === "contact") {
+  if (scope === "identity" || scope === "navigation") {
     return "overview";
   }
   return "builder";

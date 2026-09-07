@@ -99,8 +99,6 @@ describe("galería con video", () => {
         return [];
       },
     };
-    expect(() =>
-      selectGalleryMedia(root as unknown as HTMLElement, "vid-1"),
-    ).not.toThrow();
+    expect(() => selectGalleryMedia(root as unknown as HTMLElement, "vid-1")).not.toThrow();
   });
 });

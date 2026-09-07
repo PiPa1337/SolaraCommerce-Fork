@@ -56,7 +56,9 @@ test("a11y: landmarks, headings y skip link", async ({ page }) => {
     const h1Text = await page.locator("h1").first().textContent();
     expect(h1Text?.trim().length).toBeGreaterThan(0);
     // breadcrumbs have aria-label
-    await expect(page.locator('nav[aria-label="Migas de pan"]').first()).toBeHidden({ timeout: 100 });
+    await expect(page.locator('nav[aria-label="Migas de pan"]').first()).toBeHidden({
+      timeout: 100,
+    });
     // on category page, breadcrumbs should exist
     const categoryPath = [...exported.files.keys()].find((p) => p.startsWith("categorias/"));
     if (categoryPath) {

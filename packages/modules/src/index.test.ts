@@ -12,7 +12,6 @@ import { referenceStore } from "@solara/project-schema/fixture";
 import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import {
-  aboutV2Modules,
   catalogModernModules,
   contactV2Modules,
   createModuleSection,
@@ -789,12 +788,9 @@ describe("registro de módulos tipado", () => {
   });
 
   it("mantiene ids únicos en el registro", () => {
-    const ids = [
-      ...officialModules,
-      ...catalogModernModules,
-      ...contactV2Modules,
-      ...aboutV2Modules,
-    ].map((definition) => definition.manifest.id);
+    const ids = [...officialModules, ...catalogModernModules, ...contactV2Modules].map(
+      (definition) => definition.manifest.id,
+    );
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toContain("catalog-hero");
   });
@@ -1873,33 +1869,24 @@ describe("auditoría Resumen — fixes Ola 3 (navegación y footer moderno)", ()
 
     // Con items editados: el renderer los usa aunque el modo siga automatic.
     project.navigation.items = [
-      { id: "nav-manual", label: "Enlace manual", href: "/contacto/" },
-      { id: "nav-manual-2", label: "Segundo enlace", href: "/envios/" },
+      { id: "nav-manual", label: "Enlace manual", href: "/envios/" },
+      { id: "nav-manual-2", label: "Segundo enlace", href: "/buscar/" },
     ];
     const editorHtml = renderSections(project, [headerSection], { pageType: "home" });
-    expect(editorHtml).toContain('class="catalog-mega-group__link" href="/contacto/"');
     expect(editorHtml).toContain('class="catalog-mega-group__link" href="/envios/"');
+    expect(editorHtml).toContain('class="catalog-mega-group__link" href="/buscar/"');
     expect(editorHtml).toContain("Enlace manual");
     expect(editorHtml).not.toContain('href="/categorias/remeras/"');
   });
 
-  it("V2 redirige Contacto al bloque de Home y omite Nosotros archivado", () => {
+  it("V2 enlaza Contacto directamente al bloque de Home", () => {
     const project = structuredClone(catalogModernV2Store);
     project.navigation = {
       ...project.navigation,
       mode: "curated",
       items: [
-        { id: "nav-contact-v2", label: "Contacto", href: "/contacto/" },
-        { id: "nav-about-v2", label: "Nosotros", href: "/nosotros/" },
-        {
-          id: "nav-help-v2",
-          label: "Ayuda",
-          href: "/envios/",
-          children: [
-            { id: "nav-child-contact-v2", label: "Contacto", href: "/contacto/" },
-            { id: "nav-child-about-v2", label: "Nosotros", href: "/nosotros/" },
-          ],
-        },
+        { id: "nav-contact-v2", label: "Contacto", href: "/#contact-form" },
+        { id: "nav-help-v2", label: "Ayuda", href: "/envios/" },
       ],
     };
 
@@ -1914,7 +1901,7 @@ describe("auditoría Resumen — fixes Ola 3 (navegación y footer moderno)", ()
     expect(html).not.toContain('href="/envios/"');
     expect(html).not.toContain('href="/contacto/"');
     expect(html).not.toContain('href="/nosotros/"');
-    expect(html).not.toContain(">Nosotros</a>");
+    expect(html).not.toContain('href="/compra/"');
   });
 
   it("la plantilla limpia (automatic, sin items ni categorías) conserva el fallback a /buscar/", () => {

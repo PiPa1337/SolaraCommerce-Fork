@@ -16,10 +16,8 @@ test("una tienda limpia exporta un sitio sin el teléfono de plantilla", () => {
   expect(home).not.toContain("data-whatsapp=");
   expect(home).not.toContain("data-whatsapp-greeting=");
   expect(home).not.toContain("data-whatsapp-include-sku=");
-  expect(String(exported.files.get("contacto/index.html"))).not.toContain("wa.me");
-  const checkout = String(exported.files.get("compra/index.html"));
-  expect(checkout).not.toContain(PLACEHOLDER);
-  expect(checkout).not.toContain("data-whatsapp-link");
+  expect(exported.files.has("contacto/index.html")).toBe(false);
+  expect(exported.files.has("compra/index.html")).toBe(false);
 });
 
 test("un proyecto con teléfono sentinel no publica el número ni en el detalle de producto", () => {
@@ -43,5 +41,5 @@ test("la demo con teléfono real conserva el contrato data-whatsapp del sitio", 
   expect(home).toContain(
     `data-whatsapp-greeting="Hola ${catalogModernStore.identity.brandName}, quiero hacer este pedido:"`,
   );
-  expect(home).toContain('data-whatsapp-include-sku="true"');
+  expect(home).not.toContain("data-whatsapp-include-sku=");
 });

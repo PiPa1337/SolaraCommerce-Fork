@@ -209,17 +209,16 @@ function collectReferencedAssetIds(
   }
 }
 
-/** Retira del demo reservado los datos de las páginas editoriales eliminadas. */
+/** Retira del demo reservado los assets heredados de las páginas editoriales eliminadas. */
 export function removeRetiredDemoEditorialData(project: StoreProjectV1): StoreProjectV1 {
   if (project.id !== SCALE_DEMO_PROJECT_ID || project.origin?.seed !== "placeholder") {
     return project;
   }
 
-  const pages = project.pages.filter((page) => page.kind !== "about" && page.kind !== "contact");
   const referencedAssetIds = new Set<string>();
   collectReferencedAssetIds(
     {
-      pages,
+      pages: project.pages,
       sections: project.sections,
       products: project.products,
       categories: project.categories,
@@ -234,7 +233,6 @@ export function removeRetiredDemoEditorialData(project: StoreProjectV1): StorePr
   );
 
   if (
-    pages.length === project.pages.length &&
     assets.length === project.assets.length &&
     assets.every((asset, index) => asset.id === project.assets[index]?.id)
   ) {
@@ -243,7 +241,6 @@ export function removeRetiredDemoEditorialData(project: StoreProjectV1): StorePr
 
   return StoreProjectV1Schema.parse({
     ...project,
-    pages,
     assets,
     updatedAt: new Date().toISOString(),
   });
@@ -1380,6 +1377,39 @@ export async function duplicateProject(id: string): Promise<StoreProjectV1> {
     now: timestamp,
   });
   return saveProject(project);
+}
+
+/** Importa un respaldo como una tienda nueva sin sobrescribir su proyecto de origen. */
+export async function importProject(project: StoreProjectV1): Promise<StoreProjectV1> {
+  const source = StoreProjectV1Schema.parse(project);
+  const timestamp = new Date().toISOString();
+  const suffix = crypto.randomUUID();
+  const slug = slugify(`${source.slug}-importada`, suffix.slice(0, 6));
+  const imported = cloneProjectFromTemplate(source, {
+    id: `store-${suffix}`,
+    name: source.name,
+    slug,
+    baseUrl: `https://${slug}.example`,
+    now: timestamp,
+  });
+  return saveProject(
+    StoreProjectV1Schema.parse({
+      ...imported,
+      identity: {
+        ...imported.identity,
+        legalName: source.identity.legalName,
+        email: source.identity.email,
+        phone: source.identity.phone,
+        address: source.identity.address,
+      },
+      whatsapp: {
+        ...imported.whatsapp,
+        phone: source.whatsapp.phone,
+        greeting: source.whatsapp.greeting,
+        includeSku: source.whatsapp.includeSku,
+      },
+    }),
+  );
 }
 
 export async function setProjectArchived(id: string, archived: boolean): Promise<void> {

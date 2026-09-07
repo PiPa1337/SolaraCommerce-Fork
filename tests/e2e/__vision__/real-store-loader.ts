@@ -54,9 +54,6 @@ export function loadStore(label: string, dir: string): LoadedStore {
   for (const [name, path] of [
     ["busqueda", "/buscar/?q=a"],
     ["carrito-vacio", "/carrito/"],
-    ["checkout-vacio", "/checkout/"],
-    ["contacto", "/contacto/"],
-    ["nosotros", "/nosotros/"],
     ["privacidad", "/privacidad/"],
     ["terminos", "/terminos/"],
     ["404", "/ruta-inexistente-de-vision/"],

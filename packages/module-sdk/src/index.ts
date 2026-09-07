@@ -34,11 +34,8 @@ export type RenderPageType =
   | "collection"
   | "product"
   | "content"
-  | "about"
-  | "contact"
   | "search"
-  | "cart"
-  | "checkout";
+  | "cart";
 
 export interface ModuleManifest<Id extends string = string> {
   id: Id;

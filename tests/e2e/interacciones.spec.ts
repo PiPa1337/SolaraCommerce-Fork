@@ -70,7 +70,10 @@ test("P8-7: agregar al carrito y navegar sin errores de consola", async ({ brows
     await page.goto(`${serverUrl}/carrito/`, { waitUntil: "networkidle" });
     const cartText = await page.locator("[data-cart-lines]").first().innerText();
     expect(cartText).toContain("Manta Bruma");
-    await page.goto(`${serverUrl}/compra/`, { waitUntil: "networkidle" });
+    await page.locator("button[data-solara-cart-open]").first().click();
+    const drawer = page.locator("[data-cart-drawer]");
+    await expect(drawer).toHaveAttribute("aria-hidden", "false");
+    await expect(drawer.locator("[data-checkout-form]")).toBeVisible();
     await page.close();
     await context.close();
     console.log("P8-7 errores:", JSON.stringify(errors));

@@ -396,23 +396,6 @@ export function auditProject(
     });
   }
 
-  const contactPage = project.pages.find((page) => page.kind === "contact");
-  if (
-    project.commerceTemplates.designFamily !== "catalog-modern-v2" &&
-    contactPage &&
-    contactPage.seoDescription.trim() === project.publicCopy.pages.contactDescription.trim()
-  ) {
-    issues.push({
-      code: "seo.contact-description",
-      severity: "warning",
-      area: "content",
-      message:
-        "La página Contacto usa una descripción genérica; configurá una descripción SEO propia.",
-      path: `pages.${contactPage.id}.seoDescription`,
-      fixTarget: "seo",
-    });
-  }
-
   project.products.forEach((product, productIndex) => {
     if (product.status !== "active") return;
     if (!product.brand.trim()) {

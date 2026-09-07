@@ -91,8 +91,6 @@ describe("producto con videos opcionales", () => {
     store.videos = [video];
     product.videoIds = [video.id];
     const snap1 = buildCommerceSnapshot(store);
-    expect(JSON.stringify(productStructuredData(store, product, snap1))).toContain(
-      "VideoObject",
-    );
+    expect(JSON.stringify(productStructuredData(store, product, snap1))).toContain("VideoObject");
   });
 });

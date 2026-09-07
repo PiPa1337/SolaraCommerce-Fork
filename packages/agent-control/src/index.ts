@@ -336,7 +336,8 @@ function planWarnings(project: StoreProjectV1, diff: PlanDiff): string[] {
   // La plantilla base siembra un catálogo demo y datos de contacto de
   // ejemplo: un clon que no los reemplace se vería terminado sin serlo.
   const hasDemoProducts = project.products.some(
-    (product) => /^product-placeholder-\d+$/.test(product.id) || /^Producto \d+$/.test(product.title),
+    (product) =>
+      /^product-placeholder-\d+$/.test(product.id) || /^Producto \d+$/.test(product.title),
   );
   if (hasDemoProducts) {
     warnings.push(
@@ -2540,7 +2541,8 @@ export class AgentController {
           const category = project.categories.find(
             (candidate) => candidate.id === operation.categoryId,
           );
-          if (!category) fail("CATEGORY_NOT_FOUND", `No existe la categoría ${operation.categoryId}.`);
+          if (!category)
+            fail("CATEGORY_NOT_FOUND", `No existe la categoría ${operation.categoryId}.`);
           if (category.status !== "hidden") {
             fail(
               "CATEGORY_DELETE_REQUIRES_HIDDEN",

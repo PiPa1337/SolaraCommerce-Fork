@@ -235,7 +235,7 @@ test("el destino inválido `//` no persiste y mailto/tel son aceptados", async (
   await newItem.getByLabel("Destino", { exact: true }).fill("//evil.example");
   await newItem.getByLabel("Destino", { exact: true }).blur();
   await expect(
-    newItem.getByRole("alert").getByText("Usá http(s) o una ruta interna (ej. /contacto/)."),
+    newItem.getByRole("alert").getByText("Usá http(s) o una ruta interna (ej. /buscar/)."),
   ).toBeVisible();
 
   const rejected = await pollStoreProject(
@@ -476,7 +476,7 @@ test("tienda nueva (mode automatic): el enlace agregado en Resumen aparece en el
   await page.getByRole("button", { name: "Añadir enlace de catálogo", exact: true }).click();
   const newItem = page.locator(".navigation-editor-item").last();
   await newItem.getByLabel("Enlace 1", { exact: true }).fill("Enlace R4 auto");
-  await newItem.getByLabel("Destino", { exact: true }).fill("/contacto/");
+  await newItem.getByLabel("Destino", { exact: true }).fill("/#contact-form");
   await newItem.getByLabel("Destino", { exact: true }).blur();
   await expect(saveIndicator(page)).toContainText("Cambios guardados", { timeout: 5_000 });
 
@@ -484,7 +484,7 @@ test("tienda nueva (mode automatic): el enlace agregado en Resumen aparece en el
   // editor no lo conmuta; la prioridad la resuelve el renderer).
   const after = await pollStoreProject(page, storeName, (project) =>
     project.navigation.items.some(
-      (item) => item.label === "Enlace R4 auto" && item.href === "/contacto/",
+      (item) => item.label === "Enlace R4 auto" && item.href === "/#contact-form",
     ),
   );
   expect(after.navigation.mode).toBe("automatic");

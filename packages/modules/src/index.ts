@@ -17,7 +17,6 @@ import type {
   StoreProjectV1,
   StoreSection,
 } from "@solara/project-schema";
-import { aboutV2ModuleIds, aboutV2Modules } from "./about-v2";
 import {
   catalogAnnouncement,
   catalogBrandStrip,
@@ -89,8 +88,6 @@ export {
   catalogProductDetail,
   catalogProductGrid,
   catalogTestimonials,
-  aboutV2Modules,
-  aboutV2ModuleIds,
   contactV2Modules,
   contactV2ModuleIds,
 };
@@ -106,8 +103,7 @@ export type RegisteredModule = ModuleDefinition<any, any>;
 export type AnyLegacyModule = (typeof officialModules)[number];
 export type AnyCatalogModernModule =
   | (typeof catalogModernModules)[number]
-  | (typeof contactV2Modules)[number]
-  | (typeof aboutV2Modules)[number];
+  | (typeof contactV2Modules)[number];
 export type AnyModule = AnyLegacyModule | AnyCatalogModernModule;
 export type ModuleId = AnyModule["manifest"]["id"];
 export type ModuleById = { [Id in ModuleId]: Extract<AnyModule, { manifest: { id: Id } }> };
@@ -119,9 +115,10 @@ export function getTypedModule(id: string): RegisteredModule | undefined {
 }
 
 export const moduleRegistry: Record<string, RegisteredModule> = Object.fromEntries(
-  [...officialModules, ...catalogModernModules, ...contactV2Modules, ...aboutV2Modules].map(
-    (definition) => [definition.manifest.id, definition],
-  ),
+  [...officialModules, ...catalogModernModules, ...contactV2Modules].map((definition) => [
+    definition.manifest.id,
+    definition,
+  ]),
 );
 
 export function isLegacyModule(definition: RegisteredModule): boolean {
@@ -146,18 +143,15 @@ export function isModuleAvailableOnPage(
 ): boolean {
   if (!isAddableModule(definition)) return false;
   const moduleId = definition.manifest.id;
-  const isAboutV2 = pageKind === "about" && designFamily === "catalog-modern-v2";
-  const isContactV2 = pageKind === "contact" && designFamily === "catalog-modern-v2";
   const isHomeV2 = pageKind === "home" && designFamily === "catalog-modern-v2";
-  if (isAboutV2 || isContactV2) return false;
   if (isHomeV2) {
     return (
       moduleId === "contact-form" ||
       moduleId === "contact-channels" ||
-      (!aboutV2ModuleIds.has(moduleId) && !contactV2ModuleIds.has(moduleId))
+      !contactV2ModuleIds.has(moduleId)
     );
   }
-  return !aboutV2ModuleIds.has(moduleId) && !contactV2ModuleIds.has(moduleId);
+  return !contactV2ModuleIds.has(moduleId);
 }
 
 export interface PageRenderContext {
