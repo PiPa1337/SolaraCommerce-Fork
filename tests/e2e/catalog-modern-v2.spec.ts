@@ -1798,9 +1798,10 @@ test("V2 audita composición en viewports intermedios", async ({ page }, testInf
     expect(metrics.documentWidth).toBeLessThanOrEqual(viewport.width);
     expect(metrics.heroWidth).toBeLessThanOrEqual(viewport.width);
     expect(metrics.heroActionsBottom).toBeLessThanOrEqual(viewport.height);
-    // 1440 y 1366 quedan en 5 columnas (tope editorial), 1024 baja a 4 y 768 a 3.
+    // Desktop queda en 5 columnas (tope editorial); Mobile y Tablet conservan
+    // tres columnas para que el modo no cambie dentro de Tablet.
     expect(metrics.productColumns).toBe(
-      viewport.width >= 1024 ? (viewport.width >= 1200 ? 5 : 4) : 3,
+      viewport.width >= 1200 ? 5 : 3,
     );
     expect(metrics.productCardWidth).toBeGreaterThan(155);
     expect(metrics.navHeight).toBeLessThanOrEqual(44);
@@ -1809,7 +1810,7 @@ test("V2 audita composición en viewports intermedios", async ({ page }, testInf
     // pasa a exigir que NO haya text-shadow.
     expect(metrics.titleTextShadow).toBe("none");
     expect(metrics.bodyTextShadow).toBe("none");
-    if (viewport.width <= 899) {
+    if (viewport.width < 1200) {
       expect(metrics.heroDisplay).toBe("grid");
       expect(metrics.mediaPosition).toBe("relative");
       expect(metrics.benefitsBandDisplay).toBe("grid");
@@ -3564,7 +3565,7 @@ test("V2 mantiene el 404 detrás del título y alinea sus acciones", async ({ pa
     expect(metrics.copyZIndex).toBeGreaterThan(metrics.codeZIndex);
     expect(metrics.codePointerEvents).toBe("none");
     expect(metrics.buttonBoxes).toHaveLength(2);
-    if (viewport.width <= 899) {
+    if (viewport.width < 1200) {
       expect(metrics.actionsDisplay).toBe("grid");
       expect(
         Math.abs(metrics.buttonBoxes[0].width - metrics.buttonBoxes[1].width),

@@ -69,23 +69,31 @@ si un respaldo antiguo no lo tiene, se deriva de los colores del mismo tema.
 | Nosotros | catalog-header, about-hero, history, principles, editorial-image, process, manifesto, experience, team, stats, products-cta, catalog-footer |
 | Legal (404) | catalog-header, error-hero o policy-page, catalog-footer |
 
-## Breakpoints activos
+## Contrato responsive
 
-| Breakpoint | Uso principal |
-| --- | --- |
-| max-width: 450px | Móvil chico: grillas 1 col, hero compacto |
-| max-width: 640px | Móvil: salud compacta, stats apilados |
-| max-width: 767px | Tablet portrait: nav móvil, drawer sheet |
-| max-width: 900px | Grillas 2 col, filtros colapsados |
-| max-width: 1023px | Pre-tablet landscape |
-| max-width: 1024px | Tablet landscape: checkout apilado |
-| max-width: 1100px | Contenedor reducido |
-| max-width: 1199px | Pre-desktop: search 3 col |
-| min-width: 1366px | Desktop grande: contenedor amplio |
-| prefers-reduced-motion | Desactiva animaciones espaciales |
+El storefront público tiene tres modos de diseño compartidos por Preview y
+exportación:
 
-Los specs en `tests/e2e/__vision__/storefront-deep-vision.spec.ts` capturan
-la matriz de viewports declarada por el propio spec para cubrir estos breakpoints.
+| Modo | Rango | Checkpoint visual |
+| --- | --- | --- |
+| Mobile | 320–767 px | 390 × 844 |
+| Tablet | 768–1199 px | 1024 × 900 |
+| Desktop | ≥1200 px | 1440 × 900 |
+
+**Regla normativa:** sólo se permiten estos tres modos unificados de layout:
+**Mobile, Tablet y Desktop**. No se puede agregar un cuarto breakpoint de
+diseño, un preset de Preview adicional ni tuning visual para anchos intermedios.
+Las excepciones técnicas registradas en el ledger no cuentan como modos ni
+habilitan nuevos breakpoints visuales.
+
+`320` es el mínimo soportado, no un cuarto modo. Las fronteras `767/768` y
+`1199/1200` se cubren como tests geométricos y funcionales. No se deben agregar
+presets por cada ancho intermedio.
+
+Las excepciones técnicas de drawer, seguridad estrecha y entrega de assets están
+registradas en [`docs/RESPONSIVE_BREAKPOINTS.md`](RESPONSIVE_BREAKPOINTS.md).
+Los anchos de `sizes`, `<picture>` y variantes físicas de imagen no son modos de
+diseño y no deben alinearse mecánicamente con las fronteras visuales.
 
 ## Escala de espaciado (rem — respeta type-scale)
 

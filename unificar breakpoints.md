@@ -12,6 +12,13 @@ Unificar todas las tiendas actuales y futuras bajo **tres modos oficiales de dis
 
 **320 px es el mínimo obligatorio soportado para Mobile.** Es un límite técnico de compatibilidad, no un cuarto diseño.
 
+> **Regla normativa:** para el layout responsive de viewport sólo se permiten
+> estos tres modos unificados: **Mobile, Tablet y Desktop**. Está prohibido
+> introducir un cuarto breakpoint de diseño, un preset adicional de Preview o
+> tuning visual específico para un ancho intermedio. Las excepciones técnicas
+> de componente o de entrega de assets que figuran en el ledger no crean modos
+> adicionales ni habilitan nuevos breakpoints de diseño.
+
 La unificación significa **tres modos de diseño**, no “tres únicos `@media`”. Se pueden conservar excepciones técnicas de ancho cuando exista una razón demostrable, por ejemplo geometría mínima de un drawer, overflow, accesibilidad o compatibilidad de un módulo legacy. La meta es eliminar tuning visual arbitrario por ancho, no borrar media queries mecánicamente.
 
 ### Principios de seguridad

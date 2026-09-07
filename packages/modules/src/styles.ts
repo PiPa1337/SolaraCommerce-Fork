@@ -1393,12 +1393,12 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   margin: 0;
   padding: 2rem 0;
 }
-@media (max-width: 1100px) {
+@media (max-width: 1199px) {
   [data-solara-module="compact-product-grid"] .solara-compact-products {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   [data-solara-module="compact-product-grid"] {
     padding: 2.75rem 1rem;
   }
@@ -2136,7 +2136,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-header-inner {
   position: relative; display: grid; grid-template-columns: minmax(10rem, 1fr) auto minmax(16rem, 1fr); align-items: center; gap: clamp(1.25rem, 3vw, 3rem); width: min(calc(100% - 2rem), var(--solara-container)); min-height: 80px; margin-inline: auto; border-bottom: 1px solid var(--catalog-border); -webkit-user-select: none; user-select: none;
 }
-[data-solara-store].catalog-modern .catalog-brand { display: inline-flex; align-items: center; min-width: 0; max-width: min(42vw, 14rem); overflow: hidden; color: var(--catalog-ink); font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: clamp(1.25rem, 4vw, 2.15rem); font-weight: 500; letter-spacing: -.06em; text-decoration: none; white-space: nowrap; text-overflow: ellipsis; }
+[data-solara-store].catalog-modern .catalog-brand { display: inline-flex; align-items: center; min-width: 0; max-width: min(42vw, 18rem); overflow: hidden; color: var(--catalog-ink); font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: clamp(1.25rem, 4vw, 2.15rem); font-weight: 500; letter-spacing: -.06em; text-decoration: none; white-space: nowrap; text-overflow: ellipsis; }
 [data-solara-store].catalog-modern .catalog-brand .solara-wordmark { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: anywhere; }
 [data-solara-store].catalog-modern .catalog-wordmark { font-weight: 900; }
 [data-solara-store].catalog-modern .catalog-desktop-nav { display: flex; align-items: center; justify-content: center; gap: clamp(.9rem, 2vw, 1.8rem); min-width: 0; font-size: .94rem; }
@@ -2198,7 +2198,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-hero-inner { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); align-items: stretch; width: min(calc(100% - 2rem), var(--solara-container)); min-height: min(680px, calc(100svh - 104px)); margin: 1.5rem auto 0; overflow: hidden; border-radius: var(--solara-radius); background: var(--catalog-surface); }
 [data-solara-store].catalog-modern .catalog-hero-copy { display: flex; flex-direction: column; justify-content: center; padding: clamp(2rem, 5vw, 5rem); }
 [data-solara-store].catalog-modern .catalog-eyebrow { margin-bottom: 1rem; color: var(--catalog-muted); font-size: .75rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
-[data-solara-store].catalog-modern .catalog-hero-copy h1 { max-width: 11ch; font-size: calc(clamp(3.2rem, 6vw, 6.5rem) * var(--solara-type-scale, 1)); font-weight: 900; letter-spacing: -.055em; line-height: 1.15; text-wrap: balance; overflow-wrap: break-word; }
+[data-solara-store].catalog-modern .catalog-hero-copy h1 { max-width: 12ch; font-size: calc(clamp(2.8rem, 5vw, 5.5rem) * var(--solara-type-scale, 1)); font-weight: 900; letter-spacing: -.055em; line-height: 1.15; text-wrap: balance; overflow-wrap: break-word; }
 [data-solara-store].catalog-modern .catalog-hero-copy > p:not(.catalog-eyebrow) { max-width: 32ch; margin-top: 1.25rem; color: var(--catalog-muted); }
 [data-solara-store].catalog-modern .catalog-hero-actions { display: flex; flex-wrap: wrap; gap: calc(.65rem * var(--solara-space-scale, 1)); margin-top: 1.5rem; }
 [data-solara-store].catalog-modern .catalog-primary-action,
@@ -2682,7 +2682,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   [data-solara-store].catalog-modern .catalog-search-dialog-controls .catalog-primary-action { width: 100%; }
   [data-solara-store].catalog-modern .catalog-newsletter-inner { align-items: stretch; flex-direction: column; margin-bottom: 2rem; }
   [data-solara-store].catalog-modern .catalog-newsletter-action { width: 100%; }
-  [data-solara-store].catalog-modern .catalog-footer-inner { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(1.5rem * var(--solara-space-scale, 1)) calc(1rem * var(--solara-space-scale, 1)); padding-top: calc(2rem * var(--solara-space-scale, 1)); }
+  [data-solara-store].catalog-modern .catalog-footer-inner { grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr)); gap: calc(1.5rem * var(--solara-space-scale, 1)) calc(1rem * var(--solara-space-scale, 1)); padding-top: calc(2rem * var(--solara-space-scale, 1)); }
   [data-solara-store].catalog-modern .catalog-footer-brand { grid-column: 1 / -1; }
   [data-solara-store].catalog-modern .catalog-footer-inner address { grid-column: auto; }
   [data-solara-store].catalog-modern .catalog-product-detail { width: min(calc(100% - 2rem), var(--solara-container)); }
@@ -2724,16 +2724,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   }
   [data-solara-store].catalog-modern .catalog-footer-inner address {
     grid-column: auto;
-  }
-}
-@media (max-width: 560px) {
-  [data-solara-store].catalog-modern .catalog-footer-inner {
-    grid-template-columns: 1fr;
-    gap: calc(1.5rem * var(--solara-space-scale, 1));
-  }
-  [data-solara-store].catalog-modern .catalog-footer-brand,
-  [data-solara-store].catalog-modern .catalog-footer-inner address {
-    grid-column: 1 / -1;
   }
 }
 @media print {
@@ -3189,6 +3179,9 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   margin: 0 auto;
 }
 @media (min-width: 1200px) {
+  .cm.v2 .catalog-product-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
   .cm.v2 main.solara-container:has(> [data-solara-module="catalog-product-grid"]) {
     padding-inline: 0;
   }
@@ -3201,15 +3194,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     max-width: none;
   }
 }
-/* Máximo 5 columnas en desktop: el tope min(100% / 5, 20rem) nunca genera más
-   de 5 tracks; con el gap el auto-fit da 5 columnas recién a partir de un
-   contenedor de ~1702px, por eso entre 1366px y 1919px se fijan las 5 y desde
-   1920px el auto-fit topeado ya produce 5 sobre la sección de 1760px. */
-@media (min-width: 1366px) and (max-width: 1919px) {
-  .cm.v2 .catalog-product-grid {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
-}
 /* Relacionados del product-detail: hasta 8 items pedían 5+3 con la grilla
    general; cuatro por fila deja 4+4, 4+2 o 4+1 simétricas. */
 @media (min-width: 1200px) {
@@ -3217,8 +3201,8 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
-/* Tablets de 768px a 1023px: 3 columnas (el auto-fit daría 4 con cards angostas). */
-@media (max-width: 1023px) {
+/* Tablet de 768px a 1199px: 3 columnas y wrapping seguro. */
+@media (max-width: 1199px) {
   .cm.v2 .catalog-hero-copy h1,
   .cm.v2 .catalog-hero-line-inner,
   .cm.v2 .catalog-hero-body,
@@ -3754,7 +3738,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 .cm.v2 .solara-error-copy > p:not(.solara-eyebrow) { max-width: 36rem; margin-top: 1.5rem; color: var(--catalog-muted); font-size: 1.05rem; }
 .cm.v2 .solara-error-code { position: relative; z-index: 0; pointer-events: none; color: color-mix(in srgb, var(--catalog-border), transparent 25%); font-family: var(--solara-font-display, Georgia, "Times New Roman", serif); font-size: clamp(18rem, 31vw, 36rem); letter-spacing: -.1em; line-height: .7; text-align: center; }
 .cm.v2 .solara-error-actions { display: flex; align-items: flex-start; flex-wrap: wrap; gap: .75rem; margin-top: 2rem; }
-@media (max-width: 899px) {
+@media (max-width: 1199px) {
   .cm.v2 .solara-error-hero { display: flex; min-height: 0; flex-direction: column; align-items: stretch; padding: 2rem 0 4rem; }
   .cm.v2 .solara-error-copy { padding-block: 1rem 0; }
   .cm.v2 .solara-error-copy h1 { font-size: calc(clamp(3.4rem, 14vw, 4.8rem) * var(--solara-type-scale, 1)); }
@@ -4526,7 +4510,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   --hero-v2-rise: 16px;
   animation: solara-hero-rise var(--catalog-v2-motion-component) var(--catalog-v2-ease-out) 60ms backwards;
 }
-@media (max-width: 1024px) {
+@media (max-width: 1199px) {
   .cm.v2 .solara-home-contact {
     width: min(calc(100% - 1.5rem), var(--catalog-v2-wide));
     grid-template-columns: minmax(0, 1fr);
@@ -4548,17 +4532,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     width: 100%;
   }
 }
-@media (max-width: 900px) {
-  .cm.v2 .solara-home-contact {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 2.5rem 0;
-  }
-  .cm.v2 .solara-home-contact > [data-solara-module="contact-form"],
-  .cm.v2 .solara-home-contact > [data-solara-module="contact-channels"] {
-    grid-column: 1;
-  }
-}
-
 /* Los listados cortos no deben convertir una sola tarjeta en una portada. */
 .cm.v2 .catalog-product-grid[data-product-count="1"] {
   grid-template-columns: minmax(0, 20rem);
@@ -4633,7 +4606,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     overflow-wrap: anywhere;
   }
 }
-@media (max-width: 450px) {
+@media (max-width: 767px) {
   .cm.v2 .catalog-header-inner,
   .cm.v2 .catalog-hero-inner,
   .cm.v2 .catalog-brand-strip-inner,
@@ -4682,7 +4655,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     text-overflow: clip;
     overflow: visible;
   }
-@media (max-width: 900px) {
+@media (max-width: 767px) {
   .cm.v2 .catalog-footer-inner {
     grid-template-columns: minmax(0, 1fr);
     gap: 1.5rem;
@@ -4827,7 +4800,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 @media (max-width: 1199px) and (min-width: 768px) {
   .cm.v2 .catalog-footer-inner {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr));
     gap: 1.75rem 1.5rem;
   }
   .cm.v2 .catalog-footer-brand {
@@ -4839,7 +4812,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 }
 @media (max-width: 767px) {
   .cm.v2 .catalog-footer-inner {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr));
     gap: 1.5rem 1rem;
     padding-top: clamp(2rem, 4.6vw, 4.6rem);
   }
@@ -4848,33 +4821,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   }
   .cm.v2 .catalog-footer-inner address {
     grid-column: auto;
-  }
-}
-@media (max-width: 560px) {
-  .cm.v2 .catalog-footer-inner {
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-  }
-  .cm.v2 .catalog-footer-brand,
-  .cm.v2 .catalog-footer-inner address {
-    grid-column: 1 / -1;
-  }
-}
-@media (max-width: 900px) {
-  .cm.v2 .catalog-category-bento-item > span:not(.solara-category-placeholder) {
-    max-width: calc(100% - .8rem);
-    margin: .4rem;
-    padding: .55rem .85rem;
-    font-family: var(--solara-font-body, Arial, sans-serif);
-    font-size: .82rem;
-    font-weight: 600;
-    letter-spacing: -.02em;
-    line-height: 1.16;
-    overflow-wrap: anywhere;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
   }
 }
 @media (max-width: 339px) {
@@ -4892,15 +4838,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     overflow: visible;
     -webkit-box-orient: initial;
     -webkit-line-clamp: unset;
-  }
-}
-@media (min-width: 451px) and (max-width: 767px) {
-  .cm.v2 .catalog-footer-meta {
-    justify-content: space-between;
-    text-align: left;
-  }
-  .cm.v2 .catalog-footer-meta .catalog-footer-made {
-    text-align: right;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -5247,7 +5184,7 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     object-position: center;
   }
   /* Las portadas internas conservan su carril vertical en tablet angosta. */
-  @media (min-width: 768px) and (max-width: 899px) {
+  @media (min-width: 768px) and (max-width: 1199px) {
     .cm.v2 .catalog-hero-page .catalog-hero-inner {
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(15rem, min(42vw, 26rem));

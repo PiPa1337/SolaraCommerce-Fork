@@ -1226,7 +1226,7 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
       "font-size: calc(clamp(2.2rem, 9vw, 3.2rem) * var(--solara-type-scale, 1))",
     );
     expect(styles).toContain(
-      "font-size: calc(clamp(3.2rem, 6vw, 6.5rem) * var(--solara-type-scale, 1))",
+      "font-size: calc(clamp(2.8rem, 5vw, 5.5rem) * var(--solara-type-scale, 1))",
     );
     expect(v2Styles).toContain(
       "font-size: calc(clamp(2.3rem, 9vw, 3.4rem) * var(--solara-type-scale, 1))",
@@ -1454,9 +1454,9 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
       /\.cm\.v2 \.catalog-brand \.solara-logo \{[^}]*max-height: 3\.5rem;[^}]*object-fit: contain;/,
     );
 
-    const narrowStart = styles.indexOf("@media (max-width: 450px)");
-    const narrowEnd = styles.indexOf("@media (max-width: 900px)", narrowStart);
-    const narrowStyles = styles.slice(narrowStart, narrowEnd);
+    const narrowStart = styles.indexOf("@media (max-width: 767px)");
+    expect(narrowStart).toBeGreaterThanOrEqual(0);
+    const narrowStyles = styles.slice(narrowStart);
     expect(narrowStyles).toMatch(
       /\.cm\.v2 \.catalog-brand \{[\s\S]*width: fit-content;[\s\S]*max-width: 100%;[\s\S]*justify-self: start;[\s\S]*overflow: hidden;[\s\S]*white-space: nowrap;/,
     );
@@ -1569,7 +1569,7 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
       "min-height: clamp(35.5rem, min(82svh, calc(100vw * 16 / 9)), 43rem);\n      border-radius: 0;",
     );
     expect(v2Styles).toContain("aspect-ratio: 9 / 16;\n      border-radius: 0;");
-    expect(v2Styles).toContain("@media (min-width: 768px) and (max-width: 899px)");
+    expect(v2Styles).toContain("@media (min-width: 768px) and (max-width: 1199px)");
     expect(v2Styles).toContain(".catalog-hero-benefits--band");
     expect(v2Styles).not.toContain("clip-path");
   });

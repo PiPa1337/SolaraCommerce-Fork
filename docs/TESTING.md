@@ -121,6 +121,16 @@ La suite de auditoría contiene `ui-sweep-a01..a26`, Tema, Resumen, Preparar,
 `ui-sweep-a27..a30` permanece en la suite funcional porque forma parte del
 contrato actual de smoke full.
 
+El contrato responsive del storefront usa tres checkpoints visuales: 390×844,
+1024×900 y 1440×900. Las fronteras 767/768 y 1199/1200 se prueban de ambos
+lados, incluyendo capturas en 762/773 y 1194/1205 para revisión visual real.
+Las pruebas deben conservar exactamente los tres modos unificados Mobile,
+Tablet y Desktop; un cuarto breakpoint de layout o tuning visual intermedio es
+una regresión del contrato.
+Las excepciones de drawer y entrega de imágenes se conservan como tests
+funcionales, no como nuevos modos de diseño. El spec focal es
+`tests/e2e/responsive-breakpoints.spec.ts`.
+
 Smoke quick cubre: exported-store, storefront-nojs, catalog, assets, interacciones.
 Smoke full agrega: catalog-modern-v2, exporter-sentinel, scale-store,
 ui-sweep-a27..30, release-a11y, nojs-coverage y focus-visible.

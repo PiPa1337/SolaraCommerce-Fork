@@ -41,6 +41,7 @@ const testCommand = isCi
   ? "corepack pnpm -r --workspace-concurrency=1 --if-present --filter=!@solara/studio --filter=!@solara/exporter --filter=!@solara/core test"
   : "corepack pnpm -r --workspace-concurrency=2 --if-present test";
 const fastTasks = [
+  { name: "check:responsive", cmd: "corepack pnpm check:responsive" },
   { name: "check:repository", cmd: "corepack pnpm check:repository" },
   { name: "check:hardcoded-content", cmd: "corepack pnpm check:hardcoded-content" },
   { name: "check:image-budget", cmd: "node scripts/check-image-budget.mjs" },

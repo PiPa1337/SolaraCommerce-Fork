@@ -12,6 +12,7 @@ Miden el layout real con `getBoundingClientRect()`. No dependen de screenshots.
 | `__vision__/alignment.spec.ts` | Tabs del nav con misma X/Y; columnas del builder alineadas; section-row con alto acotado; cards del dashboard consistentes | `pnpm exec playwright test tests/e2e/__vision__/alignment.spec.ts` |
 | `__vision__/storefront-alignment.spec.ts` | Cards por grilla con ancho uniforme; módulos centrados; sin overflow en 320px | `pnpm exec playwright test tests/e2e/__vision__/storefront-alignment.spec.ts` |
 | `visual-break.spec.ts` | Overflow horizontal en 10 viewports (320-2560) con datos adversarios (títulos largos, Unicode, precios extremos) | `pnpm exec playwright test tests/e2e/visual-break.spec.ts` |
+| `responsive-breakpoints.spec.ts` | Modo correcto, overflow y rutas críticas en 762/773 y 1194/1205, con capturas cinco píxeles antes/después de cada frontera | `node_modules\\.bin\\playwright.CMD test tests/e2e/responsive-breakpoints.spec.ts --workers=1 --retries=0` |
 
 ## Guardianes adversariales
 
@@ -37,6 +38,16 @@ Simulan condiciones hostiles o entradas maliciosas.
 Los límites exactos son autoridad de los scripts anteriores; este cuadro sólo
 resume el contrato vigente para navegación humana.
 
+## Guardian de contrato responsive
+
+`corepack pnpm check:responsive` revisa las condiciones de ancho del renderer,
+runtime, module-sdk y exporter. Sólo permite `767/768` y `1199/1200` como
+fronteras de layout, que forman exactamente los tres modos Mobile, Tablet y
+Desktop. Un cuarto breakpoint de diseño o tuning visual intermedio debe fallar
+la revisión; sólo se admiten las excepciones técnicas documentadas en el ledger.
+Los umbrales de assets se conservan separados y se validan por paridad de
+`<picture>`/preload.
+
 ## Guardianes de seguridad
 
 | Spec | Qué valida |
@@ -52,4 +63,5 @@ No son gate. Generan capturas para inspección visual.
 | Spec | Captura | Output |
 | --- | --- | --- |
 | `storefront-deep-vision.spec.ts` | Rutas y viewports declarados por el propio spec + estados interactivos | `testInfo.outputPath("storefront-vision")` dentro del output de Playwright |
+| `responsive-breakpoints.spec.ts` | Capturas reales del home en checkpoints y cinco píxeles antes/después de `767/768` y `1199/1200` | `testInfo.outputPath("responsive-breakpoints-vision")` |
 | `studio-vision.spec.ts` | Dashboard, tabs del Studio y galería en los viewports declarados por el spec | `test-results/studio-vision/` |

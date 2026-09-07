@@ -1,3 +1,17 @@
+### Reinicio desde el tray (2026-09-07)
+
+**Changed**
+
+- Se agrega `Reiniciar` al menú de `Abrir SolaraCommerce.exe`; cierra y vuelve a abrir el tray mediante una transferencia segura del mutex, sin cerrar las sesiones activas.
+
+### Contrato responsive unificado (2026-09-07)
+
+**Changed**
+
+- Se unifican las tiendas actuales y futuras en Mobile 320–767, Tablet 768–1199 y Desktop ≥1200, con ledger de excepciones técnicas y guardianes para evitar cortes visuales arbitrarios.
+- Se explicita como regla normativa que no se permiten breakpoints adicionales de layout: sólo Mobile, Tablet y Desktop.
+- Se agrega evidencia Playwright V1/V2 en los bordes ±5 px y checkpoints 390, 1024 y 1440, manteniendo Preview y exportación bajo el mismo renderer compartido.
+
 ### Cierre de hallazgos deficientes de auditoría (2026-09-07)
 
 **Changed**
