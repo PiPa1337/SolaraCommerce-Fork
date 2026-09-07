@@ -21,9 +21,11 @@ El tray se genera con `corepack pnpm build:tray` y queda como
 `Abrir SolaraCommerce.exe` en la raíz, ignorado por Git. Al abrirlo crea un único
 icono por checkout. Su menú contextual muestra la cantidad de sesiones activas,
 permite abrir una nueva, abrir o cerrar una sesión concreta, cerrar todas y
-salir. `Salir` sólo termina cuando todas las sesiones gestionadas pudieron
-cerrarse. El tray refresca el registro periódicamente y también detecta sesiones
-que ya estaban abiertas antes de iniciarlo.
+reiniciar el tray o salir. `Reiniciar` cierra y vuelve a abrir únicamente el
+tray, conservando las sesiones activas. `Salir` sólo termina cuando todas las
+sesiones gestionadas pudieron cerrarse. El tray refresca el registro
+periódicamente y también detecta sesiones que ya estaban abiertas antes de
+iniciarlo.
 
 ## Fuente de verdad y layout
 

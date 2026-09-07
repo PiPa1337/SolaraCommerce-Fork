@@ -389,9 +389,38 @@ internal sealed class TrayApplicationContext : ApplicationContext
         };
         menu.Items.Add(closeAll);
 
+        ToolStripMenuItem restart = new ToolStripMenuItem("Reiniciar");
+        restart.Click += delegate { RestartTray(); };
+        menu.Items.Add(restart);
+
         ToolStripMenuItem exit = new ToolStripMenuItem("Salir");
         exit.Click += delegate { ExitTray(); };
         menu.Items.Add(exit);
+    }
+
+    private void RestartTray()
+    {
+        string executablePath = Application.ExecutablePath;
+        string workingDirectory = Path.GetDirectoryName(executablePath);
+        ProcessStartInfo start = new ProcessStartInfo();
+        start.FileName = executablePath;
+        start.Arguments = "--wait-for-exit " + Process.GetCurrentProcess().Id.ToString(CultureInfo.InvariantCulture);
+        start.WorkingDirectory = string.IsNullOrEmpty(workingDirectory) ? services.ApplicationRoot : workingDirectory;
+        start.UseShellExecute = true;
+
+        try
+        {
+            // La instancia nueva espera a que esta libere el mutex del tray.
+            Process.Start(start);
+        }
+        catch (Exception exception)
+        {
+            MessageBox.Show("No se pudo reiniciar SolaraCommerce: " + exception.Message, "SolaraCommerce", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        DisposeTray();
+        ExitThread();
     }
 
     private void ExitTray()
@@ -403,13 +432,18 @@ internal sealed class TrayApplicationContext : ApplicationContext
             MessageBox.Show("No se puede salir mientras queden sesiones activas.", "SolaraCommerce", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return;
         }
+        DisposeTray();
+        ExitThread();
+    }
+
+    private void DisposeTray()
+    {
         refreshTimer.Stop();
         icon.Visible = false;
         icon.Dispose();
         menu.Dispose();
         mutex.ReleaseMutex();
         mutex.Dispose();
-        ExitThread();
     }
 
     private static Icon LoadApplicationIcon(string applicationRoot)
@@ -429,6 +463,7 @@ internal static class Program
         string diagnostic = "";
         string diagnosticSessionId = "";
         string outputPath = "";
+        int waitForExitProcessId = 0;
 
         for (int index = 0; index < args.Length; index++)
         {
@@ -449,6 +484,15 @@ internal static class Program
                 diagnostic = args[index];
                 diagnosticSessionId = args[++index];
             }
+            else if (args[index] == "--wait-for-exit" && index + 1 < args.Length)
+            {
+                int.TryParse(args[++index], NumberStyles.Integer, CultureInfo.InvariantCulture, out waitForExitProcessId);
+            }
+        }
+
+        if (waitForExitProcessId > 0)
+        {
+            WaitForProcessExit(waitForExitProcessId);
         }
 
         if (!string.IsNullOrEmpty(diagnostic))
@@ -470,6 +514,20 @@ internal static class Program
         Application.SetCompatibleTextRenderingDefault(false);
         Application.Run(new TrayApplicationContext(applicationRoot, mutex));
         return 0;
+    }
+
+    private static void WaitForProcessExit(int processId)
+    {
+        try
+        {
+            using (Process process = Process.GetProcessById(processId))
+            {
+                if (!process.HasExited) process.WaitForExit(10000);
+            }
+        }
+        catch
+        {
+        }
     }
 
     private static int RunDiagnostic(string root, string diagnostic, string diagnosticSessionId, string outputPath)
