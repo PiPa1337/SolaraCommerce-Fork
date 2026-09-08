@@ -3,7 +3,6 @@
  * expone creación, duplicado, archivo, respaldos y cierre del servidor propio.
  */
 import {
-  ArrowUpRight,
   CaretLeft,
   CaretRight,
   Check,
@@ -11,7 +10,6 @@ import {
   CloudArrowDown,
   GitDiff,
   Plus,
-  Star,
   Storefront,
 } from "@phosphor-icons/react";
 import { isBaseTemplate } from "@solara/project-schema/project-policy";
@@ -92,13 +90,11 @@ interface DashboardStoreCardProps {
   record: StoredProject;
   index: number;
   isSelected: boolean;
-  isPinned: boolean;
   compareMode: boolean;
   isCompared: boolean;
   cardButtonRefs: RefObject<Map<string, HTMLButtonElement>>;
   onOpen(id: string): void | Promise<void>;
   onSelect(id: string): void;
-  onPin(id: string): void;
   onToggleCompare(id: string): void;
   onKeyDown(event: ReactKeyboardEvent<HTMLElement>, record: StoredProject): void;
 }
@@ -123,13 +119,11 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
   record,
   index,
   isSelected,
-  isPinned,
   compareMode,
   isCompared,
   cardButtonRefs,
   onOpen,
   onSelect,
-  onPin,
   onToggleCompare,
   onKeyDown,
 }: DashboardStoreCardProps) {
@@ -165,36 +159,11 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
           </span>
         </>
       ) : null}
-      <div className="dashboard-store-card__actions" role="group" aria-label="Acciones de tienda">
-        <button
-          type="button"
-          className="dashboard-store-card__pin"
-          aria-pressed={isPinned}
-          aria-label={isPinned ? "Quitar de fijadas" : "Fijar tienda"}
-          aria-description={record.name}
-          title={`${isPinned ? "Quitar" : "Fijar"} ${record.name} ${isPinned ? "de fijadas" : "en fijadas"}`}
-          data-testid="ui-card-pin"
-          onClick={() => onPin(record.id)}
-        >
-          <Star aria-hidden size={16} weight={isPinned ? "fill" : "regular"} />
-        </button>
-        <button
-          className="dashboard-store-card__open"
-          type="button"
-          data-testid="ui-card-open"
-          aria-label="Abrir esta tienda"
-          aria-description={record.name}
-          title={`Abrir ${record.name} en el editor`}
-          onClick={() => void onOpen(record.id)}
-        >
-          Abrir <ArrowUpRight aria-hidden size={13} />
-        </button>
-      </div>
       <button
         className="dashboard-store-card__button"
         type="button"
         aria-pressed={isSelected}
-        aria-description={`Selecciona ${record.name} para revisar el detalle. Usá el botón Abrir para entrar al editor.`}
+        aria-description={`Selecciona ${record.name} para revisar su información y acciones.`}
         title={`Seleccionar ${record.name} para revisar el detalle`}
         data-store-card-id={record.id}
         style={{ "--dashboard-store-hero-ratio": heroRatio } as CSSProperties}
@@ -284,12 +253,6 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
   );
 });
 
-const GARGANTUA_LAUNCH_DURATION_MS = 1460;
-const GARGANTUA_LAUNCH_HANDOFF = 0.84;
-// El Studio local necesita este inspector también cuando se sirve como bundle
-// normal; sigue siendo estado efímero de la UI y no forma parte del proyecto.
-const GARGANTUA_DEBUG_ENABLED = true;
-
 export function Dashboard({
   projects,
   onCreate,
@@ -340,8 +303,6 @@ export function Dashboard({
   const [deletingId, setDeletingId] = useState<string>();
   const [backingUp, setBackingUp] = useState<string>();
   const [openingStoreId, setOpeningStoreId] = useState<string>();
-  const [launchProgress, setLaunchProgress] = useState(0);
-  const [gargantuaUiOpacity, setGargantuaUiOpacity] = useState(1);
   const shutdownDialogRef = useRef<HTMLDialogElement>(null);
   const shutdownTerminalRef = useRef(shutdownTerminal === true);
   const selectedPanelRef = useRef<HTMLElement>(null);
@@ -354,9 +315,6 @@ export function Dashboard({
   const selectionInitializedRef = useRef(false);
   const focusCardOnSelectRef = useRef(false);
   const actionNoticeTimerRef = useRef<number | undefined>(undefined);
-  const launchFrameRef = useRef<number | undefined>(undefined);
-  const launchTokenRef = useRef<string | undefined>(undefined);
-  const launchHandoffRef = useRef(false);
   const libraryTitleId = useId();
   const shutdownTitleId = useId();
   const pinnedGroupTitleId = useId();
@@ -589,70 +547,14 @@ export function Dashboard({
       if (openingStoreId) return;
       const record = projects.find((item) => item.id === id);
       if (!record) return;
-
-      if (launchFrameRef.current !== undefined) {
-        window.cancelAnimationFrame(launchFrameRef.current);
-      }
-      const token = `${id}:${performance.now()}`;
-      const startedAt = performance.now();
-      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      const duration = reducedMotion ? 240 : GARGANTUA_LAUNCH_DURATION_MS;
-      const handoffAt = reducedMotion ? 0.46 : GARGANTUA_LAUNCH_HANDOFF;
-      launchTokenRef.current = token;
-      launchHandoffRef.current = false;
+      // La navegación debe empezar con el clic; la transición anterior ocultaba
+      // el editor durante más de un segundo y podía parecer un bloqueo.
       setOpeningStoreId(id);
-      setLaunchProgress(0);
-
-      const animateLaunch = (now: number) => {
-        if (launchTokenRef.current !== token) return;
-        const progress = Math.min(1, (now - startedAt) / duration);
-        setLaunchProgress(progress);
-        if (progress >= handoffAt && !launchHandoffRef.current) {
-          launchHandoffRef.current = true;
-          void Promise.resolve(onOpen(id)).catch(() => {
-            if (launchTokenRef.current !== token) return;
-            launchTokenRef.current = undefined;
-            launchHandoffRef.current = false;
-            setOpeningStoreId(undefined);
-            setLaunchProgress(0);
-          });
-        }
-        if (progress < 1) {
-          launchFrameRef.current = window.requestAnimationFrame(animateLaunch);
-        } else {
-          launchFrameRef.current = undefined;
-        }
-      };
-
-      launchFrameRef.current = window.requestAnimationFrame(animateLaunch);
+      void Promise.resolve()
+        .then(() => onOpen(id))
+        .catch(() => setOpeningStoreId(undefined));
     },
     [onOpen, openingStoreId, projects],
-  );
-
-  useEffect(
-    () => () => {
-      if (launchFrameRef.current !== undefined) {
-        window.cancelAnimationFrame(launchFrameRef.current);
-      }
-    },
-    [],
-  );
-
-  useEffect(() => {
-    if (!GARGANTUA_DEBUG_ENABLED) return;
-    document.documentElement.style.setProperty(
-      "--gargantua-debug-ui-opacity",
-      String(gargantuaUiOpacity),
-    );
-  }, [gargantuaUiOpacity]);
-
-  useEffect(
-    () => () => {
-      if (GARGANTUA_DEBUG_ENABLED) {
-        document.documentElement.style.removeProperty("--gargantua-debug-ui-opacity");
-      }
-    },
-    [],
   );
 
   const togglePin = useCallback((id: string) => {
@@ -795,21 +697,12 @@ export function Dashboard({
         clearSelected();
         return;
       }
-      const onCardControl =
-        target.hasAttribute("data-store-card-id") ||
-        target.classList.contains("dashboard-store-card__open");
+      const onCardControl = target.hasAttribute("data-store-card-id");
       if (!onCardControl) return;
       if (event.key === "Enter") {
         if (target.hasAttribute("data-store-card-id")) {
           event.preventDefault();
           selectCard(record.id);
-        }
-        return;
-      }
-      if (event.key === " ") {
-        if (target.classList.contains("dashboard-store-card__open")) {
-          event.preventDefault();
-          openStore(record.id);
         }
         return;
       }
@@ -824,7 +717,7 @@ export function Dashboard({
         moveCardSelection(event.key, record.id);
       }
     },
-    [clearSelected, handleArchive, moveCardSelection, openStore, selectCard],
+    [clearSelected, handleArchive, moveCardSelection, selectCard],
   );
 
   useEffect(() => {
@@ -1021,42 +914,13 @@ export function Dashboard({
     }
   };
 
-  const openingStore = openingStoreId
-    ? projects.find((record) => record.id === openingStoreId)
-    : undefined;
-
   return (
     <main
       id={"tiendas"}
       tabIndex={-1}
-      className={`dashboard-page dashboard-cosmic dashboard-gargantua${
-        openingStoreId ? " is-store-launching" : ""
-      }`}
-      data-gargantua-debug={GARGANTUA_DEBUG_ENABLED ? "true" : undefined}
+      className="dashboard-page dashboard-cosmic dashboard-gargantua"
       aria-busy={openingStoreId ? "true" : undefined}
     >
-      {GARGANTUA_DEBUG_ENABLED ? (
-        <fieldset
-          className="dashboard-gargantua-debug-controls"
-          data-testid="gargantua-debug-controls"
-        >
-          <legend>GARGANTUA / DEBUG</legend>
-          <label htmlFor="gargantua-debug-ui-opacity">Interfaz</label>
-          <input
-            id="gargantua-debug-ui-opacity"
-            type="range"
-            min="0"
-            max="100"
-            step="1"
-            value={Math.round(gargantuaUiOpacity * 100)}
-            onChange={(event) => setGargantuaUiOpacity(Number(event.target.value) / 100)}
-            aria-label="Opacidad de la interfaz del dashboard"
-          />
-          <output htmlFor="gargantua-debug-ui-opacity">
-            {Math.round(gargantuaUiOpacity * 100)}%
-          </output>
-        </fieldset>
-      ) : null}
       <GravityField
         activeIndex={selectedId ? (pageIndexById.get(selectedId) ?? 0) : 0}
         selectionVisible={Boolean(
@@ -1064,21 +928,7 @@ export function Dashboard({
         )}
         storeCount={pageVisible.length}
         templateSelected={Boolean(selected && isBaseTemplate(selected.project))}
-        launchProgress={launchProgress}
       />
-      {openingStoreId ? (
-        <output
-          className="dashboard-gargantua-transition"
-          data-testid="gargantua-launch"
-          aria-live="polite"
-        >
-          <span className="visually-hidden">Abriendo {openingStore?.name ?? "la tienda"}.</span>
-          <span className="dashboard-gargantua-transition__readout" aria-hidden="true">
-            <span>ENTRANDO EN EL POZO</span>
-            <strong>{openingStore?.name}</strong>
-          </span>
-        </output>
-      ) : null}
       <div className="dashboard-wrap dashboard-cosmic__content">
         {isShutdownTerminal ? (
           <output className="shutdown-status shutdown-status--cosmic">
@@ -1246,13 +1096,11 @@ export function Dashboard({
                             record={record}
                             index={visibleIndexById.get(record.id) ?? 0}
                             isSelected={record.id === selectedId}
-                            isPinned={pinnedIds.includes(record.id)}
                             compareMode={compareMode}
                             isCompared={compareIds.includes(record.id)}
                             cardButtonRefs={cardButtonRefs}
                             onOpen={openStore}
                             onSelect={selectCard}
-                            onPin={togglePin}
                             onToggleCompare={toggleCompareId}
                             onKeyDown={handleCardKeyDown}
                           />
@@ -1269,13 +1117,11 @@ export function Dashboard({
                           record={record}
                           index={visibleIndexById.get(record.id) ?? 0}
                           isSelected={record.id === selectedId}
-                          isPinned={pinnedIds.includes(record.id)}
                           compareMode={compareMode}
                           isCompared={compareIds.includes(record.id)}
                           cardButtonRefs={cardButtonRefs}
                           onOpen={openStore}
                           onSelect={selectCard}
-                          onPin={togglePin}
                           onToggleCompare={toggleCompareId}
                           onKeyDown={handleCardKeyDown}
                         />
@@ -1332,8 +1178,10 @@ export function Dashboard({
                 folderOpeningId={folderOpeningId}
                 downloadingId={downloadingId}
                 actionNotice={actionNotice}
+                isPinned={selected ? pinnedIds.includes(selected.id) : false}
                 onClose={clearSelected}
                 onOpen={openStore}
+                onPin={togglePin}
                 onOpenSite={onOpenSite ? openSite : undefined}
                 onOpenFolder={onOpenFolder ? openFolder : undefined}
                 onBackup={createBackup}

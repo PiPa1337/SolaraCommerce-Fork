@@ -205,7 +205,11 @@ async function openDemoStoreManaged(page: Page, url: string): Promise<void> {
     await createCleanStore(page, "Tienda A14 gestionada");
     return;
   }
-  await cards.first().getByRole("button", { name: "Abrir esta tienda" }).click();
+  await cards.first().locator(".dashboard-store-card__button").click();
+  await page
+    .getByRole("region", { name: /Tienda seleccionada:/ })
+    .getByRole("button", { name: "Abrir tienda", exact: true })
+    .click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
     timeout: 120_000,
   });

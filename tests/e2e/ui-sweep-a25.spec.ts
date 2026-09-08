@@ -378,7 +378,8 @@ test("el pin marca la card, agrupa Fijadas y persiste tras recargar", async ({ p
   const record = await recordById(page, DEMO_STORE_ID);
   expect(record).toBeTruthy();
 
-  const pin = card(page, DEMO_STORE_NAME).getByTestId("ui-card-pin");
+  await cardButton(page, DEMO_STORE_NAME).click();
+  const pin = detailPanel(page, DEMO_STORE_NAME).getByTestId("ui-detail-pin");
   await pin.click();
   await expect(pin).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("heading", { name: "Fijadas" })).toBeVisible();
@@ -396,13 +397,13 @@ test("el pin marca la card, agrupa Fijadas y persiste tras recargar", async ({ p
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
     timeout: 20_000,
   });
-  await expect(card(page, DEMO_STORE_NAME).getByTestId("ui-card-pin")).toHaveAttribute(
+  await expect(detailPanel(page, DEMO_STORE_NAME).getByTestId("ui-detail-pin")).toHaveAttribute(
     "aria-pressed",
     "true",
   );
   await expect(page.getByRole("heading", { name: "Fijadas" })).toBeVisible();
 
-  await card(page, DEMO_STORE_NAME).getByTestId("ui-card-pin").click();
+  await detailPanel(page, DEMO_STORE_NAME).getByTestId("ui-detail-pin").click();
   await expect(page.getByRole("heading", { name: "Fijadas" })).toHaveCount(0);
   await expect(await page.evaluate(() => localStorage.getItem("solara-dashboard-pinned"))).toBe(
     "[]",

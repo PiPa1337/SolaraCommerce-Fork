@@ -305,9 +305,8 @@ test("A13: respaldo ahora — descarga real de un .solara.json con el proyecto",
 
 test("A13: abrir tienda — la card y el detalle navegan al editor", async ({ page }) => {
   await openDashboard(page);
-  await cardByName(page, "Predeterminado")
-    .getByRole("button", { name: "Abrir esta tienda" })
-    .click();
+  const detail = await selectStore(page, "Predeterminado");
+  await detail.getByRole("button", { name: "Abrir tienda", exact: true }).click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
 
   await page.getByRole("button", { name: "Volver a tiendas" }).click();

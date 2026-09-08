@@ -91,9 +91,11 @@ test("el lanzador persiste el proyecto y el sitio fuera de IndexedDB", async ({ 
       .poll(() => existsSync(join(applicationRoot, "proyectos")), { timeout: 15_000 })
       .toBe(true);
 
+    const card = page.locator('article:has([data-store-card-id="store-managed-save-test"])');
+    await card.locator(".dashboard-store-card__button").click();
     await page
-      .locator('article:has([data-store-card-id="store-managed-save-test"])')
-      .getByRole("button", { name: "Abrir esta tienda" })
+      .getByRole("region", { name: /Tienda seleccionada:/ })
+      .getByRole("button", { name: "Abrir tienda", exact: true })
       .click();
     await page.getByRole("tab", { name: "Resumen" }).click();
     const beforeSave = await page.evaluate(async () => {

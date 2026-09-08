@@ -78,19 +78,17 @@ async function seedLibrary(page: Page, count = 120) {
 
 test("el arranque entra desde Gargantua y libera el dashboard", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(url);
+  await page.goto(url, { waitUntil: "commit" });
 
   const boot = page.getByTestId("solara-app-boot");
   await expect(boot).toBeVisible();
   await expect(boot.locator(".dashboard-gravity-field")).toHaveAttribute("data-renderer", "webgl2");
-  await expect(page.locator(".dashboard-gargantua > .dashboard-gravity-field")).toHaveAttribute(
-    "data-animation-state",
-    "paused",
-  );
-  await expect(boot.locator(".dashboard-gravity-field")).toHaveAttribute(
-    "data-animation-state",
-    "running",
-  );
+  await page.waitForFunction(() => {
+    const canvas = document.querySelector<HTMLCanvasElement>(
+      '[data-testid="solara-app-boot"] .dashboard-gravity-field canvas',
+    );
+    return canvas !== null && Number.parseFloat(getComputedStyle(canvas).opacity) >= 0.99;
+  }, undefined, { timeout: 2_000 });
   await page.waitForFunction(() => document.documentElement.dataset.solaraBoot === "entering", {
     timeout: 5_000,
   });
@@ -107,6 +105,7 @@ test("el arranque entra desde Gargantua y libera el dashboard", async ({ page })
   );
   await expect(page.getByTestId("gargantua-debug-controls")).toBeVisible();
   await expect(page.getByLabel("Opacidad de la interfaz del dashboard")).toHaveValue("100");
+  await expect(page.locator('[data-gargantua-debug="true"]')).toHaveCount(1);
 });
 
 for (const [width, height] of [
@@ -235,6 +234,7 @@ test("Gargantua continúa detrás del navbar superior", async ({ page }) => {
       viewportWidth: window.innerWidth,
       viewportHeight: window.innerHeight,
       headerBackgroundImage: headerStyle.backgroundImage,
+      headerBackdropFilter: headerStyle.backdropFilter,
       rootOverflow:
         root.scrollWidth <= root.clientWidth + 1 && root.scrollHeight <= root.clientHeight + 1,
       rootRect: { top: rootRect.top, bottom: rootRect.bottom },
@@ -247,6 +247,7 @@ test("Gargantua continúa detrás del navbar superior", async ({ page }) => {
   expect(metrics.fieldLeft).toBeLessThanOrEqual(0);
   expect(metrics.fieldRight).toBeGreaterThanOrEqual(metrics.viewportWidth);
   expect(metrics.headerBackgroundImage).toContain("linear-gradient");
+  expect(metrics.headerBackdropFilter).toContain("blur");
   expect(metrics.rootOverflow).toBe(true);
 });
 
@@ -341,6 +342,14 @@ test("preview y detalle mantienen lectura, espaciado y overflow controlado", asy
             ".dashboard-store-detail__actions-danger",
           ].map((selector) => detail.querySelector<HTMLElement>(selector)?.dataset.label ?? "")
         : [],
+      actionDividerWidths: detail
+        ? [
+            ".dashboard-store-detail__actions-secondary",
+            ".dashboard-store-detail__actions-danger",
+          ].map((selector) =>
+            getComputedStyle(detail.querySelector<HTMLElement>(selector)!).borderTopWidth.trim(),
+          )
+        : [],
       buttonHeights: buttons.map((button) => Math.round(button.getBoundingClientRect().height)),
       buttonPadding: buttons.map((button) => {
         const style = getComputedStyle(button);
@@ -361,6 +370,7 @@ test("preview y detalle mantienen lectura, espaciado y overflow controlado", asy
   expect(metrics.actionGroupColumns[0]).toBeGreaterThanOrEqual(1);
   expect(metrics.actionGroupColumns.slice(1)).toEqual([2, 2]);
   expect(metrics.actionLabels).toEqual(["Gestionar y respaldar", "Zona de riesgo"]);
+  expect(metrics.actionDividerWidths).toEqual(["0px", "0px"]);
   expect(metrics.buttonHeights.every((height) => height >= 38)).toBe(true);
   expect(
     metrics.buttonPadding.every(
@@ -479,37 +489,41 @@ test("el teclado separa revisar estado de abrir la tienda", async ({ page }) => 
   await card.focus();
   await page.keyboard.press("Enter");
   await expect(detail).toBeVisible();
-  await detail.getByRole("button", { name: "Cerrar detalle" }).click();
-
-  const open = page.locator(".dashboard-store-card__open").first();
-  await open.focus();
-  await page.keyboard.press(" ");
+  await detail.getByRole("button", { name: "Abrir tienda", exact: true }).click();
   await expect(page.getByRole("tab", { name: "Preparar", exact: true })).toBeVisible();
 });
 
-test("abrir una tienda atraviesa Gargantua antes de montar Studio", async ({ page }) => {
+test("abrir una tienda monta Studio sin una escena intermedia", async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.goto(url);
   await expect(page.getByRole("heading", { name: "Tus tiendas", exact: true })).toBeVisible();
   await seedLibrary(page, 12);
 
-  await page.locator(".dashboard-store-card__open").first().click();
-  await expect(page.getByTestId("gargantua-launch")).toBeVisible();
+  await page.locator(".dashboard-store-card__button").first().click();
+  await page
+    .getByRole("region", { name: /Tienda seleccionada:/ })
+    .getByRole("button", { name: "Abrir tienda", exact: true })
+    .click();
+  await expect(page.getByTestId("gargantua-launch")).toHaveCount(0);
+  await expect(page.getByTestId("store-route-curtain")).toHaveCount(0);
+  await expect(page.getByText("ENTRANDO EN EL POZO", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("tab", { name: "Preparar", exact: true })).toBeVisible({
     timeout: 10000,
   });
-  await expect(page.getByTestId("gargantua-launch")).toHaveCount(0);
 });
 
-test("el inspector de opacidad de Gargantua está disponible en el dashboard local", async ({
+test("el slider de opacidad de Gargantua vive en el navbar", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.goto(url);
   await expect(page.getByRole("heading", { name: "Tus tiendas", exact: true })).toBeVisible();
-  await expect(page.getByTestId("gargantua-debug-controls")).toBeVisible();
+  const control = page.locator(
+    ".app-header--dashboard-cosmic .app-header__actions .app-gargantua-opacity-control",
+  );
+  await expect(control).toBeVisible();
+  await expect(control.locator("input[type=range]")).toHaveValue("100");
   await expect(page.locator('[data-gargantua-debug="true"]')).toHaveCount(1);
-  await expect(page.getByLabel("Opacidad de la interfaz del dashboard")).toHaveValue("100");
 });
 
 test("las flechas respetan el orden visual después de fijar una tienda", async ({ page }) => {
@@ -529,7 +543,9 @@ test("las flechas respetan el orden visual después de fijar una tienda", async 
     .getAttribute("data-store-card-id");
   if (!firstId || !secondId) throw new Error("No se pudieron obtener las cards para la navegación");
 
-  await secondCard.getByTestId("ui-card-pin").click();
+  await secondCard.locator(".dashboard-store-card__button").click();
+  const detail = page.getByRole("region", { name: /Tienda seleccionada:/ });
+  await detail.getByTestId("ui-detail-pin").click();
   await expect(
     page
       .locator(".dashboard-cosmic-store-groups .dashboard-store-card")

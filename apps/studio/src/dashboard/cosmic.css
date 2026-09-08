@@ -110,6 +110,121 @@
   color: #ffb0b0;
 }
 
+.app-gargantua-opacity-control {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 4px 8px;
+  border: 1px solid var(--dashboard-glass-border, var(--cosmic-line));
+  border-radius: 999px;
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 0.085), rgb(255 255 255 / 0.02)),
+    var(--dashboard-glass-surface-soft, rgb(255 255 255 / 0.045));
+  box-shadow:
+    0 1px 0 var(--dashboard-glass-highlight, rgb(255 255 255 / 0.075)) inset,
+    0 8px 20px rgb(0 0 0 / 0.14);
+  color: var(--cosmic-muted);
+  font-size: 10px;
+  line-height: 1;
+  -webkit-backdrop-filter: blur(12px) saturate(120%);
+  backdrop-filter: blur(12px) saturate(120%);
+}
+
+.app-gargantua-opacity-control:focus-within {
+  border-color: var(--dashboard-glass-border-strong, var(--cosmic-line-strong));
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 0.12), rgb(255 255 255 / 0.03)),
+    var(--dashboard-glass-surface-soft, rgb(255 255 255 / 0.045));
+}
+
+.app-gargantua-opacity-control__label {
+  color: var(--cosmic-faint);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+}
+
+.app-gargantua-opacity-control input[type="range"] {
+  width: 74px;
+  height: 16px;
+  margin: 0;
+  appearance: none;
+  background: transparent;
+  accent-color: var(--cosmic-ink);
+  cursor: ew-resize;
+}
+
+.app-gargantua-opacity-control input[type="range"]::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 999px;
+  background: rgb(232 242 255 / 0.2);
+}
+
+.app-gargantua-opacity-control input[type="range"]::-webkit-slider-thumb {
+  width: 12px;
+  height: 12px;
+  margin-top: -4.5px;
+  appearance: none;
+  border: 1px solid rgb(255 255 255 / 0.65);
+  border-radius: 50%;
+  background: var(--cosmic-ink);
+  box-shadow: 0 1px 6px rgb(0 0 0 / 0.35);
+}
+
+.app-gargantua-opacity-control input[type="range"]::-moz-range-track {
+  height: 3px;
+  border-radius: 999px;
+  background: rgb(232 242 255 / 0.2);
+}
+
+.app-gargantua-opacity-control input[type="range"]::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border: 1px solid rgb(255 255 255 / 0.65);
+  border-radius: 50%;
+  background: var(--cosmic-ink);
+  box-shadow: 0 1px 6px rgb(0 0 0 / 0.35);
+}
+
+.app-gargantua-opacity-control input[type="range"]:focus-visible {
+  outline: 2px solid var(--dashboard-glass-border-strong, var(--cosmic-line-strong));
+  outline-offset: 2px;
+}
+
+.app-gargantua-opacity-control output {
+  min-width: 30px;
+  color: var(--cosmic-ink);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+@media (max-width: 560px) {
+  .app-header__actions {
+    gap: 6px;
+  }
+
+  .app-gargantua-opacity-control {
+    gap: 4px;
+    min-height: 28px;
+    padding-inline: 6px;
+  }
+
+  .app-gargantua-opacity-control__label {
+    display: none;
+  }
+
+  .app-gargantua-opacity-control input[type="range"] {
+    width: 58px;
+  }
+
+  .app-gargantua-opacity-control output {
+    min-width: 27px;
+    font-size: 9px;
+  }
+}
+
 .dashboard-page.dashboard-cosmic {
   position: relative;
   isolation: isolate;
@@ -493,50 +608,6 @@
   opacity: 0.78;
 }
 
-.dashboard-store-card__actions {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 3;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px;
-  border: 1px solid rgb(255 255 255 / 0.12);
-  border-radius: 10px;
-  background: rgb(8 11 18 / 0.58);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 0.24);
-  pointer-events: auto;
-}
-
-.dashboard-store-card__open {
-  position: static;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  min-height: 26px;
-  padding: 3px 6px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--cosmic-muted);
-  font-size: 11px;
-  font-weight: 650;
-  letter-spacing: 0.01em;
-  transition:
-    border-color 160ms ease,
-    background 160ms ease,
-    color 160ms ease;
-}
-
-.dashboard-store-card__open:hover,
-.dashboard-store-card__open:focus-visible {
-  border-color: rgb(231 170 61 / 0.5);
-  background: rgb(231 170 61 / 0.12);
-  color: var(--cosmic-ink);
-}
-
 .dashboard-store-card__index {
   position: absolute;
   z-index: 2;
@@ -576,7 +647,7 @@
 .dashboard-store-card__button strong {
   max-width: 100%;
   overflow: hidden;
-  padding-inline: 46px;
+  padding-inline: 8px;
   color: var(--cosmic-ink);
   font-size: 15px;
   font-weight: 650;
@@ -671,10 +742,6 @@
   );
 }
 
-.dashboard-cosmic-results--list .dashboard-store-card__button {
-  padding-right: 84px;
-}
-
 .dashboard-cosmic-results--list .dashboard-store-card__index {
   position: static;
 }
@@ -722,6 +789,50 @@
   gap: 2px;
 }
 
+.dashboard-store-detail__controls {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+}
+
+.dashboard-store-detail__pin {
+  display: grid;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--cosmic-line-strong);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 0.04);
+  color: var(--cosmic-muted);
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease,
+    transform 120ms ease;
+}
+
+.dashboard-store-detail__pin:hover,
+.dashboard-store-detail__pin[aria-pressed="true"] {
+  border-color: rgb(231 170 61 / 0.45);
+  background: rgb(231 170 61 / 0.09);
+  color: var(--cosmic-amber);
+}
+
+.dashboard-store-detail__pin:focus-visible {
+  border-color: rgb(231 170 61 / 0.45);
+  outline: 2px solid var(--cosmic-amber);
+  outline-offset: 2px;
+  color: var(--cosmic-ink);
+}
+
+.dashboard-store-detail__pin:active {
+  transform: translateY(1px) scale(0.97);
+}
+
 .dashboard-store-detail__close {
   flex: 0 0 36px;
   width: 36px;
@@ -730,7 +841,7 @@
   border-radius: 10px;
   background: rgb(255 255 255 / 0.04);
   color: var(--cosmic-muted);
-  margin-left: 8px;
+  margin-left: 0;
   transition:
     border-color 160ms ease,
     background-color 160ms ease,
@@ -863,7 +974,6 @@
 .dashboard-store-detail__actions-secondary,
 .dashboard-store-detail__actions-danger {
   padding-top: 7px;
-  border-top: 1px solid var(--cosmic-line);
 }
 
 .dashboard-store-detail__actions-primary.is-single,
@@ -5523,28 +5633,6 @@ tbody tr[data-selected="true"] {
     0 12px 30px rgb(0 0 0 / 0.32);
 }
 
-.dashboard-store-card__pin {
-  position: static;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  min-width: 28px;
-  min-height: 26px;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--cosmic-faint);
-}
-
-.dashboard-store-card__pin:hover,
-.dashboard-store-card__pin[aria-pressed="true"] {
-  background: rgb(231 170 61 / 0.12);
-  color: var(--cosmic-amber);
-}
-
 .dashboard-store-detail__notice {
   display: block;
   margin-top: 10px;
@@ -5912,7 +6000,7 @@ tbody tr[data-selected="true"] {
   }
 
   .dashboard-store-card__button strong {
-    padding-inline: 36px;
+    padding-inline: 8px;
     font-size: 13px;
   }
 
@@ -5975,7 +6063,7 @@ tbody tr[data-selected="true"] {
   .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
     .dashboard-store-card__button
     strong {
-    padding-inline: 25px;
+    padding-inline: 4px;
     font-size: 11px;
   }
 
@@ -5989,29 +6077,6 @@ tbody tr[data-selected="true"] {
     display: none;
   }
 
-  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-store-card__actions {
-    top: 5px;
-    right: 4px;
-    gap: 2px;
-  }
-
-  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-store-card__pin {
-    width: 28px;
-    min-width: 28px;
-    min-height: 28px;
-  }
-
-  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-store-card__open {
-    width: 28px;
-    min-width: 28px;
-    min-height: 28px;
-    padding: 0;
-    font-size: 0;
-  }
-
-  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-store-card__open svg {
-    flex: 0 0 auto;
-  }
 }
 
 @media (max-width: 560px) {
@@ -6257,19 +6322,6 @@ tbody tr[data-selected="true"] {
   .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-store-card__status,
   .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-store-card__meta {
     font-size: 8px;
-  }
-
-  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-store-card__pin,
-  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-store-card__open {
-    width: 24px;
-    min-width: 24px;
-    min-height: 24px;
-  }
-
-  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-store-card__actions {
-    top: 3px;
-    right: 3px;
-    gap: 1px;
   }
 
   .dashboard-cosmic-pagination {
@@ -6605,18 +6657,11 @@ tbody tr[data-selected="true"] {
   outline-offset: -3px;
 }
 
-/* Los controles flotantes viven por delante de la superficie 3D de la card;
- * así el parallax no intercepta sus propios botones. */
-.dashboard-gargantua .dashboard-store-card__actions,
+/* El control de comparación vive por delante de la superficie 3D de la card. */
 .dashboard-gargantua .dashboard-store-card__compare {
   z-index: 4;
   transform: translateZ(24px);
   transform-style: preserve-3d;
-}
-
-.dashboard-gargantua .dashboard-store-card__pin,
-.dashboard-gargantua .dashboard-store-card__open {
-  transform: none;
 }
 
 .dashboard-gargantua .dashboard-cosmic-results--list .dashboard-store-card__compare {
@@ -6728,29 +6773,6 @@ tbody tr[data-selected="true"] {
 .dashboard-gargantua .dashboard-store-card.is-selected .dashboard-store-card__hero:not(.is-empty),
 .dashboard-gargantua .dashboard-store-card:hover .dashboard-store-card__hero:not(.is-empty) {
   opacity: 0.92;
-}
-
-.dashboard-gargantua .dashboard-store-card__actions {
-  border-color: rgb(255 255 255 / 0.16);
-  background: rgb(8 11 9 / 0.68);
-}
-
-.dashboard-gargantua .dashboard-store-card__open {
-  border-color: rgb(255 255 255 / 0.18);
-  background: rgb(8 11 9 / 0.48);
-  color: var(--cosmic-ink);
-}
-
-.dashboard-gargantua .dashboard-store-card.is-selected .dashboard-store-card__open {
-  border-color: rgb(255 224 170 / 0.5);
-  background: rgb(232 181 111 / 0.14);
-}
-
-.dashboard-gargantua .dashboard-store-card__open:hover,
-.dashboard-gargantua .dashboard-store-card__open:focus-visible {
-  border-color: var(--cosmic-amber);
-  background: rgb(232 181 111 / 0.24);
-  color: var(--cosmic-ink);
 }
 
 .dashboard-gargantua .dashboard-store-detail.is-open {
@@ -6873,13 +6895,6 @@ tbody tr[data-selected="true"] {
     --card-lift: 0px;
   }
 
-  /* Abrir es la acción prioritaria en móvil: conserva su posición flotante,
-   * pero gana una diana táctil mínima sin cambiar la huella de la card. */
-  .dashboard-gargantua .dashboard-store-card__open {
-    min-width: 32px;
-    min-height: 32px;
-    padding: 4px 7px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -7294,248 +7309,6 @@ tbody tr[data-selected="true"] {
   }
 }
 
-/* Entrada a tienda: el botón entrega la navegación después de que Gargantua
- * haya atraído la cámara. La cortina vive en el mismo stacking context para
- * que el gesto se sienta como un único plano. */
-.app-root--dashboard-cosmic:has(.dashboard-gargantua.is-store-launching)
-  > .app-header--dashboard-cosmic {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(-14px) scale(0.98);
-  transition:
-    opacity 500ms ease,
-    transform 720ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.dashboard-gargantua.is-store-launching {
-  overflow: hidden;
-}
-
-.dashboard-gargantua.is-store-launching .dashboard-cosmic__content {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(30px) scale(0.94);
-  filter: blur(10px);
-  transition:
-    opacity 820ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 1120ms cubic-bezier(0.16, 1, 0.3, 1),
-    filter 760ms ease;
-}
-
-.dashboard-gargantua.is-store-launching .dashboard-gravity-field {
-  z-index: 6;
-  opacity: 1;
-  pointer-events: none;
-}
-
-.dashboard-gargantua.is-store-launching .dashboard-gravity-field canvas {
-  opacity: 1;
-  filter: saturate(1.35) contrast(1.18);
-  transition:
-    opacity 520ms ease,
-    filter 900ms ease;
-}
-
-.dashboard-gargantua-transition {
-  position: fixed;
-  z-index: 50;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  background:
-    radial-gradient(
-      circle at 50% 50%,
-      transparent 0 8%,
-      rgb(0 0 0 / 0.18) 20%,
-      rgb(0 0 0 / 0.72) 58%,
-      #000 100%
-    ),
-    rgb(1 2 5 / 0.22);
-  pointer-events: auto;
-  animation: dashboard-gargantua-curtain 1460ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.dashboard-gargantua-transition::before {
-  position: absolute;
-  width: 22vmin;
-  aspect-ratio: 1;
-  border: 1px solid rgb(255 233 176 / 0.42);
-  border-radius: 50%;
-  box-shadow:
-    0 0 26px rgb(255 193 86 / 0.32),
-    0 0 90px rgb(234 104 29 / 0.22),
-    inset 0 0 22px rgb(255 240 192 / 0.25);
-  content: "";
-  pointer-events: none;
-  animation: dashboard-gargantua-entry-ring 1460ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.dashboard-gargantua-transition::after {
-  position: absolute;
-  inset: 0;
-  background: #000;
-  content: "";
-  opacity: 0;
-  pointer-events: none;
-  animation: dashboard-gargantua-blackout 1460ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.dashboard-gargantua-transition__readout {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  gap: 10px;
-  color: rgb(255 241 203 / 0.76);
-  font-size: 10px;
-  letter-spacing: 0.28em;
-  line-height: 1.4;
-  text-align: center;
-  text-transform: uppercase;
-  animation: dashboard-gargantua-readout 760ms ease both;
-}
-
-.dashboard-gargantua-transition__readout strong {
-  max-width: min(70vw, 480px);
-  overflow: hidden;
-  color: #fff7df;
-  font-size: clamp(18px, 3vw, 32px);
-  font-weight: 500;
-  letter-spacing: 0.05em;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.store-launch-curtain {
-  position: fixed;
-  z-index: 1000;
-  inset: 0;
-  background: #000;
-  pointer-events: none;
-}
-
-.store-launch-curtain.is-covering {
-  opacity: 1;
-}
-
-.store-launch-curtain.is-releasing {
-  opacity: 1;
-  animation: store-launch-curtain-release 460ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-
-@keyframes dashboard-gargantua-curtain {
-  0% {
-    opacity: 0;
-  }
-
-  18% {
-    opacity: 0.16;
-  }
-
-  68% {
-    opacity: 0.58;
-  }
-
-  100% {
-    opacity: 1;
-  }
-}
-
-@keyframes dashboard-gargantua-entry-ring {
-  0% {
-    opacity: 0;
-    transform: scale(0.2) rotate(-20deg);
-  }
-
-  32% {
-    opacity: 0.8;
-  }
-
-  100% {
-    opacity: 0;
-    transform: scale(12) rotate(35deg);
-  }
-}
-
-@keyframes dashboard-gargantua-blackout {
-  0%,
-  62% {
-    opacity: 0;
-  }
-
-  82% {
-    opacity: 0.42;
-  }
-
-  100% {
-    opacity: 1;
-  }
-}
-
-@keyframes dashboard-gargantua-readout {
-  0% {
-    opacity: 0;
-    transform: scale(0.82);
-  }
-
-  35% {
-    opacity: 1;
-  }
-
-  100% {
-    opacity: 0;
-    transform: scale(1.04);
-  }
-}
-
-@keyframes store-launch-curtain-release {
-  from {
-    opacity: 1;
-  }
-
-  to {
-    opacity: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .app-root--dashboard-cosmic:has(.dashboard-gargantua.is-store-launching)
-    > .app-header--dashboard-cosmic {
-    transition: none;
-  }
-
-  .dashboard-gargantua.is-store-launching .dashboard-cosmic__content {
-    filter: none;
-    transition: opacity 120ms ease;
-    transform: none;
-  }
-
-  .dashboard-gargantua.is-store-launching .dashboard-gravity-field canvas {
-    transition: none;
-  }
-
-  .dashboard-gargantua-transition {
-    animation-duration: 240ms;
-  }
-
-  .dashboard-gargantua-transition::before {
-    animation: none;
-    opacity: 0;
-  }
-
-  .dashboard-gargantua-transition::after {
-    animation-duration: 240ms;
-  }
-
-  .dashboard-gargantua-transition__readout {
-    animation-duration: 160ms;
-  }
-
-  .store-launch-curtain.is-releasing {
-    animation-duration: 120ms;
-  }
-}
-
 /* Arranque de la app: la pantalla negra es una escena breve, no un segundo
  * dashboard. Gargantua aparece desde el negro y se retira mientras el shell
  * real se arma en bloques escalonados debajo. */
@@ -7747,26 +7520,7 @@ html[data-solara-boot="entering"] .dashboard-cosmic-results {
 
   .dashboard-gargantua .dashboard-store-detail__actions-secondary,
   .dashboard-gargantua .dashboard-store-detail__actions-danger {
-    position: relative;
     padding-top: 12px;
-    border-top-color: rgb(255 255 255 / 0.2);
-  }
-
-  .dashboard-gargantua .dashboard-store-detail__actions-secondary::before,
-  .dashboard-gargantua .dashboard-store-detail__actions-danger::before {
-    position: absolute;
-    top: 0;
-    left: 8px;
-    padding-inline: 5px;
-    background: rgb(12 15 22 / 0.99);
-    color: var(--cosmic-faint);
-    content: attr(data-label);
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.09em;
-    line-height: 1;
-    text-transform: uppercase;
-    transform: translateY(-50%);
   }
 
   .dashboard-gargantua .dashboard-store-detail__notice-slot {
@@ -7978,7 +7732,7 @@ html[data-solara-boot="entering"] .dashboard-cosmic-results {
     grid-column: 2;
     grid-row: 3;
     min-width: 0;
-    padding-inline: 10px;
+    padding-inline: 8px;
     line-height: 1.2;
     transform: none;
   }
@@ -8059,7 +7813,47 @@ html[data-solara-boot="entering"] .dashboard-cosmic-results {
   .dashboard-gargantua
     .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
     .dashboard-cosmic-store-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 700px) and (max-width: 1120px) and (max-height: 820px) {
+  .dashboard-gargantua
+    .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
+    .dashboard-store-card__button {
+    --dashboard-card-height: 104px;
+    grid-template-rows: 28px 24px auto auto auto auto minmax(0, 1fr);
+    row-gap: 1px;
+    height: var(--dashboard-card-height);
+    min-height: var(--dashboard-card-height);
+  }
+
+  .dashboard-gargantua
+    .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
+    .dashboard-store-card__mark {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+@media (min-width: 1121px) and (max-width: 1300px) and (max-height: 760px) {
+  /* Las cuatro columnas de laptop bajo necesitan una card un poco más baja
+   * para que las tres filas y la paginación compartan el alto disponible. */
+  .dashboard-gargantua
+    .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
+    .dashboard-store-card__button {
+    --dashboard-card-height: 128px;
+    grid-template-rows: 33px 25px auto auto auto auto minmax(0, 1fr);
+    row-gap: 2px;
+    height: var(--dashboard-card-height);
+    min-height: var(--dashboard-card-height);
+  }
+
+  .dashboard-gargantua
+    .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
+    .dashboard-store-card__mark {
+    width: 28px;
+    height: 28px;
   }
 }
 
@@ -8203,33 +7997,6 @@ html[data-solara-boot="entering"] .dashboard-cosmic-results {
     no-repeat;
 }
 
-.dashboard-gargantua .dashboard-store-card__actions {
-  border-color: rgb(238 246 255 / 0.18);
-  background: rgb(7 14 25 / 0.74);
-  box-shadow: 0 5px 14px rgb(0 0 0 / 0.28);
-}
-
-.dashboard-gargantua .dashboard-store-card__pin:hover,
-.dashboard-gargantua .dashboard-store-card__pin[aria-pressed="true"] {
-  border-color: rgb(255 255 255 / 0.24);
-  background: rgb(255 255 255 / 0.1);
-  color: #fff;
-}
-
-.dashboard-gargantua .dashboard-store-card__open,
-.dashboard-gargantua .dashboard-store-card.is-selected .dashboard-store-card__open {
-  border-color: rgb(238 246 255 / 0.2);
-  background: rgb(255 255 255 / 0.075);
-  color: var(--cosmic-ink);
-}
-
-.dashboard-gargantua .dashboard-store-card__open:hover,
-.dashboard-gargantua .dashboard-store-card__open:focus-visible {
-  border-color: rgb(255 255 255 / 0.44);
-  background: rgb(255 255 255 / 0.14);
-  color: #fff;
-}
-
 .dashboard-gargantua .dashboard-store-card__badge {
   border-color: rgb(255 255 255 / 0.2);
   background: rgb(255 255 255 / 0.06);
@@ -8254,108 +8021,25 @@ html[data-solara-boot="entering"] .dashboard-cosmic-results {
   outline-color: rgb(255 255 255 / 0.78);
 }
 
-/* Inspector temporal para aislar el campo gravitacional durante el ajuste
- * visual. Sólo existe dentro del Studio local y la variable se limpia al
- * desmontar el dashboard, por lo que no altera el proyecto persistido ni la
- * exportación del storefront. */
-.app-root--dashboard-cosmic:has(.dashboard-gargantua[data-gargantua-debug="true"])
-  > .dashboard-page.dashboard-cosmic {
-  z-index: 30;
-}
-
-.app-root--dashboard-cosmic:has(.dashboard-gargantua[data-gargantua-debug="true"])
-  > .app-header--dashboard-cosmic,
-.app-root--dashboard-cosmic:has(.dashboard-gargantua[data-gargantua-debug="true"])
-  .dashboard-cosmic__banners,
-.dashboard-gargantua[data-gargantua-debug="true"]:not(.is-store-launching) .dashboard-cosmic__content {
+/* El inspector efímero vive en el navbar y sólo desvanece la interfaz para
+ * dejar el campo gravitacional visible durante el ajuste visual. */
+.app-root--dashboard-cosmic[data-gargantua-debug="true"] > .app-header--dashboard-cosmic .app-wordmark,
+.app-root--dashboard-cosmic[data-gargantua-debug="true"] > .app-header--dashboard-cosmic .app-header__nav,
+.app-root--dashboard-cosmic[data-gargantua-debug="true"] > .app-header--dashboard-cosmic .app-shutdown-button,
+.app-root--dashboard-cosmic[data-gargantua-debug="true"] > .dashboard-cosmic__banners,
+.app-root--dashboard-cosmic[data-gargantua-debug="true"] > .global-error,
+.app-root--dashboard-cosmic[data-gargantua-debug="true"] > .dashboard-page > .dashboard-cosmic__content {
   opacity: var(--gargantua-debug-ui-opacity, 1);
   transition: opacity 180ms ease;
 }
 
-.dashboard-gargantua-debug-controls {
-  position: fixed;
-  z-index: 100;
-  top: clamp(78px, 9vh, 96px);
-  left: 50%;
-  display: flex;
-  align-items: center;
-  width: max-content;
-  max-width: calc(100vw - 20px);
-  gap: 10px;
-  margin: 0;
-  padding: 7px 10px 8px;
-  border: 1px solid rgb(255 215 125 / 0.72);
-  border-radius: 999px;
-  background: rgb(3 5 11 / 0.96);
-  box-shadow:
-    0 12px 28px rgb(0 0 0 / 0.48),
-    0 0 0 1px rgb(255 255 255 / 0.08) inset;
-  color: #fff7df;
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  line-height: 1;
-  transform: translateX(-50%);
-  backdrop-filter: blur(14px);
-}
-
-.dashboard-gargantua-debug-controls legend {
-  padding: 0 4px;
-  color: rgb(255 215 125 / 0.64);
-  font-size: 8px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
-.dashboard-gargantua-debug-controls label {
-  color: var(--cosmic-muted);
-  white-space: nowrap;
-}
-
-.dashboard-gargantua-debug-controls input[type="range"] {
-  width: clamp(140px, 19vw, 230px);
-  accent-color: var(--cosmic-amber);
-  cursor: ew-resize;
-}
-
-.dashboard-gargantua-debug-controls input[type="range"]:focus-visible {
-  outline: 2px solid var(--cosmic-yellow);
-  outline-offset: 3px;
-}
-
-.dashboard-gargantua-debug-controls output {
-  min-width: 32px;
-  color: var(--cosmic-ink);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-
-@media (max-width: 600px) {
-  .dashboard-gargantua-debug-controls {
-    top: 76px;
-    width: calc(100vw - 20px);
-    max-width: none;
-    gap: 7px;
-    padding-inline: 8px;
-    font-size: 9px;
-  }
-
-  .dashboard-gargantua-debug-controls legend {
-    font-size: 7px;
-  }
-
-  .dashboard-gargantua-debug-controls input[type="range"] {
-    min-width: 0;
-    flex: 1 1 auto;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .app-root--dashboard-cosmic:has(.dashboard-gargantua[data-gargantua-debug="true"])
-    > .app-header--dashboard-cosmic,
-  .app-root--dashboard-cosmic:has(.dashboard-gargantua[data-gargantua-debug="true"])
-    .dashboard-cosmic__banners,
-  .dashboard-gargantua[data-gargantua-debug="true"]:not(.is-store-launching)
-    .dashboard-cosmic__content {
+  .app-root--dashboard-cosmic[data-gargantua-debug="true"] > .app-header--dashboard-cosmic .app-wordmark,
+  .app-root--dashboard-cosmic[data-gargantua-debug="true"] > .app-header--dashboard-cosmic .app-header__nav,
+  .app-root--dashboard-cosmic[data-gargantua-debug="true"] > .app-header--dashboard-cosmic .app-shutdown-button,
+  .app-root--dashboard-cosmic[data-gargantua-debug="true"] > .dashboard-cosmic__banners,
+  .app-root--dashboard-cosmic[data-gargantua-debug="true"] > .global-error,
+  .app-root--dashboard-cosmic[data-gargantua-debug="true"] > .dashboard-page > .dashboard-cosmic__content {
     transition: none;
   }
 }
@@ -8376,11 +8060,13 @@ html[data-solara-boot="entering"] .dashboard-cosmic-results {
 .app-root--dashboard-cosmic > .app-header--dashboard-cosmic {
   border-bottom-color: var(--dashboard-glass-border);
   background:
-    linear-gradient(180deg, rgb(255 255 255 / 0.035), transparent),
-    rgb(5 9 17 / 0.72);
+    linear-gradient(180deg, var(--dashboard-glass-highlight), rgb(255 255 255 / 0.012)),
+    var(--dashboard-glass-surface);
   box-shadow:
-    0 10px 28px rgb(0 0 0 / 0.18),
+    0 10px 28px rgb(0 0 0 / 0.16),
     0 1px 0 var(--dashboard-glass-highlight) inset;
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  backdrop-filter: blur(14px) saturate(120%);
 }
 
 .app-root--dashboard-cosmic .app-wordmark__logo {
@@ -8550,14 +8236,19 @@ html[data-solara-boot="entering"] .dashboard-cosmic-results {
   }
 }
 
+.dashboard-gargantua .dashboard-store-detail__pin,
 .dashboard-gargantua .dashboard-store-detail__close,
+.dashboard-gargantua .dashboard-store-detail__pin:hover,
 .dashboard-gargantua .dashboard-store-detail__close:hover {
   border-color: var(--dashboard-glass-border);
   background: rgb(255 255 255 / 0.05);
   color: var(--cosmic-muted);
 }
 
+.dashboard-gargantua .dashboard-store-detail__pin[aria-pressed="true"],
 .dashboard-gargantua .dashboard-store-detail__close:hover,
+.dashboard-gargantua .dashboard-store-detail__pin:hover,
+.dashboard-gargantua .dashboard-store-detail__pin:focus-visible,
 .dashboard-gargantua .dashboard-store-detail__close:focus-visible {
   border-color: var(--dashboard-glass-border-strong);
   background: rgb(255 255 255 / 0.11);
@@ -8578,13 +8269,6 @@ html[data-solara-boot="entering"] .dashboard-cosmic-results {
 
 .dashboard-gargantua .dashboard-store-detail__actions-secondary,
 .dashboard-gargantua .dashboard-store-detail__actions-danger {
-  border-top-color: var(--dashboard-glass-border);
-}
-
-.dashboard-gargantua .dashboard-store-detail__actions-secondary::before,
-.dashboard-gargantua .dashboard-store-detail__actions-danger::before {
-  background: var(--dashboard-glass-surface-strong);
-  color: var(--cosmic-faint);
 }
 
 .dashboard-gargantua .dashboard-store-detail__actions .button.dashboard-store-detail__calculator,
@@ -8791,25 +8475,4 @@ body:has(.app-root--dashboard-cosmic) .confirm-dialog {
   border-color: var(--dashboard-glass-border-strong, rgb(242 248 255 / 0.3));
   background: rgb(255 255 255 / 0.11);
   color: var(--cosmic-ink);
-}
-
-.dashboard-gargantua .dashboard-gargantua-debug-controls {
-  border-color: var(--dashboard-glass-border-strong);
-  background:
-    linear-gradient(135deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.02)),
-    var(--dashboard-glass-surface-strong);
-  box-shadow: var(--dashboard-glass-shadow), 0 1px 0 var(--dashboard-glass-highlight) inset;
-  color: var(--cosmic-ink);
-}
-
-.dashboard-gargantua .dashboard-gargantua-debug-controls legend {
-  color: var(--cosmic-faint);
-}
-
-.dashboard-gargantua .dashboard-gargantua-debug-controls input[type="range"] {
-  accent-color: #d8e5f1;
-}
-
-.dashboard-gargantua .dashboard-gargantua-debug-controls input[type="range"]:focus-visible {
-  outline-color: var(--dashboard-glass-border-strong);
 }

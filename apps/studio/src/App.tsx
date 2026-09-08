@@ -148,19 +148,6 @@ function StudioBootSequence({ ready }: { ready: boolean }) {
   );
 }
 
-type StoreLaunchCurtainPhase = "idle" | "covering" | "releasing";
-
-function StoreLaunchCurtain({ phase }: { phase: StoreLaunchCurtainPhase }) {
-  if (phase === "idle") return null;
-  return (
-    <div
-      className={`store-launch-curtain is-${phase}`}
-      data-testid="store-route-curtain"
-      aria-hidden="true"
-    />
-  );
-}
-
 export function App() {
   return (
     <AppErrorBoundary>
@@ -262,7 +249,6 @@ function StudioShellWithBoot() {
 function StudioShell({ onInitialLoadComplete }: { onInitialLoadComplete: () => void }) {
   const [projects, setProjects] = useState<StoredProject[]>([]);
   const [active, setActive] = useState<StoreProjectV1>();
-  const [storeLaunchCurtain, setStoreLaunchCurtain] = useState<StoreLaunchCurtainPhase>("idle");
   const [recovery, setRecovery] = useState<ProjectRecoveryIssue[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -279,6 +265,7 @@ function StudioShell({ onInitialLoadComplete }: { onInitialLoadComplete: () => v
   // ofrecer «Cerrar app» ni reintentar el cierre con el servidor muerto.
   const [shutdownTerminal, setShutdownTerminal] = useState(false);
   const [swUpdateAvailable, setSwUpdateAvailable] = useState(false);
+  const [gargantuaUiOpacity, setGargantuaUiOpacity] = useState(1);
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator !== "undefined" ? navigator.onLine : true,
   );
@@ -297,6 +284,16 @@ function StudioShell({ onInitialLoadComplete }: { onInitialLoadComplete: () => v
     null,
   );
   const storageModeRef = useRef(false);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--gargantua-debug-ui-opacity",
+      String(gargantuaUiOpacity),
+    );
+    return () => {
+      document.documentElement.style.removeProperty("--gargantua-debug-ui-opacity");
+    };
+  }, [gargantuaUiOpacity]);
 
   const refreshBrowser = useCallback(async () => {
     const result = await listProjectsWithRecovery();
@@ -510,16 +507,6 @@ function StudioShell({ onInitialLoadComplete }: { onInitialLoadComplete: () => v
     }
   };
 
-  useEffect(() => {
-    if (!active || storeLaunchCurtain !== "covering") return;
-    const frame = window.requestAnimationFrame(() => setStoreLaunchCurtain("releasing"));
-    const timer = window.setTimeout(() => setStoreLaunchCurtain("idle"), 560);
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.clearTimeout(timer);
-    };
-  }, [active, storeLaunchCurtain]);
-
   const openSite = useCallback(async (id: string) => {
     const popup = window.open("about:blank", "_blank");
     try {
@@ -657,7 +644,6 @@ function StudioShell({ onInitialLoadComplete }: { onInitialLoadComplete: () => v
             onDiskSaved={(receipt) => setActiveDiskVersion(receipt.version)}
             onBack={() => {
               setActive(undefined);
-              setStoreLaunchCurtain("idle");
               setActiveDiskVersion(null);
               setActiveDiskBaseProject(undefined);
               void refresh();
@@ -723,14 +709,13 @@ function StudioShell({ onInitialLoadComplete }: { onInitialLoadComplete: () => v
             }}
           />
         </Suspense>
-        <StoreLaunchCurtain phase={storeLaunchCurtain} />
       </ToastProvider>
     );
   }
 
   return (
     <ToastProvider>
-      <div className="app-root app-root--dashboard-cosmic">
+      <div className="app-root app-root--dashboard-cosmic" data-gargantua-debug="true">
         <div className="dashboard-cosmic__banners">{banners}</div>
         <a className="skip-link" href="#tiendas">
           Saltar al contenido
@@ -761,6 +746,28 @@ function StudioShell({ onInitialLoadComplete }: { onInitialLoadComplete: () => v
             </a>
           </nav>
           <div className="app-header__actions">
+            <label
+              className="app-gargantua-opacity-control"
+              data-testid="gargantua-debug-controls"
+              title="Ajustar opacidad de la interfaz del dashboard"
+            >
+              <span className="app-gargantua-opacity-control__label" aria-hidden="true">
+                UI
+              </span>
+              <input
+                id="gargantua-debug-ui-opacity"
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value={Math.round(gargantuaUiOpacity * 100)}
+                onChange={(event) => setGargantuaUiOpacity(Number(event.target.value) / 100)}
+                aria-label="Opacidad de la interfaz del dashboard"
+              />
+              <output htmlFor="gargantua-debug-ui-opacity">
+                {Math.round(gargantuaUiOpacity * 100)}%
+              </output>
+            </label>
             {sessionManaged && !shutdownTerminal ? (
               <button
                 className="app-shutdown-button"
@@ -884,9 +891,7 @@ function StudioShell({ onInitialLoadComplete }: { onInitialLoadComplete: () => v
             }
           }}
           onOpen={async (id) => {
-            setStoreLaunchCurtain("covering");
-            try {
-              await guard(async () => {
+            await guard(async () => {
                 let project: StoreProjectV1 | undefined;
                 if (storageModeRef.current) {
                   // El listing es metadata barata; el respaldo completo sólo se
@@ -942,11 +947,7 @@ function StudioShell({ onInitialLoadComplete }: { onInitialLoadComplete: () => v
                 }
                 if (!project) throw new Error("No se encontró la tienda.");
                 setActive(project);
-              });
-            } catch (reason) {
-              setStoreLaunchCurtain("idle");
-              throw reason;
-            }
+            });
           }}
           onDuplicate={(id, name) =>
             guard(async () => {
@@ -1107,7 +1108,6 @@ function StudioShell({ onInitialLoadComplete }: { onInitialLoadComplete: () => v
           />
         ) : null}
       </div>
-      <StoreLaunchCurtain phase={storeLaunchCurtain} />
     </ToastProvider>
   );
 }

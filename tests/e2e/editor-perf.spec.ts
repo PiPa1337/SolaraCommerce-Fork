@@ -84,7 +84,13 @@ test("mide la apertura de Predeterminado hasta Resumen y el cambio a Catálogo",
       element.textContent?.includes("Predeterminado"),
     );
     const startOpen = performance.now();
-    card?.querySelector<HTMLButtonElement>(".dashboard-store-card__open")?.click();
+    card?.querySelector<HTMLButtonElement>(".dashboard-store-card__button")?.click();
+    await waitFor(() => document.querySelector(".dashboard-store-detail.is-open") !== null);
+    document
+      .querySelector<HTMLButtonElement>(
+        ".dashboard-store-detail.is-open .dashboard-store-detail__actions-primary button",
+      )
+      ?.click();
     await waitFor(() => document.querySelector('[role="tablist"]') !== null);
     tabByName("Resumen")?.click();
     await waitFor(() => headingVisible("Resumen"));
@@ -137,10 +143,10 @@ test("abrir una tienda administrada no vuelve a descargar el respaldo desde disc
         archiveFetchesDuringOpen += 1;
       }
     });
+    await page.locator(".dashboard-store-card").first().locator(".dashboard-store-card__button").click();
     await page
-      .locator(".dashboard-store-card")
-      .first()
-      .locator(".dashboard-store-card__open")
+      .getByRole("region", { name: /Tienda seleccionada:/ })
+      .getByRole("button", { name: "Abrir tienda", exact: true })
       .click();
     await expect(page.locator('[role="tablist"]')).toBeVisible({ timeout: 30_000 });
     expect(archiveFetchesDuringOpen).toBe(0);

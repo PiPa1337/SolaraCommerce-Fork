@@ -308,7 +308,11 @@ test("el detalle muestra usos coherentes con las referencias del proyecto", asyn
     .locator(".dashboard-store-card")
     .filter({ has: page.getByText("Predeterminado", { exact: true }) });
   await expect(card).toBeVisible();
-  await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+  await card.locator(".dashboard-store-card__button").click();
+  await page
+    .getByRole("region", { name: /Tienda seleccionada:/ })
+    .getByRole("button", { name: "Abrir tienda", exact: true })
+    .click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
   await openAssetsTab(page);
 
@@ -356,7 +360,11 @@ test("Copiar ID escribe el identificador del recurso y comunica Copiado", async 
   const card = page
     .locator(".dashboard-store-card")
     .filter({ has: page.getByText("Predeterminado", { exact: true }) });
-  await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+  await card.locator(".dashboard-store-card__button").click();
+  await page
+    .getByRole("region", { name: /Tienda seleccionada:/ })
+    .getByRole("button", { name: "Abrir tienda", exact: true })
+    .click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
   await openAssetsTab(page);
 
@@ -394,7 +402,11 @@ test("Copiar ID muestra un error accionable cuando el portapapeles rechaza la op
   const card = page
     .locator(".dashboard-store-card")
     .filter({ has: page.getByText("Predeterminado", { exact: true }) });
-  await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+  await card.locator(".dashboard-store-card__button").click();
+  await page
+    .getByRole("region", { name: /Tienda seleccionada:/ })
+    .getByRole("button", { name: "Abrir tienda", exact: true })
+    .click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
   await openAssetsTab(page);
 

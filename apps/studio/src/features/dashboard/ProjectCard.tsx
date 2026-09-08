@@ -11,6 +11,7 @@ import {
   Minus,
   Package,
   Plus,
+  Star,
   Trash,
   X,
 } from "@phosphor-icons/react";
@@ -67,8 +68,10 @@ export interface ProjectCardProps {
   folderOpeningId: string | undefined;
   downloadingId: string | undefined;
   actionNotice: string | undefined;
+  isPinned: boolean;
   onClose(): void;
   onOpen(id: string): void;
+  onPin(id: string): void;
   onOpenSite?: ((id: string) => Promise<void>) | undefined;
   onOpenFolder?: ((id: string) => Promise<void>) | undefined;
   onBackup(id: string): Promise<void>;
@@ -89,8 +92,10 @@ export function ProjectCard({
   folderOpeningId,
   downloadingId,
   actionNotice,
+  isPinned,
   onClose,
   onOpen,
+  onPin,
   onOpenSite,
   onOpenFolder,
   onBackup,
@@ -383,12 +388,26 @@ export function ProjectCard({
                 ) : null}
               </div>
             </div>
-            <IconButton
-              icon={X}
-              label="Cerrar detalle"
-              onClick={onClose}
-              className="dashboard-store-detail__close"
-            />
+            <div className="dashboard-store-detail__controls">
+              <button
+                type="button"
+                className="dashboard-store-detail__pin"
+                aria-pressed={isPinned}
+                aria-label={isPinned ? "Quitar de fijadas" : "Fijar tienda"}
+                aria-description={project.name}
+                title={`${isPinned ? "Quitar" : "Fijar"} ${project.name} ${isPinned ? "de fijadas" : "en fijadas"}`}
+                data-testid="ui-detail-pin"
+                onClick={() => onPin(project.id)}
+              >
+                <Star aria-hidden size={16} weight={isPinned ? "fill" : "regular"} />
+              </button>
+              <IconButton
+                icon={X}
+                label="Cerrar detalle"
+                onClick={onClose}
+                className="dashboard-store-detail__close"
+              />
+            </div>
           </div>
           <dl className="dashboard-store-detail__facts">
             <div>

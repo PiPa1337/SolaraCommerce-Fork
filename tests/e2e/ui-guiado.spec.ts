@@ -205,8 +205,12 @@ test("Respaldar y adoptar cambios aplica la actualización y persiste (H8-24)", 
 
   await page.reload();
   const card = page.locator(".dashboard-store-card", { hasText: storeName });
-  await expect(card.getByTestId("ui-card-open")).toBeVisible();
-  await card.getByTestId("ui-card-open").click();
+  await expect(card.locator(".dashboard-store-card__button")).toBeVisible();
+  await card.locator(".dashboard-store-card__button").click();
+  await page
+    .getByRole("region", { name: new RegExp(`Tienda seleccionada: ${storeName}`) })
+    .getByRole("button", { name: "Abrir tienda", exact: true })
+    .click();
 
   await page.getByRole("tab", { name: "Preparar", exact: true }).click();
   await expect(page.getByText("Actualización disponible")).toBeVisible();
@@ -225,8 +229,12 @@ test("Respaldar y adoptar cambios aplica la actualización y persiste (H8-24)", 
 
   await page.reload();
   const reopened = page.locator(".dashboard-store-card", { hasText: storeName });
-  await expect(reopened.getByTestId("ui-card-open")).toBeVisible();
-  await reopened.getByTestId("ui-card-open").click();
+  await expect(reopened.locator(".dashboard-store-card__button")).toBeVisible();
+  await reopened.locator(".dashboard-store-card__button").click();
+  await page
+    .getByRole("region", { name: new RegExp(`Tienda seleccionada: ${storeName}`) })
+    .getByRole("button", { name: "Abrir tienda", exact: true })
+    .click();
   await page.getByRole("tab", { name: "Preparar", exact: true }).click();
   await expect(page.getByText("Actualización disponible")).toHaveCount(0);
 });

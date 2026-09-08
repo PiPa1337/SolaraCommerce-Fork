@@ -166,7 +166,10 @@ async function openEditor(page: Page): Promise<void> {
   await openDashboard(page);
   const card = page.locator(".dashboard-store-card").filter({ hasText: "Predeterminado" }).first();
   await card.locator(".dashboard-store-card__button").click();
-  await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+  await page
+    .getByRole("region", { name: /Tienda seleccionada:/ })
+    .getByRole("button", { name: "Abrir tienda", exact: true })
+    .click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
   await expect(page.locator(".preview-pane iframe").first()).toBeVisible();
 }

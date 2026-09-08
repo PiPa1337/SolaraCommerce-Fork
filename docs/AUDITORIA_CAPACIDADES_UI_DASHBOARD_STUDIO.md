@@ -74,7 +74,7 @@ Cada ID debe revisarse durante el rework para identificar su función subyacente
 | DASH-029 | Fijar tienda | Marcar una tienda como fijada | Tarjeta de tienda | Cambia prioridad/pin persistido |
 | DASH-030 | Quitar de fijadas | Desmarcar pin | Tienda fijada | Elimina prioridad/pin |
 | DASH-031 | Seleccionar tarjeta de tienda | Mostrar detalle de una tienda | Listado Dashboard | Actualiza panel de detalle |
-| DASH-032 | Abrir esta tienda | Entrar directamente al Studio de la tienda | Tarjeta de tienda | Abre proyecto en editor |
+| DASH-032 | Abrir tienda | Entrar al Studio desde la información de la tienda | Panel de información | Abre proyecto en editor |
 | DASH-033 | Cerrar detalle | Cerrar panel/detalle de tienda seleccionada | Tienda seleccionada | Vuelve al estado sin selección |
 | DASH-034 | `Abrir tienda` | Abrir proyecto seleccionado en Studio | Panel de detalle | Entra al editor |
 | DASH-035 | `Abrir sitio público` | Abrir el sitio exportado/publicado de la tienda | Sólo cuando el runtime administrado dispone de sitio válido | Abre sitio local/publicado asociado |

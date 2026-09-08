@@ -21,7 +21,11 @@ test("el mega-menú de la navbar es visible y alcanzable en el preview", async (
     const card = page.locator(".dashboard-store-card").filter({
       has: page.getByText("Predeterminado", { exact: true }),
     });
-    await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+    await card.locator(".dashboard-store-card__button").click();
+    await page
+      .getByRole("region", { name: /Tienda seleccionada:/ })
+      .getByRole("button", { name: "Abrir tienda", exact: true })
+      .click();
 
     const preview = page.frameLocator('iframe[title="Vista previa desktop"]');
     const header = preview.locator('[data-solara-module="catalog-header"]');

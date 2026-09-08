@@ -446,8 +446,12 @@ test("contenedor: el ancho persiste al recargar el editor", async ({ page }) => 
     timeout: 30_000,
   });
   const card = page.locator(".dashboard-store-card", { hasText: storeName });
-  await expect(card.getByTestId("ui-card-open")).toBeVisible();
-  await card.getByTestId("ui-card-open").click();
+  await expect(card.locator(".dashboard-store-card__button")).toBeVisible();
+  await card.locator(".dashboard-store-card__button").click();
+  await page
+    .getByRole("region", { name: new RegExp(`Tienda seleccionada: ${storeName}`) })
+    .getByRole("button", { name: "Abrir tienda", exact: true })
+    .click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
   await openThemeTab(page);
 

@@ -209,8 +209,12 @@ test("Respaldar y adoptar cambios: respalda en descarga, actualiza y persiste te
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
   const card = page.locator(".dashboard-store-card", { hasText: storeName });
-  await expect(card.getByTestId("ui-card-open")).toBeVisible();
-  await card.getByTestId("ui-card-open").click();
+  await expect(card.locator(".dashboard-store-card__button")).toBeVisible();
+  await card.locator(".dashboard-store-card__button").click();
+  await page
+    .getByRole("region", { name: new RegExp(`Tienda seleccionada: ${storeName}`) })
+    .getByRole("button", { name: "Abrir tienda", exact: true })
+    .click();
 
   // Auto-feedback del panel: anuncia la versión destino.
   await openStudioTab(page, "Preparar");
@@ -231,8 +235,12 @@ test("Respaldar y adoptar cambios: respalda en descarga, actualiza y persiste te
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
   const reopened = page.locator(".dashboard-store-card", { hasText: storeName });
-  await expect(reopened.getByTestId("ui-card-open")).toBeVisible();
-  await reopened.getByTestId("ui-card-open").click();
+  await expect(reopened.locator(".dashboard-store-card__button")).toBeVisible();
+  await reopened.locator(".dashboard-store-card__button").click();
+  await page
+    .getByRole("region", { name: new RegExp(`Tienda seleccionada: ${storeName}`) })
+    .getByRole("button", { name: "Abrir tienda", exact: true })
+    .click();
   await openStudioTab(page, "Preparar");
   await expect(page.getByText("Actualización disponible")).toHaveCount(0);
 });
@@ -245,9 +253,11 @@ test("Cerrar aviso de actualización lo descarta sin mutar la plantilla", async 
   await seedTemplateVersion(page, storeName, 1);
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  const card = page.locator(".dashboard-store-card", { hasText: storeName });
+  await card.locator(".dashboard-store-card__button").click();
   await page
-    .locator(".dashboard-store-card", { hasText: storeName })
-    .getByTestId("ui-card-open")
+    .getByRole("region", { name: new RegExp(`Tienda seleccionada: ${storeName}`) })
+    .getByRole("button", { name: "Abrir tienda", exact: true })
     .click();
   await openStudioTab(page, "Preparar");
 

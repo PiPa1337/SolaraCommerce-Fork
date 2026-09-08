@@ -95,7 +95,11 @@ async function openManagedStoreByName(page: Page, name: string): Promise<void> {
     has: page.getByText(name, { exact: true }),
   });
   await expect(card).toBeVisible({ timeout: 30_000 });
-  await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+  await card.locator(".dashboard-store-card__button").click();
+  await page
+    .getByRole("region", { name: new RegExp(`Tienda seleccionada: ${name}`) })
+    .getByRole("button", { name: "Abrir tienda", exact: true })
+    .click();
   const navigation = page.getByRole("navigation", { name: /de la tienda/ });
   const recovery = page.getByTestId("ui-confirm-dialog");
   await expect

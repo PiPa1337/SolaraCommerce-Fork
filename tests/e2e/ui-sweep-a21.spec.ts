@@ -221,7 +221,11 @@ async function openManagedProject(
     .filter({ has: page.locator(`[data-store-card-id="${project.id}"]`) })
     .first();
   await expect(card).toBeVisible({ timeout: 120_000 });
-  await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+  await card.locator(".dashboard-store-card__button").click();
+  await page
+    .getByRole("region", { name: /Tienda seleccionada:/ })
+    .getByRole("button", { name: "Abrir tienda", exact: true })
+    .click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
     timeout: 120_000,
   });
@@ -260,9 +264,11 @@ async function openDemoStore(page: Page): Promise<void> {
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
     timeout: 40_000,
   });
+  const card = page.locator(`article:has([data-store-card-id="${DEMO_STORE_ID}"])`);
+  await card.locator(".dashboard-store-card__button").click();
   await page
-    .locator(`article:has([data-store-card-id="${DEMO_STORE_ID}"])`)
-    .getByRole("button", { name: "Abrir esta tienda" })
+    .getByRole("region", { name: /Tienda seleccionada:/ })
+    .getByRole("button", { name: "Abrir tienda", exact: true })
     .click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
     timeout: 40_000,

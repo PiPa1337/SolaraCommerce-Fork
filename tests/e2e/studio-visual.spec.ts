@@ -113,7 +113,7 @@ test("las portadas conservan su encuadre y el hover anima la card", async ({ pag
     .not.toBe(beforeHover);
 });
 
-test("las acciones de la card tienen un rail propio y el indice contrasta", async ({ page }) => {
+test("la card libera el rail de acciones y el detalle conserva sus controles", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto(studioUrl);
 
@@ -121,7 +121,9 @@ test("las acciones de la card tienen un rail propio y el indice contrasta", asyn
   const index = card.locator(".dashboard-store-card__index");
   await expect(index).toHaveText("1");
   await expect(card.locator(".dashboard-store-card__status.is-active")).toHaveCount(0);
-  await expect(card.locator(".dashboard-store-card__actions")).toBeVisible();
+  await expect(card.locator(".dashboard-store-card__actions")).toHaveCount(0);
+  await expect(card.locator(".dashboard-store-card__pin")).toHaveCount(0);
+  await expect(card.locator(".dashboard-store-card__open")).toHaveCount(0);
 
   const layout = await card.evaluate((element) => {
     const rect = (selector: string) => {
@@ -130,25 +132,38 @@ test("las acciones de la card tienen un rail propio y el indice contrasta", asyn
       const bounds = node.getBoundingClientRect();
       return { left: bounds.left, right: bounds.right, top: bounds.top, bottom: bounds.bottom };
     };
-    const indexStyle = getComputedStyle(element.querySelector(".dashboard-store-card__index")!);
+    const indexElement = element.querySelector<HTMLElement>(".dashboard-store-card__index");
+    const titleElement = element.querySelector<HTMLElement>("strong");
+    if (!indexElement || !titleElement) throw new Error("Faltan los textos de la card");
+    const indexStyle = getComputedStyle(indexElement);
+    const titleStyle = getComputedStyle(titleElement);
     return {
       card: rect(".dashboard-store-card__button"),
-      actions: rect(".dashboard-store-card__actions"),
-      pin: rect(".dashboard-store-card__pin"),
-      open: rect(".dashboard-store-card__open"),
       mark: rect(".dashboard-store-card__mark"),
+      titlePadding: titleStyle.paddingInline,
       indexColor: indexStyle.color,
       indexShadow: indexStyle.textShadow,
     };
   });
 
-  expect(layout.pin.right).toBeLessThanOrEqual(layout.open.left + 1);
-  expect(layout.actions.left).toBeGreaterThanOrEqual(layout.card.left - 1);
-  expect(layout.actions.right).toBeLessThanOrEqual(layout.card.right + 1);
-  expect(layout.actions.bottom).toBeLessThanOrEqual(layout.mark.top + 1);
+  expect(layout.titlePadding).toBe("8px");
   expect(layout.indexColor).toBe("rgb(255, 255, 255)");
   expect(layout.indexShadow).toContain("1px 1px");
   expect(layout.indexShadow).toContain("rgb(0, 0, 0)");
+
+  await card.locator(".dashboard-store-card__button").click();
+  const detail = page.getByRole("region", { name: /Tienda seleccionada:/ });
+  await expect(detail.getByTestId("ui-detail-pin")).toBeVisible();
+  const detailLayout = await detail.evaluate((element) => {
+    const pin = element.querySelector<HTMLElement>('[data-testid="ui-detail-pin"]');
+    const close = element.querySelector<HTMLElement>('[aria-label="Cerrar detalle"]');
+    if (!pin || !close) throw new Error("Faltan los controles del encabezado del detalle");
+    return {
+      pinRight: pin.getBoundingClientRect().right,
+      closeLeft: close.getBoundingClientRect().left,
+    };
+  });
+  expect(detailLayout.pinRight).toBeLessThanOrEqual(detailLayout.closeLeft);
 });
 
 test("tres cards con portadas no desbordan la grilla", async ({ page }) => {
@@ -164,10 +179,12 @@ test("tres cards con portadas no desbordan la grilla", async ({ page }) => {
   await expect(grid.locator(".dashboard-store-card")).toHaveCount(3);
   const layout = await grid.evaluate((element) => {
     const gridRect = element.getBoundingClientRect();
-    const cards = [...element.querySelectorAll<HTMLElement>(".dashboard-store-card")].map((card) => {
-      const rect = card.getBoundingClientRect();
-      return { left: rect.left, right: rect.right };
-    });
+    const cards = [...element.querySelectorAll<HTMLElement>(".dashboard-store-card")].map(
+      (card) => {
+        const rect = card.getBoundingClientRect();
+        return { left: rect.left, right: rect.right };
+      },
+    );
     return {
       clientWidth: element.clientWidth,
       scrollWidth: element.scrollWidth,
@@ -251,7 +268,10 @@ test("dashboard permite abrir, buscar, cambiar vista, respaldar y administrar un
     page.getByRole("region", { name: "Tienda seleccionada: Predeterminado" }),
   ).toBeVisible();
 
-  await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+  await page
+    .getByRole("region", { name: "Tienda seleccionada: Predeterminado" })
+    .getByRole("button", { name: "Abrir tienda", exact: true })
+    .click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
   await page.getByRole("button", { name: "Volver a tiendas" }).click();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();

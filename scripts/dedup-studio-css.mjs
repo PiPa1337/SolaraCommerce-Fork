@@ -9,11 +9,21 @@ if (stylesheets.length === 0) {
 }
 
 let removed = 0;
+// The leaf-rule regex also matches `from`/`to` blocks inside keyframes;
+// protect those animation programs before deduplicating ordinary CSS rules.
+const keyframeBlockPattern = /@(?:-webkit-)?keyframes[^{]+\{(?:[^{}]|\{[^{}]*\})*\}/g;
+
 for (const stylesheet of stylesheets) {
   const path = `${assetsDirectory}${stylesheet}`;
   const css = readFileSync(path, "utf8");
   const seen = new Set();
-  const deduped = css.replace(/[^{}]+\{[^{}]*\}/g, (rule) => {
+  const keyframes = [];
+  const protectedCss = css.replace(keyframeBlockPattern, (block) => {
+    const token = `__solara_keyframes_${keyframes.length}__`;
+    keyframes.push(block);
+    return token;
+  });
+  const dedupedRules = protectedCss.replace(/[^{}]+\{[^{}]*\}/g, (rule) => {
     const key = rule;
     if (seen.has(key)) {
       removed += 1;
@@ -22,6 +32,10 @@ for (const stylesheet of stylesheets) {
     seen.add(key);
     return rule;
   });
+  const deduped = dedupedRules.replace(
+    /__solara_keyframes_(\d+)__/g,
+    (_token, index) => keyframes[Number(index)],
+  );
   if (deduped !== css) writeFileSync(path, deduped, "utf8");
 }
 console.log(`Dedup CSS Studio: ${removed} reglas duplicadas exactas eliminadas.`);

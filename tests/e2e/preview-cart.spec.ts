@@ -3,6 +3,17 @@ import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(120_000);
 
+async function openStoreFromDashboard(
+  page: import("@playwright/test").Page,
+  card: import("@playwright/test").Locator,
+): Promise<void> {
+  await card.locator(".dashboard-store-card__button").click();
+  await page
+    .getByRole("region", { name: /Tienda seleccionada:/ })
+    .getByRole("button", { name: "Abrir tienda", exact: true })
+    .click();
+}
+
 test("el preview V2 conserva el carrito al navegar con enlaces internos", async ({ page }) => {
   const running = await startStudioServer();
   try {
@@ -14,7 +25,7 @@ test("el preview V2 conserva el carrito al navegar con enlaces internos", async 
     const card = page.locator(".dashboard-store-card").filter({
       has: page.getByText("Predeterminado", { exact: true }),
     });
-    await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+    await openStoreFromDashboard(page, card);
 
     const preview = page.frameLocator('iframe[title="Vista previa desktop"]');
     await page.evaluate(() => localStorage.removeItem("solara-cart:store-modo-sur-demo"));
@@ -134,7 +145,7 @@ test("el enlace Abrir carrito del footer abre el drawer sin cambiar de ruta", as
     const card = page.locator(".dashboard-store-card").filter({
       has: page.getByText("Predeterminado", { exact: true }),
     });
-    await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+    await openStoreFromDashboard(page, card);
 
     const preview = page.frameLocator('iframe[title="Vista previa desktop"]');
     const footerCartLink = preview.locator("a.catalog-footer-cart-link");
@@ -162,7 +173,7 @@ test("el preview V2 conserva el carrito al cambiar de ruta inmediatamente despu�
     const card = page.locator(".dashboard-store-card").filter({
       has: page.getByText("Predeterminado", { exact: true }),
     });
-    await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+    await openStoreFromDashboard(page, card);
 
     const preview = page.frameLocator('iframe[title="Vista previa desktop"]');
     await page.evaluate(() => localStorage.removeItem("solara-cart:store-modo-sur-demo"));
@@ -222,7 +233,7 @@ test("el preview V2 conserva el vaciado intencional al cambiar de ruta", async (
     const card = page.locator(".dashboard-store-card").filter({
       has: page.getByText("Predeterminado", { exact: true }),
     });
-    await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+    await openStoreFromDashboard(page, card);
 
     const preview = page.frameLocator('iframe[title="Vista previa desktop"]');
     await page.evaluate(() => {
@@ -263,7 +274,7 @@ test("P7-B5: los tamaños de vista y el zoom cambian el stage del preview", asyn
     const card = page.locator(".dashboard-store-card").filter({
       has: page.getByText("Predeterminado", { exact: true }),
     });
-    await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+    await openStoreFromDashboard(page, card);
     await page.locator(".studio-shell").waitFor({ timeout: 30_000 });
 
     const frame = page.locator('.preview-stage iframe[title^="Vista previa"]');
@@ -316,7 +327,7 @@ test("P7-B6: el zoom del preview se conserva al recargar la sesión", async ({ p
     const card = page.locator(".dashboard-store-card").filter({
       has: page.getByText("Predeterminado", { exact: true }),
     });
-    await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+    await openStoreFromDashboard(page, card);
     await page.locator(".studio-shell").waitFor({ timeout: 30_000 });
 
     const zoom50 = page.getByRole("button", { name: "50%" });
@@ -329,7 +340,7 @@ test("P7-B6: el zoom del preview se conserva al recargar la sesión", async ({ p
     const cardAfter = page.locator(".dashboard-store-card").filter({
       has: page.getByText("Predeterminado", { exact: true }),
     });
-    await cardAfter.getByRole("button", { name: "Abrir esta tienda" }).click();
+    await openStoreFromDashboard(page, cardAfter);
     await page.locator(".studio-shell").waitFor({ timeout: 30_000 });
 
     const frame = page.locator('.preview-stage iframe[title^="Vista previa"]');

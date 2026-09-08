@@ -34,7 +34,11 @@ async function openDefaultStore(page: Page): Promise<void> {
     has: page.getByText("Predeterminado", { exact: true }),
   });
   await expect(card).toBeVisible();
-  await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+  await card.locator(".dashboard-store-card__button").click();
+  await page
+    .getByRole("region", { name: /Tienda seleccionada:/ })
+    .getByRole("button", { name: "Abrir tienda", exact: true })
+    .click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
 }
 
@@ -128,18 +132,17 @@ test("el skip-link del dashboard es el primer control y salta al contenido", asy
   await expect(page.getByRole("button", { name: "Nueva tienda", exact: true })).toBeFocused();
 });
 
-test("el orden de tabulación llega de las tarjetas al panel de detalle", async ({ page }) => {
+test("el teclado llega desde las tarjetas al panel de detalle", async ({ page }) => {
   await openDashboard(page);
   const cards = page.locator(".dashboard-store-card");
   await expect(cards.first()).toBeVisible();
-  const lastOpen = cards.last().getByRole("button", { name: "Abrir esta tienda" });
-  await lastOpen.focus();
+  const lastCard = cards.last().locator(".dashboard-store-card__button");
+  await lastCard.focus();
+  await page.keyboard.press("Enter");
+  const detail = page.locator(".dashboard-store-detail");
+  await expect(detail).toBeFocused();
   await page.keyboard.press("Tab");
-  await expect(page.locator(".dashboard-store-detail")).toBeFocused();
-  await page.keyboard.press("Tab");
-  await expect(
-    page.locator(".dashboard-store-detail").getByRole("button", { name: "Cerrar detalle" }),
-  ).toBeFocused();
+  await expect(detail.getByTestId("ui-detail-pin")).toBeFocused();
 });
 
 test("el skip-link del Studio llega al panel de edición", async ({ page }) => {
@@ -411,10 +414,7 @@ test("el foco visible es distinguible en tarjetas y tabs", async ({ page }) => {
   await openDashboard(page);
   await expectFocusVisible(
     page,
-    page
-      .locator(".dashboard-store-card")
-      .first()
-      .getByRole("button", { name: "Abrir esta tienda" }),
+    page.locator(".dashboard-store-card").first().locator(".dashboard-store-card__button"),
   );
   await openDefaultStore(page);
   await expectFocusVisible(page, page.getByRole("tab", { name: "Preparar", exact: true }));
@@ -523,8 +523,7 @@ test("los controles repetidos conservan contexto accesible por superficie", asyn
     return;
   };
 
-  await distinctDescriptions(page.getByTestId("ui-card-pin"));
-  await distinctDescriptions(page.getByTestId("ui-card-open"));
+  await distinctDescriptions(page.getByTestId("ui-detail-pin"));
 
   await openDefaultStore(page);
   await page.getByRole("tab", { name: "Resumen", exact: true }).click();
@@ -851,7 +850,11 @@ async function openManagedStoreByName(page: Page, name: string): Promise<void> {
     has: page.getByText(name, { exact: true }),
   });
   await expect(card).toBeVisible({ timeout: 30_000 });
-  await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+  await card.locator(".dashboard-store-card__button").click();
+  await page
+    .getByRole("region", { name: /Tienda seleccionada:/ })
+    .getByRole("button", { name: "Abrir tienda", exact: true })
+    .click();
   const navigation = page.getByRole("navigation", { name: /de la tienda/ });
   const recovery = page.getByTestId("ui-confirm-dialog");
   await expect

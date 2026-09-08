@@ -413,7 +413,11 @@ test("A15.7 el guardado gestionado versiona en disco y actualiza la barra de est
     if ((await cards.count()) === 0) {
       await createCleanStore(page, "Tienda A15 gestionada");
     } else {
-      await cards.first().getByRole("button", { name: "Abrir esta tienda" }).click();
+      await cards.first().locator(".dashboard-store-card__button").click();
+      await page
+        .getByRole("region", { name: /Tienda seleccionada:/ })
+        .getByRole("button", { name: "Abrir tienda", exact: true })
+        .click();
     }
     await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
 

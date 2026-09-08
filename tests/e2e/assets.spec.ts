@@ -80,7 +80,11 @@ test("el asset del hero de Predeterminado muestra su uso y no se puede borrar", 
     .locator(".dashboard-store-card")
     .filter({ has: page.getByText("Predeterminado", { exact: true }) });
   await expect(card).toBeVisible();
-  await card.getByRole("button", { name: "Abrir esta tienda" }).click();
+  await card.locator(".dashboard-store-card__button").click();
+  await page
+    .getByRole("region", { name: /Tienda seleccionada:/ })
+    .getByRole("button", { name: "Abrir tienda", exact: true })
+    .click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
   await page.getByRole("tab", { name: "Recursos", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Recursos" })).toBeVisible();

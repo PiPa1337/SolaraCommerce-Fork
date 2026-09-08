@@ -1661,7 +1661,6 @@ button.status-label:focus-visible {
   .overview-accordion__caret,
   .overview-accordion__panel:not([hidden]),
   .overview-save-indicator--unsaved svg,
-  .dashboard-store-card__open,
   .guided-progress__meter span,
   .category-tree-toggle,
   .category-tree-toggle svg,

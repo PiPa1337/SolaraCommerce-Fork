@@ -82,9 +82,11 @@ pages.
 
 The storefront reference palette is warm, editorial and low-chroma, with a
 terracotta accent. The Studio uses near-black surfaces, warm text and an orange
-working accent. The Gargantua dashboard refines that register with a near-neutral
-void (`#080b08`), desaturated blue-gray haze, pale hot-disk highlights and a
-champagne amber (`#e8b56f`). Public theme presets may replace the reference
+working accent. The Gargantua dashboard keeps its near-neutral void (`#080b08`),
+desaturated blue-gray haze and pale hot-disk highlights, while its operational
+surfaces use a cool, translucent glass recipe with restrained light borders.
+Champagne amber remains limited to brand/background and semantic actions; it does
+not tint the dashboard chrome. Public theme presets may replace the reference
 storefront values.
 
 ### Primary

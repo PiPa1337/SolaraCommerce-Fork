@@ -606,10 +606,19 @@ export function GravityField({
     let rootTop = 0;
     let rootWidth = 1;
     let rootHeight = 1;
-    let sceneStartedAt = performance.now();
+    const bootStateAtMount = document.documentElement.dataset.solaraBoot;
+    const settleSceneAtMount = pauseWhileAppBooting && bootStateAtMount === "entering";
+    let sceneStartedAt =
+      performance.now() - (settleSceneAtMount ? GRAVITY_SETTLED_ELAPSED_MS : 0);
+    const appBootOverlayMountedBeforeMarker =
+      pauseWhileAppBooting &&
+      document.documentElement.dataset.solaraBoot === undefined &&
+      document.querySelector(".app-boot-sequence") !== null;
     const isAppBooting = () =>
       pauseWhileAppBooting && document.documentElement.dataset.solaraBoot === "loading";
-    let appBootPaused = isAppBooting();
+    // The overlay and dashboard mount in the same commit. The one-time DOM
+    // fallback closes that first-effect race before the overlay writes its dataset.
+    let appBootPaused = isAppBooting() || appBootOverlayMountedBeforeMarker;
 
     const draw = (time: number, settleIntro = false) => {
       if (appBootPaused) return;

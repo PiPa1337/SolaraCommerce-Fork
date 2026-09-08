@@ -53,8 +53,12 @@ async function resetDemoStore(page: Page): Promise<void> {
 
 async function openStoreFromDashboard(page: Page, name: string): Promise<void> {
   const card = page.locator(".dashboard-store-card", { hasText: name });
-  await expect(card.getByTestId("ui-card-open")).toBeVisible();
-  await card.getByTestId("ui-card-open").click();
+  await expect(card.locator(".dashboard-store-card__button")).toBeVisible();
+  await card.locator(".dashboard-store-card__button").click();
+  await page
+    .getByRole("region", { name: new RegExp(`Tienda seleccionada: ${name}`) })
+    .getByRole("button", { name: "Abrir tienda", exact: true })
+    .click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
 }
 

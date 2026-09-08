@@ -95,8 +95,12 @@ async function readProgress(page: Page): Promise<{ text: string; percent: number
 
 async function openStoreFromDashboard(page: Page, name: string): Promise<void> {
   const card = page.locator(".dashboard-store-card", { hasText: name });
-  await expect(card.getByTestId("ui-card-open")).toBeVisible();
-  await card.getByTestId("ui-card-open").click();
+  await expect(card.locator(".dashboard-store-card__button")).toBeVisible();
+  await card.locator(".dashboard-store-card__button").click();
+  await page
+    .getByRole("region", { name: new RegExp(`Tienda seleccionada: ${name}`) })
+    .getByRole("button", { name: "Abrir tienda", exact: true })
+    .click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
 }
 
@@ -420,6 +424,5 @@ test("el estado invalid es inalcanzable en un proyecto persistido: el schema lo 
   await expect(page.getByText(/requieren recuperación/)).toBeVisible();
   await expect(page.getByText(`${storeName}: identity.email`)).toBeVisible();
   const card = page.locator(".dashboard-store-card", { hasText: storeName });
-  await expect(card.getByTestId("ui-card-open")).toHaveCount(0);
   await expect(card).toHaveCount(0);
 });

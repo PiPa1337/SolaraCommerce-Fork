@@ -10,13 +10,13 @@
  *      de la card, disabled/title coherentes;
  *  (3) datos: persistencia en localStorage/IndexedDB y payload del handler
  *      → receptor (selectCard → writeStoredSelectedId; togglePin →
- *      writePinnedIds; onOpen → Studio con el proyecto).
+ *      writePinnedIds; panel "Abrir tienda" → Studio con el proyecto).
  *
  * Cubre el bin A12: búsqueda (filtra cards y renumera), filtro de estado,
  * orden (reordena de verdad), vista grilla/lista (layout + estado
  * presionado), pin (marca visible y persiste), checkboxes de comparar
- * (selección marcada + barra con conteo), botón Abrir de la card (abre el
- * editor), chips de salud (seleccionan y persisten) y acciones de la
+ * (selección marcada + barra con conteo), botón Abrir tienda del detalle
+ * (abre el editor), chips de salud (seleccionan y persisten) y acciones de la
  * biblioteca (Comparar tiendas, Respaldar todo en modo navegador).
  */
 
@@ -320,8 +320,8 @@ test("fijar marca la card con aria-pressed, la agrupa en Fijadas y persiste tras
 }) => {
   await openDashboard(page);
   await duplicateAs(page, "Zeta");
-  await selectCardByName(page, "Predeterminado");
-  const zetaPin = card(page, "Zeta").getByTestId("ui-card-pin");
+  await selectCardByName(page, "Zeta");
+  const zetaPin = detailPanel(page, "Zeta").getByTestId("ui-detail-pin");
   const zetaId = await card(page, "Zeta")
     .locator(".dashboard-store-card__button")
     .getAttribute("data-store-card-id");
@@ -341,19 +341,19 @@ test("fijar marca la card con aria-pressed, la agrupa en Fijadas y persiste tras
     await page.evaluate(() => localStorage.getItem("solara-dashboard-pinned")),
   ).toContain(zetaId as string);
 
-  await expect(detailPanel(page, "Predeterminado")).toBeVisible();
+  await expect(detailPanel(page, "Zeta")).toBeVisible();
 
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
     timeout: 20_000,
   });
-  await expect(card(page, "Zeta").getByTestId("ui-card-pin")).toHaveAttribute(
+  await expect(detailPanel(page, "Zeta").getByTestId("ui-detail-pin")).toHaveAttribute(
     "aria-pressed",
     "true",
   );
   await expect(page.getByRole("heading", { name: "Fijadas" })).toBeVisible();
 
-  await card(page, "Zeta").getByTestId("ui-card-pin").click();
+  await detailPanel(page, "Zeta").getByTestId("ui-detail-pin").click();
   await expect(page.getByRole("heading", { name: "Fijadas" })).toHaveCount(0);
   await expect(await page.evaluate(() => localStorage.getItem("solara-dashboard-pinned"))).toBe(
     "[]",
@@ -395,9 +395,12 @@ test("el modo comparar marca los checkboxes y la barra actualiza el conteo y el 
   await expect(toggle).toHaveAttribute("aria-pressed", "false");
 });
 
-test("el botón Abrir de la card abre el editor con el proyecto", async ({ page }) => {
+test("el botón Abrir tienda del detalle abre el editor con el proyecto", async ({ page }) => {
   await openDashboard(page);
-  await card(page, "Predeterminado").getByTestId("ui-card-open").click();
+  await selectCardByName(page, "Predeterminado");
+  await detailPanel(page, "Predeterminado")
+    .getByRole("button", { name: "Abrir tienda", exact: true })
+    .click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
     timeout: 20_000,
   });
