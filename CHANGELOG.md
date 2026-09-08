@@ -1,3 +1,169 @@
+### Dashboard paginado sin scroll (2026-09-08)
+
+- El rail desktop del dashboard recupera una escala mínima legible, hace visibles sus grupos de gestión y riesgo, y mantiene estable el espacio del feedback posterior a las acciones.
+- `Respaldar ahora`, `Restaurar tienda` y los estados de calculadora/plantilla protegida expresan mejor su consecuencia sin cambiar los contratos de operación.
+- La card seleccionada reduce capas decorativas redundantes y conserva un único nivel de elevación, manteniendo la identidad Gargantua sin competir con la acción primaria.
+- La apertura de una tienda ahora atraviesa una transición cinematográfica: la biblioteca se retira, Gargantua atrae la cámara hacia el centro, el campo hace fade a negro y Studio aparece detrás de una cortina de ruta con salida suave.
+- El dashboard incorpora un inspector temporal sólo en desarrollo para bajar la opacidad de la interfaz y calibrar Gargantua de forma aislada contra las referencias cinematográficas.
+- El lanzamiento conserva una lectura accesible y un recorrido reducido para `prefers-reduced-motion`, además de una cobertura E2E que verifica el paso por Gargantua antes de montar Studio.
+- El layout desktop aprovecha mejor los viewports anchos y ajusta la grilla a la cantidad real de tiendas, evitando columnas vacías en bibliotecas pequeñas.
+- El panel de tienda mejora su ritmo interno y distribuye sus acciones en dos columnas cuando hay altura suficiente; la card de la plantilla protegida mantiene una preview visible y legible también en laptops.
+- El campo Gargantua suma partículas térmicas deterministas con estelas cortas en el disco de acreción, manteniendo el detalle 3D dentro del canvas y respetando `prefers-reduced-motion`.
+- Gargantua amplía levemente su escala sólo en desktop ancho, manteniendo tablet y móvil sin cambios para ganar presencia sin alterar el layout.
+- Gargantua suma otro 15% de escala en desktop ancho; el aumento sigue aislado del layout y no cambia tablet ni móvil.
+- Las cards de tiendas comparten la línea superior del detalle en desktop y conservan un gutter para que el lift de hover no quede recortado por el contenedor.
+- La card seleccionada incorpora dos líneas internas de horizonte para mantener visible la relación con el detalle incluso cuando el reset de sombras del dashboard está activo.
+- La cobertura E2E suma el estado sin coincidencias a 320 px, verificando que el vacío estilizado tampoco cree scroll de página ni de panel.
+- Las previews reales del hero ganan presencia calibrada en grilla, rail y móvil; el fallback sin asset conserva su tratamiento tenue para no fingir una captura de home.
+- El teclado ahora respeta la misma jerarquía que click y tooltip: `Enter` revisa la card y `Espacio` sobre `Abrir` entra al editor.
+- Las flechas de navegación ahora siguen el orden visual de las cards después de fijar una tienda, evitando saltos inesperados entre grupos.
+- El modo Comparar ahora convierte cada selección en una órbita visual de la card, con checkbox tematizado, foco accesible y realce de profundidad sin sumar altura ni scroll.
+- Las cards comparadas muestran ahora un check de confirmación con el icono del sistema, sin quitar el input accesible ni modificar la huella de la card.
+- El tratamiento Gargantua recupera sombras de profundidad sólo en la biblioteca, la selección, la comparación, el detalle y la plantilla protegida, sin reactivar sombras decorativas en todo el dashboard.
+- La densidad de la grilla ahora es contextual: las bibliotecas pequeñas conservan la fecha de actualización, mientras las páginas grandes compactan ese dato para sostener las 12 tiendas sin scroll.
+- La franja de acciones explica ahora de forma visible la diferencia entre seleccionar para revisar y abrir para editar; la guía desaparece en compacto y durante Comparar para conservar el foco.
+- Gargantua deja de usar la simulación Canvas 2D: el campo pasa a un shader WebGL2 real con lente gravitacional, volumen térmico, horizonte, anillo de fotones, partículas y nodos orbitales; si WebGL2 no existe, sólo se oculta el adorno y no se degrada la biblioteca.
+- La pasada Overdrive profundiza el cielo con tres capas de estrellas con jitter espacial, bloom y color térmico, además de polvo nebular animado, beaming relativista y filamentos de acreción para que el fondo tenga profundidad perceptible en lugar de una retícula de puntos.
+- La plantilla protegida vuelve al flujo común de la grilla/lista y la paginación; el rail lateral queda dedicado al detalle de la tienda seleccionada y recupera espacio vertical.
+- El campo WebGL2 ahora vive como fondo de página del dashboard, no dentro de la card de biblioteca; la superficie operativa queda translúcida sin alterar el detalle fijo ni el viewport móvil.
+- Los atajos `/`, `N` y `Enter` ahora tienen una micro-ayuda visible en escritorio/tablet; el recordatorio desaparece en compacto para proteger el viewport.
+- La micro-ayuda también explicita `Espacio abrir`, cerrando la diferencia entre revisar una card y entrar al editor con teclado.
+- Los grupos `Fijadas` y `Todas` incorporan una línea de horizonte ámbar propia, mejorando la lectura de la biblioteca sin sumar contenido ni altura.
+- El detalle seleccionado suma una llegada Gargantua breve y contenida, con blur mínimo y fallback estático para movimiento reducido, sin alterar la geometría del layout.
+- El campo gravitacional suma tres arcos fotónicos móviles sobre el horizonte, congelados de forma determinista con movimiento reducido y sin agregar trabajo interactivo al DOM.
+
+- El campo gravitacional ahora muestra un sello orbital propio cuando la plantilla protegida está seleccionada, sin hacerla pasar por el primer nodo de las tiendas visibles.
+- La selección de una tienda normal suma un hotspot lensed estable en el lado visible del campo, evitando que el indicador desaparezca detrás del rail mientras el nodo orbital continúa animándose.
+- Las cards Gargantua ahora separan hero, identidad y metadatos en capas Z reales sobre puntero fino, profundizando el parallax sin reservar capas GPU en touch ni afectar movimiento reducido.
+- El campo gravitacional ya no inventa un nodo cuando un filtro deja cero tiendas: conserva el ambiente del horizonte, pero oculta la señal orbital y el hotspot de selección.
+- Los nodos orbitales ahora representan sólo la página visible —12 en grilla o 5 en lista— y no confunden una selección fuera de página con el primer nodo del campo.
+- `prefers-reduced-motion` ahora retira también las capas Z internas y la compresión de click de las cards, no sólo la rotación exterior, con cobertura E2E explícita.
+- Las tiendas sin hero reciben un fallback gravitacional sutil con anillos y lente ámbar/azul, evitando placas grises genéricas sin simular un asset inexistente.
+- Las previews reales del hero ganan profundidad y presencia en las cards, manteniendo el fallback separado para no confundirlo con una captura de home.
+- El scrim de las previews reales deja pasar más color e información de la portada; el contraste operativo sigue protegido por la capa inferior y los realces tipográficos.
+- Las previews de la página actual se decodifican con prioridad, evitando que una card visible entre vacía en una biblioteca que no usa scroll.
+- El estado sin coincidencias ahora tiene un horizonte Gargantua propio, manteniendo la densidad del viewport y haciendo explícito que el filtro dejó el campo vacío.
+- El foco de teclado de las cards ahora se dibuja dentro de la superficie contenida, sin quedar recortado por la composición 3D ni depender de una sombra exterior.
+- El detalle seleccionado suma un halo y una órbita interna muy sutil para reforzar la lectura de panel activo sin añadir altura, capas interactivas ni scroll.
+- El detalle móvil abierto libera de forma condicional los clips del shell y del containment del library, manteniendo visible la identidad completa incluso a 320 px.
+- Las cards explicitan también por tooltip la diferencia entre seleccionar para revisar, fijar y abrir el editor, sin sumar texto ni altura al viewport compacto.
+- El control `Abrir` conserva la prioridad operativa en móvil con una diana táctil mínima de 32 px, sin aumentar la altura de las cards ni introducir scroll.
+- La vista lista móvil mantiene completa y legible la etiqueta de plantilla protegida, evitando que caiga en una celda implícita y se trunque.
+
+**Changed**
+
+- La biblioteca del Studio muestra 12 tiendas por página en grilla y 5 en
+  lista, con navegación preparada para crecer sin perder las acciones actuales.
+- El dashboard se adapta a viewport bajo y móvil sin scroll de página ni de
+  panel; la grilla compacta mantiene las 12 tiendas visibles cuando el ancho
+  lo permite.
+- Se limpian selecciones y comparaciones contra tiendas eliminadas, se
+  normalizan entradas numéricas inválidas de la calculadora y se localizan los
+  conteos grandes; las etiquetas largas pueden envolver sin desbordar.
+- La cabecera del dashboard ahora comunica el contexto y el conteo visible,
+  `Nueva tienda` queda como acción primaria, el modo navegador explica el
+  respaldo por tienda y la plantilla protegida se distingue como badge.
+- En escritorio, la plantilla protegida se mueve debajo del detalle de la tienda
+  seleccionada; al colapsar a móvil vuelve a la grilla para conservar el acceso
+  y el encaje sin scroll.
+- Las cards de tiendas muestran una preview visual del hero de su home usando
+  assets responsive, con fallback seguro para tiendas legacy o sin hero explícito.
+- Se simplificó el encabezado de la biblioteca y se compactó el detalle móvil en
+  una retícula de acciones más legible, conservando todas las operaciones y el
+  comportamiento sin scroll.
+- Se ajustó la jerarquía tipográfica del dashboard: títulos con mayor autoridad,
+  estados y valores diferenciados, y metadatos numéricos con lectura tabular sin
+  cambiar la familia Arial ni aumentar la altura de las cards.
+- Se cerró el acabado visual con foco ámbar coherente, caret/selección alineados
+  al tema, botones deshabilitados más legibles y un scrim de hero que prioriza
+  el texto sin perder la preview.
+- El dashboard incorpora una capa overdrive inspirada en Gargantua: campo
+  gravitacional Canvas con disco de acreción, anillo de fotones, estrellas y
+  nodos orbitales para las tiendas visibles, con el seleccionado resaltado;
+  las cards suman profundidad/parallax sutil con fallback estático y soporte
+  para movimiento reducido.
+- El campo ambiental pausa su animación cuando la pestaña queda oculta, responde
+  a cambios de `prefers-reduced-motion` en vivo y conserva un fallback de resize
+  para navegadores sin `ResizeObserver`.
+- La interacción de puntero usa bounds cacheados para evitar lecturas de layout
+  repetidas mientras se mueve sobre la constelación.
+- El campo overdrive suma profundidad visual con capas cacheadas de disco lejano
+  y cercano, doble anillo de fotones y arcos de lente gravitacional; conserva el
+  contraste y el presupuesto de interacción del dashboard.
+- El parallax de las cards cachea sus límites al entrar el puntero y evita
+  reservar capas GPU para cards inactivas, reduciendo lecturas de layout durante
+  la interacción sin perder el efecto 3D.
+- En viewport compacto el detalle no se abre automáticamente como bottom-sheet:
+  la biblioteca queda libre para seleccionar cualquier card, y el detalle se
+  abre sólo tras una acción explícita.
+- Los controles flotantes de fijado, apertura y comparación quedan por delante
+  de la superficie 3D de la card, evitando que el parallax intercepte sus clicks.
+- El campo Gargantua conserva una única inicialización de Canvas y actualiza el
+  nodo activo por referencia, evitando reconstruir observers y capas cacheadas
+  al cambiar de tienda.
+- La cabecera conserva una micro-métrica de productos activos en escritorio y
+  tablet para revisar el estado rápidamente; en compacto se oculta para
+  proteger el encaje de la biblioteca sin scroll.
+- En laptops de 1280px la grilla usa cuatro columnas para mantener las 12
+  tiendas en tres filas; el rail conserva la plantilla protegida completa sin
+  recortar contenido ni crear scroll interno.
+- El rail de la plantilla protegida suma un tratamiento ámbar y un scrim más
+  limpio para mantener hero, etiqueta y metadatos legibles sobre el fondo.
+- La vista lista mantiene la plantilla protegida en composición vertical dentro
+  del rail, evitando que herede la fila horizontal y trunque su identidad.
+- El diálogo de comparación adopta la superficie Gargantua, diferencia mejor las
+  dos tiendas y marca las filas con cambios sin alterar el informe ni su scroll
+  interno confinado.
+- Los valores largos del tema en el comparador ahora usan columnas flexibles y
+  wrapping controlado, evitando que tipografías extensas invadan las etiquetas.
+- La calculadora mantiene la jerarquía del bloque incluido con un borde completo
+  más sobrio, y la espera de eliminación anima `scaleX` en vez de `width` para
+  evitar trabajo de layout durante el countdown.
+- La acción primaria de la calculadora ahora usa el ámbar Gargantua incluso al
+  renderizarse por portal, alineando el estado secundario con el dashboard.
+- Las previews hero de las cards conservan su profundidad visual con un scrim
+  responsivo de mayor contraste, haciendo legibles nombre, estado y métricas
+  también en la grilla móvil de 3 columnas.
+- En pantallas pequeñas, la intensidad fotográfica se calibra por breakpoint:
+  la mini-grilla prioriza la lectura y recupera la presencia completa al
+  interactuar con una tienda.
+- El botón `Comparar` ahora comunica visualmente su estado bloqueado hasta que
+  hay dos tiendas elegidas; al completar el par vuelve a la acción ámbar.
+- La vista lista ya no hereda la compactación de la grilla en escritorios bajos:
+  cada tienda conserva una fila real sin perder la densidad ni la paginación.
+- Cuando una búsqueda oculta la tienda seleccionada, el detalle conserva el
+  contexto pero ahora lo comunica con la etiqueta `Fuera del filtro` y un
+  estado vacío explicativo.
+
+- En escritorio, el contador y la paginación excluyen la plantilla protegida
+  cuando ésta vive en el rail inferior; la grilla principal deja de anunciar
+  tiendas que visualmente no contiene, mientras móvil conserva la plantilla en
+  el total paginado.
+- La acción flotante `Abrir` ahora conserva contraste sobre cualquier preview
+  hero y adopta el acento ámbar de la tienda seleccionada sin aumentar la
+  altura ni alterar la interacción de la card.
+- Se ordenaron las capas 3D de las cards para que el glow gravitacional quede
+  detrás del contenido y los controles, evitando que el acabado visual opaque
+  texto, fijado o comparación.
+- La tipografía operativa de las cards gana contraste sobre previews intensas o
+  fallbacks sin asset, con realce sutil para nombre, estado, métricas y badge sin
+  cambiar la densidad ni la altura del layout.
+- La selección de una card ahora describe de forma accesible la diferencia entre
+  revisar el detalle y usar `Abrir`; el foco de teclado conserva un anillo visible
+  aunque se desactiven sombras decorativas por rendimiento.
+- El nodo orbital de la tienda activa suma un tether de lente gravitacional tenue
+  hacia el horizonte, haciendo más evidente la relación entre selección y campo
+  Gargantua sin competir con el contenido operativo.
+- El comparador móvil compacta sus filas, encabezado y acciones para mostrar el
+  informe completo en 390 px sin crear scroll interno ni recortar valores largos.
+- La superficie del comparador ahora es opaca y aislada del dashboard subyacente,
+  evitando que filtros o cards se transparenten detrás de las filas del informe.
+
+**Tests**
+
+- Se agregaron pruebas del modelo de paginación y se verificaron con Playwright
+  el overflow, el detalle, la búsqueda, la navegación y el cambio de vista.
+
 ### Integración de Impeccable para el agente de código (2026-09-08)
 
 **Added**

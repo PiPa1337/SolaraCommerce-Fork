@@ -3,6 +3,17 @@ import type { StoredProject } from "./repository";
 export type DashboardStatusFilter = "all" | "active" | "archived";
 export type DashboardSort = "name" | "updated" | "products";
 
+export const DASHBOARD_GRID_PAGE_SIZE = 12;
+export const DASHBOARD_LIST_PAGE_SIZE = 5;
+
+export interface DashboardPage<T> {
+  items: T[];
+  page: number;
+  pageCount: number;
+  startIndex: number;
+  endIndex: number;
+}
+
 export interface DashboardStats {
   totalStores: number;
   activeStores: number;
@@ -22,6 +33,25 @@ export interface ProjectMetrics {
 export interface PinnedPartition<T> {
   pinned: T[];
   rest: T[];
+}
+
+export function paginateDashboardItems<T>(
+  items: readonly T[],
+  requestedPage: number,
+  pageSize: number,
+): DashboardPage<T> {
+  const safePageSize = Math.max(1, Math.floor(pageSize));
+  const pageCount = Math.max(1, Math.ceil(items.length / safePageSize));
+  const page = Math.min(Math.max(1, Math.floor(requestedPage)), pageCount);
+  const startIndex = Math.min((page - 1) * safePageSize, items.length);
+  const endIndex = Math.min(startIndex + safePageSize, items.length);
+  return {
+    items: items.slice(startIndex, endIndex),
+    page,
+    pageCount,
+    startIndex,
+    endIndex,
+  };
 }
 
 export interface HealthAuditResult {
@@ -46,6 +76,55 @@ export function storeFaviconSrc(project: StoredProject["project"]): string | und
   const asset = project.assets.find((candidate) => candidate.id === faviconId);
   if (!asset) return undefined;
   return asset.fallbackSource ?? asset.source;
+}
+
+function stringSetting(settings: Record<string, unknown>, key: string): string | undefined {
+  const value = settings[key];
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function homeHeroAssetIds(project: StoredProject["project"]): string[] {
+  const home = project.pages.find((page) => page.kind === "home");
+  const sections = home?.sections.length ? home.sections : project.sections;
+  const hero =
+    sections.find((section) => section.slot === "hero" && section.enabled) ??
+    sections.find((section) => section.slot === "hero");
+  const settings = hero?.settings ?? {};
+  const slides = Array.isArray(settings.slides) ? settings.slides : [];
+  const firstSlide = slides.find(
+    (slide): slide is Record<string, unknown> =>
+      typeof slide === "object" && slide !== null && !Array.isArray(slide),
+  );
+  const firstSlideImageId = firstSlide ? stringSetting(firstSlide, "imageId") : undefined;
+  const mode = stringSetting(settings, "mode");
+  const videoId = stringSetting(settings, "videoAssetId");
+  const videoPosterId = videoId
+    ? project.videos.find((video) => video.id === videoId)?.posterAssetId
+    : undefined;
+  const configuredIds = [
+    ...(mode === "carousel" ? [firstSlideImageId] : []),
+    stringSetting(settings, "posterAssetId"),
+    stringSetting(settings, "imageId"),
+    videoPosterId,
+    ...(mode !== "carousel" ? [firstSlideImageId] : []),
+    stringSetting(settings, "backgroundImageId"),
+  ];
+  const fallbackIds = [
+    project.seo.socialImageId,
+    project.collections.find((collection) => collection.status !== "hidden")?.imageId,
+    project.products.find((product) => product.status === "active")?.imageIds[0],
+  ];
+  return [...new Set([...configuredIds, ...fallbackIds].filter((id): id is string => Boolean(id)))];
+}
+
+/** Devuelve el asset visual que representa el hero de la home en una card. */
+export function storeHeroAsset(
+  project: StoredProject["project"],
+): StoredProject["project"]["assets"][number] | undefined {
+  const assetIds = homeHeroAssetIds(project);
+  return assetIds
+    .map((assetId) => project.assets.find((asset) => asset.id === assetId))
+    .find((asset) => asset !== undefined);
 }
 
 export interface HealthAuditCacheEntry {

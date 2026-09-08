@@ -4,6 +4,9 @@
  */
 import {
   ArrowUpRight,
+  CaretLeft,
+  CaretRight,
+  Check,
   CheckCircle,
   CloudArrowDown,
   GitDiff,
@@ -24,15 +27,21 @@ import {
   useState,
 } from "react";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { ResponsiveAssetImage } from "../components/ResponsiveAssetImage";
 import { useToast } from "../components/Toast";
 import { Button, EmptyState, InlineError } from "../components/Ui";
 import {
+  DASHBOARD_GRID_PAGE_SIZE,
+  DASHBOARD_LIST_PAGE_SIZE,
   type DashboardSort,
   type DashboardStatusFilter,
   filterDashboardProjects,
+  getDashboardStats,
   getProjectMetrics,
+  paginateDashboardItems,
   partitionPinnedProjects,
   storeFaviconSrc,
+  storeHeroAsset,
   storeMark,
 } from "../lib/dashboardModel";
 import {
@@ -56,13 +65,14 @@ import { CompareView } from "./dashboard/CompareView";
 import { CreateStoreDialog } from "./dashboard/CreateStoreDialog";
 import { DashboardToolbar } from "./dashboard/DashboardToolbar";
 import { DuplicateDialog } from "./dashboard/DuplicateDialog";
+import { GravityField } from "./dashboard/GravityField";
 import { formatCompactDate, ProjectCard, statusLabel } from "./dashboard/ProjectCard";
 
 interface DashboardProps {
   projects: StoredProject[];
   onCreate(input: { name: string; brandName: string; email: string; phone: string }): Promise<void>;
   onImport(file: File): Promise<void>;
-  onOpen(id: string): void;
+  onOpen(id: string): void | Promise<void>;
   onDuplicate(id: string, name?: string): Promise<void>;
   onArchive(id: string, archived: boolean): Promise<void>;
   onDelete(id: string): Promise<void>;
@@ -85,11 +95,27 @@ interface DashboardStoreCardProps {
   compareMode: boolean;
   isCompared: boolean;
   cardButtonRefs: RefObject<Map<string, HTMLButtonElement>>;
-  onOpen(id: string): void;
+  onOpen(id: string): void | Promise<void>;
   onSelect(id: string): void;
   onPin(id: string): void;
   onToggleCompare(id: string): void;
   onKeyDown(event: ReactKeyboardEvent<HTMLElement>, record: StoredProject): void;
+}
+
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(() =>
+    typeof window === "undefined" ? false : window.matchMedia(query).matches,
+  );
+
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    const update = () => setMatches(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, [query]);
+
+  return matches;
 }
 
 const DashboardStoreCard = memo(function DashboardStoreCard({
@@ -107,9 +133,11 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
   onKeyDown,
 }: DashboardStoreCardProps) {
   const metrics = getProjectMetrics(record.project);
+  const cardBoundsRef = useRef<DOMRect | null>(null);
   const updatedLabel = formatDate(record.updatedAt);
   const protectedTemplate = isBaseTemplate(record.project);
   const faviconSrc = storeFaviconSrc(record.project);
+  const heroAsset = storeHeroAsset(record.project);
   return (
     <article
       className={`dashboard-store-card${isSelected ? " is-selected" : ""}${
@@ -118,14 +146,19 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
       onKeyDown={(event) => onKeyDown(event, record)}
     >
       {compareMode ? (
-        <input
-          type="checkbox"
-          className="dashboard-store-card__compare"
-          data-testid="ui-card-compare"
-          aria-label={`Comparar ${record.name}`}
-          checked={isCompared}
-          onChange={() => onToggleCompare(record.id)}
-        />
+        <>
+          <input
+            type="checkbox"
+            className="dashboard-store-card__compare"
+            data-testid="ui-card-compare"
+            aria-label={`Comparar ${record.name}`}
+            checked={isCompared}
+            onChange={() => onToggleCompare(record.id)}
+          />
+          <span className="dashboard-store-card__compare-visual" aria-hidden="true">
+            <Check size={11} weight="bold" />
+          </span>
+        </>
       ) : null}
       <button
         type="button"
@@ -133,6 +166,7 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
         aria-pressed={isPinned}
         aria-label={isPinned ? "Quitar de fijadas" : "Fijar tienda"}
         aria-description={record.name}
+        title={`${isPinned ? "Quitar" : "Fijar"} ${record.name} ${isPinned ? "de fijadas" : "en fijadas"}`}
         data-testid="ui-card-pin"
         onClick={() => onPin(record.id)}
       >
@@ -142,14 +176,62 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
         className="dashboard-store-card__button"
         type="button"
         aria-pressed={isSelected}
+        aria-description={`Selecciona ${record.name} para revisar el detalle. Usá el botón Abrir para entrar al editor.`}
+        title={`Seleccionar ${record.name} para revisar el detalle`}
         data-store-card-id={record.id}
         ref={(element) => {
           if (element) cardButtonRefs.current.set(record.id, element);
           else cardButtonRefs.current.delete(record.id);
         }}
         onClick={() => onSelect(record.id)}
-        onDoubleClick={() => onOpen(record.id)}
+        onDoubleClick={() => void onOpen(record.id)}
+        onPointerEnter={(event) => {
+          if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+          const card = event.currentTarget.closest<HTMLElement>(".dashboard-store-card");
+          cardBoundsRef.current = card?.getBoundingClientRect() ?? null;
+        }}
+        onPointerMove={(event) => {
+          if (!cardBoundsRef.current) return;
+          const card = event.currentTarget.closest<HTMLElement>(".dashboard-store-card");
+          if (!card) return;
+          const bounds = cardBoundsRef.current;
+          const x = (event.clientX - bounds.left) / bounds.width;
+          const y = (event.clientY - bounds.top) / bounds.height;
+          card.style.setProperty("--card-rotate-x", `${(0.5 - y) * 4}deg`);
+          card.style.setProperty("--card-rotate-y", `${(x - 0.5) * 5}deg`);
+          card.style.setProperty("--card-glow-x", `${x * 100}%`);
+          card.style.setProperty("--card-glow-y", `${y * 100}%`);
+          card.style.setProperty("--card-image-x", `${(0.5 - x) * 8}px`);
+          card.style.setProperty("--card-image-y", `${(0.5 - y) * 6}px`);
+        }}
+        onPointerLeave={(event) => {
+          cardBoundsRef.current = null;
+          const card = event.currentTarget.closest<HTMLElement>(".dashboard-store-card");
+          if (!card) return;
+          card.style.removeProperty("--card-rotate-x");
+          card.style.removeProperty("--card-rotate-y");
+          card.style.removeProperty("--card-glow-x");
+          card.style.removeProperty("--card-glow-y");
+          card.style.removeProperty("--card-image-x");
+          card.style.removeProperty("--card-image-y");
+        }}
       >
+        <span className={`dashboard-store-card__hero${heroAsset ? "" : " is-empty"}`} aria-hidden>
+          {heroAsset ? (
+            <ResponsiveAssetImage
+              asset={heroAsset}
+              alt=""
+              width={heroAsset.width}
+              height={heroAsset.height}
+              // La página sólo monta 12 cards (5 en lista): la preview visible
+              // debe estar disponible al entrar, no esperar a un scroll que no existe.
+              loading="eager"
+              decoding="async"
+              sizes="(max-width: 560px) 25vw, (max-width: 820px) 33vw, 21vw"
+            />
+          ) : null}
+          <span className="dashboard-store-card__hero-scrim" />
+        </span>
         <span className="dashboard-store-card__index">{index + 1}</span>
         <span className="dashboard-store-card__mark" aria-hidden>
           {faviconSrc ? (
@@ -164,7 +246,7 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
           {statusLabel(record.status)}
         </span>
         {protectedTemplate ? (
-          <span className="dashboard-store-card__status is-protected">Plantilla protegida</span>
+          <span className="dashboard-store-card__badge">Plantilla protegida</span>
         ) : null}
         <span className="dashboard-store-card__meta">
           {metrics.activeProducts.toLocaleString("es-AR")} productos
@@ -183,13 +265,18 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
         data-testid="ui-card-open"
         aria-label="Abrir esta tienda"
         aria-description={record.name}
-        onClick={() => onOpen(record.id)}
+        title={`Abrir ${record.name} en el editor`}
+        onClick={() => void onOpen(record.id)}
       >
         Abrir <ArrowUpRight aria-hidden size={13} />
       </button>
     </article>
   );
 });
+
+const GARGANTUA_LAUNCH_DURATION_MS = 1460;
+const GARGANTUA_LAUNCH_HANDOFF = 0.84;
+const GARGANTUA_DEBUG_ENABLED = import.meta.env.DEV || import.meta.env.MODE === "development";
 
 export function Dashboard({
   projects,
@@ -211,7 +298,15 @@ export function Dashboard({
   const [sort, setSort] = useState<DashboardSort>(readStoredSort);
   const [view, setView] = useState<DashboardView>(readStoredView);
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<string | undefined>(readStoredSelectedId);
+  const [page, setPage] = useState(1);
+  const [selectedId, setSelectedId] = useState<string | undefined>(() => {
+    // En compacto el detalle es un bottom-sheet: no debe abrirse solo al cargar
+    // porque taparía las primeras cards y bloquearía la biblioteca.
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 820px)").matches) {
+      return undefined;
+    }
+    return readStoredSelectedId();
+  });
   const [pinnedIds, setPinnedIds] = useState<string[]>(readPinnedIds);
   const [creating, setCreating] = useState(false);
   const [backupId, setBackupId] = useState<string>();
@@ -232,6 +327,9 @@ export function Dashboard({
   const [archivingId, setArchivingId] = useState<string>();
   const [deletingId, setDeletingId] = useState<string>();
   const [backingUp, setBackingUp] = useState<string>();
+  const [openingStoreId, setOpeningStoreId] = useState<string>();
+  const [launchProgress, setLaunchProgress] = useState(0);
+  const [gargantuaUiOpacity, setGargantuaUiOpacity] = useState(1);
   const shutdownDialogRef = useRef<HTMLDialogElement>(null);
   const shutdownTerminalRef = useRef(shutdownTerminal === true);
   const selectedPanelRef = useRef<HTMLElement>(null);
@@ -244,22 +342,43 @@ export function Dashboard({
   const selectionInitializedRef = useRef(false);
   const focusCardOnSelectRef = useRef(false);
   const actionNoticeTimerRef = useRef<number | undefined>(undefined);
+  const launchFrameRef = useRef<number | undefined>(undefined);
+  const launchTokenRef = useRef<string | undefined>(undefined);
+  const launchHandoffRef = useRef(false);
   const libraryTitleId = useId();
   const shutdownTitleId = useId();
   const pinnedGroupTitleId = useId();
+  const backupHintId = useId();
+  const desktopViewport = useMediaQuery("(min-width: 821px)");
 
   const visible = useMemo(
     () => filterDashboardProjects(projects, query, statusFilter, sort),
     [projects, query, sort, statusFilter],
   );
+  const mainVisible = visible;
+  const dashboardStats = useMemo(() => getDashboardStats(projects), [projects]);
+  const pageSize = view === "grid" ? DASHBOARD_GRID_PAGE_SIZE : DASHBOARD_LIST_PAGE_SIZE;
+  const denseGrid = view === "grid" && mainVisible.length >= 8;
+  const paginated = useMemo(
+    () => paginateDashboardItems(mainVisible, page, pageSize),
+    [mainVisible, page, pageSize],
+  );
+  const pageVisible = paginated.items;
   const selected = projects.find((record) => record.id === selectedId);
+  const selectedFilteredOut = Boolean(
+    selected && !visible.some((record) => record.id === selected.id),
+  );
   const { pinned: pinnedVisible, rest: restVisible } = useMemo(
-    () => partitionPinnedProjects(visible, pinnedIds),
-    [pinnedIds, visible],
+    () => partitionPinnedProjects(pageVisible, pinnedIds),
+    [pageVisible, pinnedIds],
   );
   const visibleIndexById = useMemo(
     () => new Map(visible.map((record, index) => [record.id, index])),
     [visible],
+  );
+  const pageIndexById = useMemo(
+    () => new Map(pageVisible.map((record, index) => [record.id, index])),
+    [pageVisible],
   );
   const isShutdownTerminal = shutdownTerminal === true || shutdownState === "closed";
   const managed = shutdownState === "available" && !isShutdownTerminal;
@@ -271,7 +390,30 @@ export function Dashboard({
   }, [compareIds, projects]);
 
   useEffect(() => {
-    if (projects.length === 0) return;
+    if (page !== paginated.page) setPage(paginated.page);
+  }, [page, paginated.page]);
+
+  useEffect(() => {
+    const existingIds = new Set(projects.map((record) => record.id));
+    setCompareIds((current) => {
+      const next = current.filter((id) => existingIds.has(id));
+      return next.length === current.length ? current : next;
+    });
+  }, [projects]);
+
+  useEffect(() => {
+    if (compareOpen && !comparePair) setCompareOpen(false);
+  }, [compareOpen, comparePair]);
+
+  useEffect(() => {
+    if (projects.length === 0) {
+      selectionInitializedRef.current = false;
+      if (selectedId) {
+        clearStoredSelectedId();
+        setSelectedId(undefined);
+      }
+      return;
+    }
     const selectedIsVisible = selectedId
       ? visible.some((record) => record.id === selectedId)
       : false;
@@ -292,10 +434,11 @@ export function Dashboard({
       return;
     }
     if (!selectionInitializedRef.current && visible[0]) {
+      if (!desktopViewport) return;
       selectionInitializedRef.current = true;
       setSelectedId(visible[0].id);
     }
-  }, [projects, selectedId, visible]);
+  }, [desktopViewport, projects, selectedId, visible]);
 
   useEffect(() => {
     if (creating) return;
@@ -406,20 +549,99 @@ export function Dashboard({
     setSelectedId(undefined);
   }, []);
 
+  const changeQuery = useCallback((next: string) => {
+    setQuery(next);
+    setPage(1);
+  }, []);
+
   const changeSort = useCallback((next: DashboardSort) => {
     writeStoredSort(next);
     setSort(next);
+    setPage(1);
   }, []);
 
   const changeStatusFilter = useCallback((next: DashboardStatusFilter) => {
     writeStoredStatusFilter(next);
     setStatusFilter(next);
+    setPage(1);
   }, []);
 
   const changeView = useCallback((next: DashboardView) => {
     writeStoredView(next);
     setView(next);
+    setPage(1);
   }, []);
+
+  const openStore = useCallback(
+    (id: string) => {
+      if (openingStoreId) return;
+      const record = projects.find((item) => item.id === id);
+      if (!record) return;
+
+      if (launchFrameRef.current !== undefined) {
+        window.cancelAnimationFrame(launchFrameRef.current);
+      }
+      const token = `${id}:${performance.now()}`;
+      const startedAt = performance.now();
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const duration = reducedMotion ? 240 : GARGANTUA_LAUNCH_DURATION_MS;
+      const handoffAt = reducedMotion ? 0.46 : GARGANTUA_LAUNCH_HANDOFF;
+      launchTokenRef.current = token;
+      launchHandoffRef.current = false;
+      setOpeningStoreId(id);
+      setLaunchProgress(0);
+
+      const animateLaunch = (now: number) => {
+        if (launchTokenRef.current !== token) return;
+        const progress = Math.min(1, (now - startedAt) / duration);
+        setLaunchProgress(progress);
+        if (progress >= handoffAt && !launchHandoffRef.current) {
+          launchHandoffRef.current = true;
+          void Promise.resolve(onOpen(id)).catch(() => {
+            if (launchTokenRef.current !== token) return;
+            launchTokenRef.current = undefined;
+            launchHandoffRef.current = false;
+            setOpeningStoreId(undefined);
+            setLaunchProgress(0);
+          });
+        }
+        if (progress < 1) {
+          launchFrameRef.current = window.requestAnimationFrame(animateLaunch);
+        } else {
+          launchFrameRef.current = undefined;
+        }
+      };
+
+      launchFrameRef.current = window.requestAnimationFrame(animateLaunch);
+    },
+    [onOpen, openingStoreId, projects],
+  );
+
+  useEffect(
+    () => () => {
+      if (launchFrameRef.current !== undefined) {
+        window.cancelAnimationFrame(launchFrameRef.current);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!GARGANTUA_DEBUG_ENABLED) return;
+    document.documentElement.style.setProperty(
+      "--gargantua-debug-ui-opacity",
+      String(gargantuaUiOpacity),
+    );
+  }, [gargantuaUiOpacity]);
+
+  useEffect(
+    () => () => {
+      if (GARGANTUA_DEBUG_ENABLED) {
+        document.documentElement.style.removeProperty("--gargantua-debug-ui-opacity");
+      }
+    },
+    [],
+  );
 
   const togglePin = useCallback((id: string) => {
     setPinnedIds((current) => {
@@ -503,8 +725,10 @@ export function Dashboard({
 
   const pendingArchiveRecord = projects.find((item) => item.id === pendingArchiveId) ?? null;
 
-  const visibleRef = useRef<StoredProject[]>(visible);
-  visibleRef.current = visible;
+  const visibleRef = useRef<StoredProject[]>(pageVisible);
+  // La navegación horizontal debe seguir la lectura visual: las fijadas se
+  // renderizan primero y luego continúa el resto de la página.
+  visibleRef.current = [...pinnedVisible, ...restVisible];
 
   const moveCardSelection = useCallback(
     (key: string, fromId: string) => {
@@ -515,7 +739,13 @@ export function Dashboard({
       if (key !== "ArrowUp" && key !== "ArrowDown") {
         const delta = key === "ArrowRight" ? 1 : -1;
         const nextId = ids[(fromIndex + delta + ids.length) % ids.length];
-        if (nextId) selectCard(nextId, { focusCard: true });
+        if (nextId) {
+          selectCard(nextId, { focusCard: true });
+          // Si la card destino ya era la seleccionada, React no cambia el
+          // estado y el efecto de foco no se dispara; el teclado igual debe
+          // seguir la lectura visual después de fijar una tienda.
+          requestAnimationFrame(() => cardButtonRefs.current.get(nextId)?.focus());
+        }
         return;
       }
       const goingDown = key === "ArrowDown";
@@ -560,14 +790,14 @@ export function Dashboard({
       if (event.key === "Enter") {
         if (target.hasAttribute("data-store-card-id")) {
           event.preventDefault();
-          onOpen(record.id);
+          selectCard(record.id);
         }
         return;
       }
       if (event.key === " ") {
         if (target.classList.contains("dashboard-store-card__open")) {
           event.preventDefault();
-          selectCard(record.id);
+          openStore(record.id);
         }
         return;
       }
@@ -582,7 +812,7 @@ export function Dashboard({
         moveCardSelection(event.key, record.id);
       }
     },
-    [clearSelected, handleArchive, moveCardSelection, onOpen, selectCard],
+    [clearSelected, handleArchive, moveCardSelection, openStore, selectCard],
   );
 
   useEffect(() => {
@@ -779,8 +1009,64 @@ export function Dashboard({
     }
   };
 
+  const openingStore = openingStoreId
+    ? projects.find((record) => record.id === openingStoreId)
+    : undefined;
+
   return (
-    <main id={"tiendas"} tabIndex={-1} className="dashboard-page dashboard-cosmic">
+    <main
+      id={"tiendas"}
+      tabIndex={-1}
+      className={`dashboard-page dashboard-cosmic dashboard-gargantua${
+        openingStoreId ? " is-store-launching" : ""
+      }`}
+      data-gargantua-debug={GARGANTUA_DEBUG_ENABLED ? "true" : undefined}
+      aria-busy={openingStoreId ? "true" : undefined}
+    >
+      {GARGANTUA_DEBUG_ENABLED ? (
+        <fieldset
+          className="dashboard-gargantua-debug-controls"
+          data-testid="gargantua-debug-controls"
+        >
+          <legend>GARGANTUA / DEBUG</legend>
+          <label htmlFor="gargantua-debug-ui-opacity">Interfaz</label>
+          <input
+            id="gargantua-debug-ui-opacity"
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            value={Math.round(gargantuaUiOpacity * 100)}
+            onChange={(event) => setGargantuaUiOpacity(Number(event.target.value) / 100)}
+            aria-label="Opacidad de la interfaz del dashboard"
+          />
+          <output htmlFor="gargantua-debug-ui-opacity">
+            {Math.round(gargantuaUiOpacity * 100)}%
+          </output>
+        </fieldset>
+      ) : null}
+      <GravityField
+        activeIndex={selectedId ? (pageIndexById.get(selectedId) ?? 0) : 0}
+        selectionVisible={Boolean(
+          selectedId && !selectedFilteredOut && pageIndexById.has(selectedId),
+        )}
+        storeCount={pageVisible.length}
+        templateSelected={Boolean(selected && isBaseTemplate(selected.project))}
+        launchProgress={launchProgress}
+      />
+      {openingStoreId ? (
+        <output
+          className="dashboard-gargantua-transition"
+          data-testid="gargantua-launch"
+          aria-live="polite"
+        >
+          <span className="visually-hidden">Abriendo {openingStore?.name ?? "la tienda"}.</span>
+          <span className="dashboard-gargantua-transition__readout" aria-hidden="true">
+            <span>ENTRANDO EN EL POZO</span>
+            <strong>{openingStore?.name}</strong>
+          </span>
+        </output>
+      ) : null}
       <div className="dashboard-wrap dashboard-cosmic__content">
         {isShutdownTerminal ? (
           <output className="shutdown-status shutdown-status--cosmic">
@@ -792,15 +1078,28 @@ export function Dashboard({
         ) : null}
 
         <section className="dashboard-cosmic-library" aria-labelledby={libraryTitleId}>
-          <h1 id={libraryTitleId} className="visually-hidden">
-            Tus tiendas
-          </h1>
+          <header className="dashboard-cosmic-library-head">
+            <div className="dashboard-cosmic-library-heading">
+              <h1 id={libraryTitleId}>Tus tiendas</h1>
+              <span className="dashboard-cosmic-library-summary" aria-hidden="true">
+                {mainVisible.length}{" "}
+                {mainVisible.length === 1 ? "tienda visible" : "tiendas visibles"}
+              </span>
+              <span className="dashboard-cosmic-library-stat">
+                <strong>{dashboardStats.activeProducts.toLocaleString("es-AR")}</strong>
+                <span>Productos activos</span>
+              </span>
+            </div>
+            <Button ref={createButtonRef} variant="primary" icon={Plus} onClick={openCreate}>
+              Nueva tienda
+            </Button>
+          </header>
           <span
             className="dashboard-cosmic-count visually-hidden"
             aria-live="polite"
             aria-atomic="true"
           >
-            {visible.length} visibles
+            {mainVisible.length} visibles
           </span>
 
           <DashboardToolbar
@@ -809,7 +1108,7 @@ export function Dashboard({
             sort={sort}
             view={view}
             searchRef={searchInputRef}
-            onQueryChange={setQuery}
+            onQueryChange={changeQuery}
             onStatusFilterChange={changeStatusFilter}
             onSortChange={changeSort}
             onViewChange={changeView}
@@ -823,6 +1122,9 @@ export function Dashboard({
               icon={CloudArrowDown}
               disabled={!managed || backingUp !== undefined}
               loading={backingUp !== undefined}
+              aria-describedby={
+                !managed && shutdownState === "unavailable" ? backupHintId : undefined
+              }
               title={
                 managed
                   ? undefined
@@ -832,9 +1134,34 @@ export function Dashboard({
             >
               {backingUp !== undefined ? `Respaldando ${backingUp}` : "Respaldar todo"}
             </Button>
-            <Button ref={createButtonRef} variant="primary" icon={Plus} onClick={openCreate}>
-              Nueva tienda
-            </Button>
+            {!managed && shutdownState === "unavailable" ? (
+              <span id={backupHintId} className="dashboard-cosmic-actions__hint">
+                En modo navegador, descargá el respaldo desde cada tienda.
+              </span>
+            ) : null}
+            {!compareMode ? (
+              <span className="dashboard-cosmic-actions__legend">
+                <strong>Seleccionar</strong>
+                <span>revisar</span>
+                <span aria-hidden="true">·</span>
+                <strong>Abrir</strong>
+                <span>editar</span>
+              </span>
+            ) : null}
+            <span className="dashboard-cosmic-shortcuts">
+              <span>Atajos</span>
+              <kbd>/</kbd>
+              <span>buscar</span>
+              <span aria-hidden="true">·</span>
+              <kbd>N</kbd>
+              <span>nueva</span>
+              <span aria-hidden="true">·</span>
+              <kbd>Enter</kbd>
+              <span>revisar</span>
+              <span aria-hidden="true">·</span>
+              <kbd>Espacio</kbd>
+              <span>abrir</span>
+            </span>
             {compareMode ? (
               <div className="dashboard-cosmic-comparebar">
                 <span className="dashboard-cosmic-comparebar__count" aria-live="polite">
@@ -859,16 +1186,30 @@ export function Dashboard({
             ) : null}
           </div>
 
-          <div className={`dashboard-cosmic-results dashboard-cosmic-results--${view}`}>
-            <div className="dashboard-cosmic-store-groups" aria-live="polite">
-              {visible.length === 0 ? (
+          <div
+            className={`dashboard-cosmic-results dashboard-cosmic-results--${view}${
+              denseGrid ? " dashboard-cosmic-results--dense-grid" : ""
+            }`}
+          >
+            <div className="dashboard-cosmic-store-groups">
+              {mainVisible.length === 0 ? (
                 <EmptyState
                   icon={Storefront}
-                  title={projects.length === 0 ? "Todavía no hay tiendas" : "No hay coincidencias"}
+                  title={
+                    projects.length === 0
+                      ? "Todavía no hay tiendas"
+                      : visible.length === 0
+                        ? "No hay coincidencias"
+                        : "Sólo queda la plantilla protegida"
+                  }
                   body={
                     projects.length === 0
                       ? "Creá una tienda para empezar a organizar tu catálogo."
-                      : "Probá con otra búsqueda o limpiá los filtros activos."
+                      : selectedFilteredOut
+                        ? "Probá con otra búsqueda o limpiá los filtros activos. La tienda seleccionada sigue abierta en el detalle."
+                        : visible.length === 0
+                          ? "Probá con otra búsqueda o limpiá los filtros activos."
+                          : "La plantilla protegida se mantiene en el panel lateral. Creá una tienda para comenzar."
                   }
                   action={
                     projects.length === 0 ? (
@@ -897,7 +1238,7 @@ export function Dashboard({
                             compareMode={compareMode}
                             isCompared={compareIds.includes(record.id)}
                             cardButtonRefs={cardButtonRefs}
-                            onOpen={onOpen}
+                            onOpen={openStore}
                             onSelect={selectCard}
                             onPin={togglePin}
                             onToggleCompare={toggleCompareId}
@@ -920,7 +1261,7 @@ export function Dashboard({
                           compareMode={compareMode}
                           isCompared={compareIds.includes(record.id)}
                           cardButtonRefs={cardButtonRefs}
-                          onOpen={onOpen}
+                          onOpen={openStore}
                           onSelect={selectCard}
                           onPin={togglePin}
                           onToggleCompare={toggleCompareId}
@@ -931,28 +1272,65 @@ export function Dashboard({
                   </section>
                 </>
               )}
+              {mainVisible.length > 0 ? (
+                <nav className="dashboard-cosmic-pagination" aria-label="Páginas de tiendas">
+                  <div className="dashboard-cosmic-pagination__summary">
+                    <strong aria-live="polite" aria-atomic="true">
+                      Página {paginated.page} de {paginated.pageCount}
+                    </strong>
+                    <span>
+                      {paginated.startIndex + 1}–{paginated.endIndex} de {mainVisible.length}
+                    </span>
+                  </div>
+                  <div className="dashboard-cosmic-pagination__actions">
+                    <Button
+                      variant="quiet"
+                      icon={CaretLeft}
+                      aria-label="Página anterior"
+                      disabled={paginated.page === 1}
+                      onClick={() => setPage((current) => Math.max(1, current - 1))}
+                    >
+                      Anterior
+                    </Button>
+                    <Button
+                      variant="quiet"
+                      icon={CaretRight}
+                      aria-label="Página siguiente"
+                      disabled={paginated.page === paginated.pageCount}
+                      onClick={() =>
+                        setPage((current) => Math.min(paginated.pageCount, current + 1))
+                      }
+                    >
+                      Siguiente
+                    </Button>
+                  </div>
+                </nav>
+              ) : null}
             </div>
 
-            <ProjectCard
-              project={selected}
-              detailRef={selectedPanelRef}
-              backupId={backupId}
-              archivingId={archivingId}
-              deletingId={deletingId}
-              siteOpeningId={siteOpeningId}
-              folderOpeningId={folderOpeningId}
-              downloadingId={downloadingId}
-              actionNotice={actionNotice}
-              onClose={clearSelected}
-              onOpen={onOpen}
-              onOpenSite={onOpenSite ? openSite : undefined}
-              onOpenFolder={onOpenFolder ? openFolder : undefined}
-              onBackup={createBackup}
-              onDownloadBackup={onDownloadBackup ? downloadBackup : undefined}
-              onDuplicate={openDuplicate}
-              onArchive={handleArchive}
-              onDelete={handleDelete}
-            />
+            <div className="dashboard-cosmic-side">
+              <ProjectCard
+                project={selected}
+                isFilteredOut={selectedFilteredOut}
+                detailRef={selectedPanelRef}
+                backupId={backupId}
+                archivingId={archivingId}
+                deletingId={deletingId}
+                siteOpeningId={siteOpeningId}
+                folderOpeningId={folderOpeningId}
+                downloadingId={downloadingId}
+                actionNotice={actionNotice}
+                onClose={clearSelected}
+                onOpen={openStore}
+                onOpenSite={onOpenSite ? openSite : undefined}
+                onOpenFolder={onOpenFolder ? openFolder : undefined}
+                onBackup={createBackup}
+                onDownloadBackup={onDownloadBackup ? downloadBackup : undefined}
+                onDuplicate={openDuplicate}
+                onArchive={handleArchive}
+                onDelete={handleDelete}
+              />
+            </div>
           </div>
         </section>
       </div>

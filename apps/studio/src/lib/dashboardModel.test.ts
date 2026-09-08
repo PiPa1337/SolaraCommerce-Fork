@@ -5,10 +5,14 @@ import {
   auditStoreHealth,
   calculateMonthlyCost,
   DEFAULT_PRICING,
+  DASHBOARD_GRID_PAGE_SIZE,
+  DASHBOARD_LIST_PAGE_SIZE,
   filterDashboardProjects,
   getDashboardStats,
   getProjectMetrics,
+  paginateDashboardItems,
   partitionPinnedProjects,
+  storeHeroAsset,
   storeMark,
 } from "./dashboardModel";
 import type { StoredProject } from "./repository";
@@ -33,6 +37,15 @@ describe("modelo del dashboard", () => {
     expect(metrics.categories).toBe(14);
     expect(metrics.collections).toBeGreaterThan(0);
     expect(metrics.assets).toBeGreaterThan(0);
+  });
+
+  it("resuelve la imagen principal configurada para el hero de la home", () => {
+    const hero = catalogModernStore.sections.find((section) => section.slot === "hero");
+    if (!hero || typeof hero.settings.posterAssetId !== "string") {
+      throw new Error("Fixture sin imagen de hero");
+    }
+
+    expect(storeHeroAsset(catalogModernStore)?.id).toBe(hero.settings.posterAssetId);
   });
 
   it("cuenta cada variante adicional de productos activos aunque no esté disponible", () => {
@@ -149,6 +162,38 @@ describe("modelo del dashboard", () => {
     ]);
     expect(partitionPinnedProjects(projects, []).pinned).toHaveLength(0);
     expect(partitionPinnedProjects(projects, ["alpha", "missing"]).pinned).toHaveLength(1);
+  });
+
+  it("pagina la grilla en doce elementos y la lista en cinco sin perder el total", () => {
+    const items = Array.from({ length: 25 }, (_, index) => index + 1);
+
+    expect(paginateDashboardItems(items, 1, DASHBOARD_GRID_PAGE_SIZE)).toMatchObject({
+      items: items.slice(0, 12),
+      page: 1,
+      pageCount: 3,
+      startIndex: 0,
+      endIndex: 12,
+    });
+    expect(paginateDashboardItems(items, 2, DASHBOARD_LIST_PAGE_SIZE)).toMatchObject({
+      items: items.slice(5, 10),
+      page: 2,
+      pageCount: 5,
+      startIndex: 5,
+      endIndex: 10,
+    });
+  });
+
+  it("ajusta páginas inválidas al límite disponible", () => {
+    const items = ["a", "b", "c"];
+
+    expect(paginateDashboardItems(items, 99, 2)).toMatchObject({
+      items: ["c"],
+      page: 2,
+      pageCount: 2,
+      startIndex: 2,
+      endIndex: 3,
+    });
+    expect(paginateDashboardItems(items, 0, 2).page).toBe(1);
   });
 
   it("salta sólo la tienda lenta y sigue auditando el resto", () => {

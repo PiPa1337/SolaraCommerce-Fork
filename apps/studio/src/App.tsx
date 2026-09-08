@@ -82,6 +82,19 @@ const Studio = lazy(() =>
   import("./features/Studio").then(({ Studio: Component }) => ({ default: Component })),
 );
 
+type StoreLaunchCurtainPhase = "idle" | "covering" | "releasing";
+
+function StoreLaunchCurtain({ phase }: { phase: StoreLaunchCurtainPhase }) {
+  if (phase === "idle") return null;
+  return (
+    <div
+      className={`store-launch-curtain is-${phase}`}
+      data-testid="store-route-curtain"
+      aria-hidden="true"
+    />
+  );
+}
+
 export function App() {
   return (
     <AppErrorBoundary>
@@ -171,6 +184,7 @@ function AppInner() {
 function StudioShell() {
   const [projects, setProjects] = useState<StoredProject[]>([]);
   const [active, setActive] = useState<StoreProjectV1>();
+  const [storeLaunchCurtain, setStoreLaunchCurtain] = useState<StoreLaunchCurtainPhase>("idle");
   const [recovery, setRecovery] = useState<ProjectRecoveryIssue[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -417,6 +431,16 @@ function StudioShell() {
     }
   };
 
+  useEffect(() => {
+    if (!active || storeLaunchCurtain !== "covering") return;
+    const frame = window.requestAnimationFrame(() => setStoreLaunchCurtain("releasing"));
+    const timer = window.setTimeout(() => setStoreLaunchCurtain("idle"), 560);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [active, storeLaunchCurtain]);
+
   const openSite = useCallback(async (id: string) => {
     const popup = window.open("about:blank", "_blank");
     try {
@@ -576,6 +600,7 @@ function StudioShell() {
             onDiskSaved={(receipt) => setActiveDiskVersion(receipt.version)}
             onBack={() => {
               setActive(undefined);
+              setStoreLaunchCurtain("idle");
               setActiveDiskVersion(null);
               setActiveDiskBaseProject(undefined);
               void refresh();
@@ -641,6 +666,7 @@ function StudioShell() {
             }}
           />
         </Suspense>
+        <StoreLaunchCurtain phase={storeLaunchCurtain} />
       </ToastProvider>
     );
   }
@@ -800,65 +826,73 @@ function StudioShell() {
               throw new Error(message);
             }
           }}
-          onOpen={(id) =>
-            void guard(async () => {
-              let project: StoreProjectV1 | undefined;
-              if (storageModeRef.current) {
-                // El listing es metadata barata; el respaldo completo sólo se
-                // re-descarga si el disco avanzó respecto del estado cargado.
-                const { loadDiskProject } = await loadLocalProjectRepository();
-                const { listLocalProjects } = await loadLocalStorage();
-                const listing = await listLocalProjects();
-                const summary = listing.projects.find((item) => item.projectId === id);
-                const cached = projects.find((item) => item.id === id) as
-                  | (StoredProject & { diskVersion?: number })
-                  | undefined;
-                let selected: (StoredProject & { diskVersion?: number }) | undefined;
-                if (cached && summary && cached.diskVersion === summary.version) {
-                  selected = cached;
-                } else if (summary) {
-                  const loaded = await loadDiskProject(summary);
-                  selected = loaded;
-                  setProjects((previous) => {
-                    const withoutId = previous.filter((item) => item.id !== id);
-                    return [...withoutId, loaded].sort((left, right) =>
-                      right.updatedAt.localeCompare(left.updatedAt),
-                    );
-                  });
-                }
-                const diskProject = selected?.project;
-                project = diskProject;
-                setActiveDiskVersion(selected?.diskVersion ?? null);
-                setActiveDiskBaseProject(diskProject);
-                if (diskProject) {
-                  const draft = await getRecoveryDraft(diskProject.id);
-                  if (draft && JSON.stringify(draft.project) !== JSON.stringify(diskProject)) {
-                    const recoveryDecision = await new Promise<RecoveryDraftDecision>((resolve) => {
-                      pendingRecoverResolverRef.current = resolve;
-                      setPendingRecover({ projectId: diskProject.id, draft: draft.project });
-                    });
-                    project = await resolveRecoveryDraftDecision(
-                      recoveryDecision,
-                      diskProject,
-                      draft.project,
-                      clearRecoveryDraft,
-                    );
-                    if (recoveryDecision === "recover") {
-                      setNotice(
-                        "Se recuperó el borrador local. Guardalo para confirmarlo en disco.",
+          onOpen={async (id) => {
+            setStoreLaunchCurtain("covering");
+            try {
+              await guard(async () => {
+                let project: StoreProjectV1 | undefined;
+                if (storageModeRef.current) {
+                  // El listing es metadata barata; el respaldo completo sólo se
+                  // re-descarga si el disco avanzó respecto del estado cargado.
+                  const { loadDiskProject } = await loadLocalProjectRepository();
+                  const { listLocalProjects } = await loadLocalStorage();
+                  const listing = await listLocalProjects();
+                  const summary = listing.projects.find((item) => item.projectId === id);
+                  const cached = projects.find((item) => item.id === id) as
+                    | (StoredProject & { diskVersion?: number })
+                    | undefined;
+                  let selected: (StoredProject & { diskVersion?: number }) | undefined;
+                  if (cached && summary && cached.diskVersion === summary.version) {
+                    selected = cached;
+                  } else if (summary) {
+                    const loaded = await loadDiskProject(summary);
+                    selected = loaded;
+                    setProjects((previous) => {
+                      const withoutId = previous.filter((item) => item.id !== id);
+                      return [...withoutId, loaded].sort((left, right) =>
+                        right.updatedAt.localeCompare(left.updatedAt),
                       );
+                    });
+                  }
+                  const diskProject = selected?.project;
+                  project = diskProject;
+                  setActiveDiskVersion(selected?.diskVersion ?? null);
+                  setActiveDiskBaseProject(diskProject);
+                  if (diskProject) {
+                    const draft = await getRecoveryDraft(diskProject.id);
+                    if (draft && JSON.stringify(draft.project) !== JSON.stringify(diskProject)) {
+                      const recoveryDecision = await new Promise<RecoveryDraftDecision>(
+                        (resolve) => {
+                          pendingRecoverResolverRef.current = resolve;
+                          setPendingRecover({ projectId: diskProject.id, draft: draft.project });
+                        },
+                      );
+                      project = await resolveRecoveryDraftDecision(
+                        recoveryDecision,
+                        diskProject,
+                        draft.project,
+                        clearRecoveryDraft,
+                      );
+                      if (recoveryDecision === "recover") {
+                        setNotice(
+                          "Se recuperó el borrador local. Guardalo para confirmarlo en disco.",
+                        );
+                      }
                     }
                   }
+                } else {
+                  project = await getProject(id);
+                  setActiveDiskVersion(null);
+                  setActiveDiskBaseProject(undefined);
                 }
-              } else {
-                project = await getProject(id);
-                setActiveDiskVersion(null);
-                setActiveDiskBaseProject(undefined);
-              }
-              if (!project) throw new Error("No se encontró la tienda.");
-              setActive(project);
-            }).catch(() => undefined)
-          }
+                if (!project) throw new Error("No se encontró la tienda.");
+                setActive(project);
+              });
+            } catch (reason) {
+              setStoreLaunchCurtain("idle");
+              throw reason;
+            }
+          }}
           onDuplicate={(id, name) =>
             guard(async () => {
               const duplicate = await duplicateProject(id);
@@ -1018,6 +1052,7 @@ function StudioShell() {
           />
         ) : null}
       </div>
+      <StoreLaunchCurtain phase={storeLaunchCurtain} />
     </ToastProvider>
   );
 }

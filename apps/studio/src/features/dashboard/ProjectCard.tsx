@@ -53,8 +53,13 @@ export function formatCompactDate(value: string): string {
   return [day, month, year].filter(Boolean).join(" ");
 }
 
+function formatDashboardCount(value: number): string {
+  return value.toLocaleString("es-AR");
+}
+
 export interface ProjectCardProps {
   project: StoredProject | undefined;
+  isFilteredOut?: boolean;
   detailRef: RefObject<HTMLElement | null>;
   backupId: string | undefined;
   archivingId?: string | undefined;
@@ -76,6 +81,7 @@ export interface ProjectCardProps {
 
 export function ProjectCard({
   project,
+  isFilteredOut = false,
   detailRef,
   backupId,
   archivingId,
@@ -175,10 +181,12 @@ export function ProjectCard({
 
   const handlePricingChange = (patch: Partial<PricingConfig>) => {
     const next = { ...pricingConfig, ...patch };
-    next.base = Math.max(0, Math.round(next.base));
-    next.tier1Price = Math.max(0, Math.round(next.tier1Price));
-    next.tier2Price = Math.max(0, Math.round(next.tier2Price));
-    next.tier3Price = Math.max(0, Math.round(next.tier3Price));
+    const normalizePrice = (value: number, fallback: number) =>
+      Number.isFinite(value) ? Math.max(0, Math.round(value)) : fallback;
+    next.base = normalizePrice(next.base, pricingConfig.base);
+    next.tier1Price = normalizePrice(next.tier1Price, pricingConfig.tier1Price);
+    next.tier2Price = normalizePrice(next.tier2Price, pricingConfig.tier2Price);
+    next.tier3Price = normalizePrice(next.tier3Price, pricingConfig.tier3Price);
     // incluido fijo en 20
     next.included = 20;
     setPricingConfig(next);
@@ -187,7 +195,8 @@ export function ProjectCard({
   };
 
   const handleDiscountChange = (value: number) => {
-    const clamped = Math.max(0, Math.min(100, Math.round(value)));
+    const safeValue = Number.isFinite(value) ? value : 0;
+    const clamped = Math.max(0, Math.min(100, Math.round(safeValue)));
     setStoreDiscount(clamped);
     if (project) saveStoreDiscount(project.id, clamped);
   };
@@ -369,6 +378,9 @@ export function ProjectCard({
                 {protectedTemplate ? (
                   <span className="dashboard-store-card__status is-protected">Solo lectura</span>
                 ) : null}
+                {isFilteredOut ? (
+                  <span className="dashboard-store-detail__context">Fuera del filtro</span>
+                ) : null}
               </div>
             </div>
             <IconButton
@@ -390,13 +402,13 @@ export function ProjectCard({
             <div>
               <dt>Productos</dt>
               <dd>
-                {billableProducts}
-                {variantExtras > 0 ? ` (${variantExtras} extra)` : ""}
+                {formatDashboardCount(billableProducts)}
+                {variantExtras > 0 ? ` (${formatDashboardCount(variantExtras)} extra)` : ""}
               </dd>
             </div>
             <div>
               <dt>Categorías</dt>
-              <dd>{getProjectMetrics(project.project).categories}</dd>
+              <dd>{formatDashboardCount(projectMetrics?.categories ?? 0)}</dd>
             </div>
             <div>
               <dt>Mensualidad</dt>
@@ -404,7 +416,7 @@ export function ProjectCard({
             </div>
             <div>
               <dt>Recursos</dt>
-              <dd>{getProjectMetrics(project.project).assets}</dd>
+              <dd>{formatDashboardCount(projectMetrics?.assets ?? 0)}</dd>
             </div>
             {project.diskVersion !== undefined ? (
               <div>
@@ -422,50 +434,63 @@ export function ProjectCard({
             ) : null}
           </dl>
           <div className="dashboard-store-detail__actions">
-            <Button variant="primary" icon={ArrowUpRight} onClick={() => onOpen(project.id)}>
-              Abrir tienda
-            </Button>
-            {onOpenSite ? (
-              <Button
-                variant="secondary"
-                icon={Globe}
-                loading={siteOpeningId === project.id}
-                onClick={() => void onOpenSite(project.id)}
-              >
-                {siteOpeningId === project.id ? "Abriendo sitio" : "Abrir sitio público"}
-              </Button>
-            ) : null}
-            {onOpenFolder ? (
-              <Button
-                variant="secondary"
-                icon={FolderOpen}
-                loading={folderOpeningId === project.id}
-                onClick={() => void onOpenFolder(project.id)}
-              >
-                {folderOpeningId === project.id ? "Abriendo carpeta" : "Abrir carpeta"}
-              </Button>
-            ) : null}
-            <Button
-              variant="secondary"
-              icon={CloudArrowDown}
-              loading={backupId === project.id}
-              onClick={() => void onBackup(project.id)}
+            <div
+              className={`dashboard-store-detail__actions-primary${onOpenSite ? "" : " is-single"}`}
+              role="group"
+              aria-label="Acciones principales"
             >
-              {backupId === project.id ? "Preparando respaldo" : "Respaldo ahora"}
-            </Button>
-            {onDownloadBackup ? (
+              <Button variant="primary" icon={ArrowUpRight} onClick={() => onOpen(project.id)}>
+                Abrir tienda
+              </Button>
+              {onOpenSite ? (
+                <Button
+                  variant="secondary"
+                  icon={Globe}
+                  loading={siteOpeningId === project.id}
+                  onClick={() => void onOpenSite(project.id)}
+                >
+                  {siteOpeningId === project.id ? "Abriendo sitio" : "Abrir sitio público"}
+                </Button>
+              ) : null}
+            </div>
+            <div
+              className="dashboard-store-detail__actions-secondary"
+              data-label="Gestionar y respaldar"
+              role="group"
+              aria-label="Herramientas y respaldos"
+            >
+              {onOpenFolder ? (
+                <Button
+                  variant="secondary"
+                  icon={FolderOpen}
+                  loading={folderOpeningId === project.id}
+                  onClick={() => void onOpenFolder(project.id)}
+                >
+                  {folderOpeningId === project.id ? "Abriendo carpeta" : "Abrir carpeta"}
+                </Button>
+              ) : null}
               <Button
                 variant="secondary"
-                icon={DownloadSimple}
-                loading={downloadingId === project.id}
-                onClick={() => void onDownloadBackup(project.id)}
+                icon={CloudArrowDown}
+                loading={backupId === project.id}
+                onClick={() => void onBackup(project.id)}
               >
-                {downloadingId === project.id ? "Descargando respaldo" : "Descargar respaldo"}
+                {backupId === project.id ? "Preparando respaldo" : "Respaldar ahora"}
               </Button>
-            ) : null}
-            <Button variant="secondary" icon={Copy} onClick={() => void onDuplicate(project.id)}>
-              Duplicar
-            </Button>
+              {onDownloadBackup ? (
+                <Button
+                  variant="secondary"
+                  icon={DownloadSimple}
+                  loading={downloadingId === project.id}
+                  onClick={() => void onDownloadBackup(project.id)}
+                >
+                  {downloadingId === project.id ? "Descargando respaldo" : "Descargar respaldo"}
+                </Button>
+              ) : null}
+              <Button variant="secondary" icon={Copy} onClick={() => void onDuplicate(project.id)}>
+                Duplicar
+              </Button>
+            </div>
             <Button
               ref={calculatorButtonRef}
               className="dashboard-store-detail__calculator"
@@ -475,33 +500,44 @@ export function ProjectCard({
             >
               Calculadora
             </Button>
-            <Button
-              className="dashboard-store-detail__danger dashboard-store-detail__archive"
-              variant="secondary"
-              icon={project.status === "archived" ? ArrowCounterClockwise : Archive}
-              loading={archivingId === project.id}
-              disabled={protectedTemplate}
-              onClick={() => void onArchive(project.id, project.status !== "archived")}
+            <div
+              className={`dashboard-store-detail__actions-danger${onDelete ? "" : " is-single"}`}
+              data-label="Zona de riesgo"
+              role="group"
+              aria-label="Acciones de riesgo"
             >
-              {protectedTemplate
-                ? "Plantilla protegida"
-                : project.status === "archived"
-                  ? "Restaurar"
-                  : "Archivar"}
-            </Button>
-            {onDelete ? (
               <Button
-                ref={deleteButtonRef}
-                className="dashboard-store-detail__danger"
-                variant="danger"
-                icon={Trash}
-                loading={deletingId === project.id || deleteBusy}
+                className={`dashboard-store-detail__danger ${
+                  project.status === "archived"
+                    ? "dashboard-store-detail__restore"
+                    : "dashboard-store-detail__archive"
+                }`}
+                variant="secondary"
+                icon={project.status === "archived" ? ArrowCounterClockwise : Archive}
+                loading={archivingId === project.id}
                 disabled={protectedTemplate}
-                onClick={openDelete}
+                onClick={() => void onArchive(project.id, project.status !== "archived")}
               >
-                {deletingId === project.id || deleteBusy ? "Eliminando tienda" : "Eliminar tienda"}
+                {protectedTemplate
+                  ? "Plantilla protegida"
+                  : project.status === "archived"
+                    ? "Restaurar tienda"
+                    : "Archivar"}
               </Button>
-            ) : null}
+              {onDelete ? (
+                <Button
+                  ref={deleteButtonRef}
+                  className="dashboard-store-detail__danger"
+                  variant="danger"
+                  icon={Trash}
+                  loading={deletingId === project.id || deleteBusy}
+                  disabled={protectedTemplate}
+                  onClick={openDelete}
+                >
+                  {deletingId === project.id || deleteBusy ? "Eliminando tienda" : "Eliminar tienda"}
+                </Button>
+              ) : null}
+            </div>
           </div>
           {calculatorOpen
             ? createPortal(
@@ -895,7 +931,7 @@ export function ProjectCard({
                         >
                           <span
                             style={{
-                              width: `${Math.round(((DELETE_CONFIRM_SECONDS - deleteCountdown) / DELETE_CONFIRM_SECONDS) * 100)}%`,
+                              transform: `scaleX(${(DELETE_CONFIRM_SECONDS - deleteCountdown) / DELETE_CONFIRM_SECONDS})`,
                             }}
                           />
                         </div>
@@ -943,15 +979,17 @@ export function ProjectCard({
                 document.body,
               )
             : null}
-          {actionNotice ? (
-            <output
-              className="dashboard-store-detail__notice"
-              aria-live="polite"
-              data-testid="ui-detail-notice"
-            >
-              {actionNotice}
-            </output>
-          ) : null}
+          <div className="dashboard-store-detail__notice-slot">
+            {actionNotice ? (
+              <output
+                className="dashboard-store-detail__notice"
+                aria-live="polite"
+                data-testid="ui-detail-notice"
+              >
+                {actionNotice}
+              </output>
+            ) : null}
+          </div>
         </>
       ) : (
         <div className="dashboard-store-detail__empty">

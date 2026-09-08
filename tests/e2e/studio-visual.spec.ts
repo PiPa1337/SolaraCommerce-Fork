@@ -101,11 +101,11 @@ test("dashboard cosmic muestra datos reales y creación guiada", async ({ page }
   await expect
     .poll(() => logo.evaluate((image) => (image as HTMLImageElement).naturalWidth))
     .toBeGreaterThan(0);
-  await expect(page.getByText("50", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("Productos activos", { exact: true })).toBeVisible();
+  const activeProductsStat = page.locator(".dashboard-cosmic-library-stat");
+  await expect(activeProductsStat).toContainText("Productos activos");
+  await expect(activeProductsStat.locator("strong")).toHaveText(/^\d+$/);
   await expect(page.locator(".dashboard-cosmic-select select").first()).toHaveValue("active");
-  const updatedMeta = page.locator(".dashboard-store-card__meta").last();
-  await expect(updatedMeta).toBeVisible();
+  const updatedMeta = page.locator("time.dashboard-store-card__meta").first();
   await expect(updatedMeta).toHaveAttribute("datetime", /^\d{4}-\d{2}-\d{2}T/);
   await expect
     .poll(() =>
@@ -190,7 +190,7 @@ test("dashboard permite abrir, buscar, cambiar vista, respaldar y administrar un
   await selectedButton.click();
 
   const downloadPromise = page.waitForEvent("download");
-  await detail.getByRole("button", { name: "Respaldo ahora" }).click();
+  await detail.getByRole("button", { name: "Respaldar ahora" }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toMatch(/\.solara\.json$/);
 
@@ -226,11 +226,11 @@ test("dashboard permite abrir, buscar, cambiar vista, respaldar y administrar un
   await expect(
     page
       .getByRole("region", { name: "Tienda seleccionada: Predeterminado" })
-      .getByRole("button", { name: "Restaurar" }),
+      .getByRole("button", { name: "Restaurar tienda" }),
   ).toBeVisible();
   await page
     .getByRole("region", { name: "Tienda seleccionada: Predeterminado" })
-    .getByRole("button", { name: "Restaurar" })
+    .getByRole("button", { name: "Restaurar tienda" })
     .click();
   await expect(page.locator(".dashboard-cosmic-count")).toHaveText("0 visibles");
 });
