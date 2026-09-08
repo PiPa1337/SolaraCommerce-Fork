@@ -1,22 +1,25 @@
 /* biome-ignore-all lint/style/noDescendingSpecificity: legacy and cosmic dashboard shells share selectors by design. */
 /* Dashboard: un shell aislado para administrar tiendas locales. */
 .app-root--dashboard-cosmic {
-  --cosmic-bg: #03050b;
-  --cosmic-surface: rgb(13 16 24 / 0.82);
-  --cosmic-surface-strong: rgb(22 25 34 / 0.92);
-  --cosmic-line: rgb(255 255 255 / 0.12);
-  --cosmic-line-strong: rgb(255 255 255 / 0.2);
-  --cosmic-ink: #f5f1e8;
-  --cosmic-muted: #a7a9b0;
-  --cosmic-faint: #858995;
-  --cosmic-amber: #e7aa3d;
+  /* Paleta Gargantua: vacío casi neutro, velo azul-gris y disco caliente
+   * blanco-amarillo con bordes salmón. Los HEX son muestras aproximadas de
+   * una referencia SDR, no colores oficiales de la película. */
+  --cosmic-bg: #080b08;
+  --cosmic-surface: rgb(14 18 19 / 0.86);
+  --cosmic-surface-strong: rgb(24 29 31 / 0.94);
+  --cosmic-line: rgb(255 230 187 / 0.14);
+  --cosmic-line-strong: rgb(255 236 202 / 0.24);
+  --cosmic-ink: #f6f1e1;
+  --cosmic-muted: #a9ada6;
+  --cosmic-faint: #828b87;
+  --cosmic-amber: #e8b56f;
   --cosmic-green: #7bd98a;
-  --cosmic-yellow: #f6c75e;
+  --cosmic-yellow: #ffe5a6;
   --cosmic-red: #ed6e70;
   position: relative;
   min-height: 100dvh;
   background:
-    radial-gradient(circle at 78% -12%, rgb(231 170 61 / 0.08), transparent 34%),
+    radial-gradient(circle at 78% -12%, rgb(232 181 111 / 0.08), transparent 34%),
     radial-gradient(circle at 8% 38%, rgb(255 255 255 / 0.025), transparent 26%), var(--cosmic-bg);
   color: var(--cosmic-ink);
 }
@@ -43,7 +46,7 @@
   height: 72px;
   padding-inline: clamp(16px, 3vw, 36px);
   border-bottom-color: var(--cosmic-line);
-  background: rgb(3 5 11 / 0.98);
+  background: linear-gradient(180deg, rgb(8 11 8 / 0.7), rgb(8 11 8 / 0.86));
   color: var(--cosmic-ink);
   box-shadow: 0 1px 0 rgb(255 255 255 / 0.05) inset;
 }
@@ -134,14 +137,14 @@
 }
 
 .dashboard-cosmic .button--primary {
-  border-color: #f3c35e;
-  background: #f5c65b;
+  border-color: #f1c383;
+  background: #efbf72;
   color: #1e1305;
 }
 
 .dashboard-cosmic .button--primary:hover {
-  border-color: #ffe09a;
-  background: #ffdb7c;
+  border-color: #ffebbd;
+  background: #ffe1a0;
   color: #1e1305;
 }
 
@@ -429,6 +432,8 @@
   z-index: 1;
   display: grid;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   min-height: 132px;
   align-content: start;
   justify-items: center;
@@ -488,16 +493,30 @@
   opacity: 0.78;
 }
 
-.dashboard-store-card__open {
+.dashboard-store-card__actions {
   position: absolute;
   top: 8px;
-  right: 9px;
+  right: 8px;
   z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 10px;
+  background: rgb(8 11 18 / 0.58);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.24);
+  pointer-events: auto;
+}
+
+.dashboard-store-card__open {
+  position: static;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   gap: 2px;
   min-height: 26px;
-  padding: 3px 5px;
+  padding: 3px 6px;
   border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
@@ -520,10 +539,13 @@
 
 .dashboard-store-card__index {
   position: absolute;
+  z-index: 2;
   top: 9px;
   left: 10px;
-  color: var(--cosmic-faint);
+  color: #fff;
   font-size: 11px;
+  font-weight: 700;
+  text-shadow: 1px 1px 0 #000;
 }
 
 .dashboard-store-card__mark,
@@ -963,11 +985,11 @@
 }
 
 .dashboard-calculator-dialog {
-  --cosmic-line: rgb(255 255 255 / 0.12);
-  --cosmic-line-strong: rgb(255 255 255 / 0.2);
-  --cosmic-muted: #a7a9b0;
-  --cosmic-amber: #e7aa3d;
-  --cosmic-ink: #f5f1e8;
+  --cosmic-line: rgb(255 230 187 / 0.14);
+  --cosmic-line-strong: rgb(255 236 202 / 0.24);
+  --cosmic-muted: #a9ada6;
+  --cosmic-amber: #e8b56f;
+  --cosmic-ink: #f6f1e1;
   position: fixed;
   z-index: 80;
   inset: 0;
@@ -5502,19 +5524,17 @@ tbody tr[data-selected="true"] {
 }
 
 .dashboard-store-card__pin {
-  position: absolute;
-  top: 8px;
-  right: 76px;
-  z-index: 2;
+  position: static;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  min-width: 30px;
-  min-height: 30px;
+  width: 28px;
+  min-width: 28px;
+  min-height: 26px;
   padding: 0;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 6px;
   background: transparent;
   color: var(--cosmic-faint);
 }
@@ -5924,8 +5944,7 @@ tbody tr[data-selected="true"] {
     display: contents;
   }
 
-  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
-    .dashboard-cosmic-store-grid {
+  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-cosmic-store-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
@@ -5936,36 +5955,32 @@ tbody tr[data-selected="true"] {
 }
 
 @media (max-width: 600px) {
-  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
-    .dashboard-cosmic-store-grid {
+  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-cosmic-store-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 5px;
   }
 
-  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
-    .dashboard-store-card__button {
+  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-store-card__button {
     min-height: 82px;
     gap: 2px;
     padding: 7px 4px 6px;
   }
 
-  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
-    .dashboard-store-card__mark {
+  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-store-card__mark {
     width: 30px;
     height: 30px;
     font-size: 10px;
   }
 
   .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
-    .dashboard-store-card__button strong {
+    .dashboard-store-card__button
+    strong {
     padding-inline: 25px;
     font-size: 11px;
   }
 
-  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
-    .dashboard-store-card__status,
-  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
-    .dashboard-store-card__meta {
+  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-store-card__status,
+  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-store-card__meta {
     font-size: 9px;
   }
 
@@ -5974,19 +5989,19 @@ tbody tr[data-selected="true"] {
     display: none;
   }
 
-  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
-    .dashboard-store-card__pin {
+  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-store-card__actions {
     top: 5px;
-    right: 38px;
+    right: 4px;
+    gap: 2px;
+  }
+
+  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-store-card__pin {
     width: 28px;
     min-width: 28px;
     min-height: 28px;
   }
 
-  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
-    .dashboard-store-card__open {
-    top: 5px;
-    right: 4px;
+  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-store-card__open {
     width: 28px;
     min-width: 28px;
     min-height: 28px;
@@ -5994,8 +6009,7 @@ tbody tr[data-selected="true"] {
     font-size: 0;
   }
 
-  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
-    .dashboard-store-card__open svg {
+  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-store-card__open svg {
     flex: 0 0 auto;
   }
 }
@@ -6207,8 +6221,7 @@ tbody tr[data-selected="true"] {
     padding-inline: 5px;
   }
 
-  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
-    .dashboard-cosmic-store-grid {
+  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-cosmic-store-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 4px;
   }
@@ -6222,50 +6235,41 @@ tbody tr[data-selected="true"] {
     gap: 10px;
   }
 
-  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
-    .dashboard-store-card__button {
+  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-store-card__button {
     min-height: 66px;
     gap: 1px;
     padding: 4px 3px;
   }
 
-  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
-    .dashboard-store-card__mark {
+  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-store-card__mark {
     width: 24px;
     height: 24px;
     font-size: 9px;
   }
 
   .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
-    .dashboard-store-card__button strong {
+    .dashboard-store-card__button
+    strong {
     padding-inline: 4px;
     font-size: 10px;
   }
 
-  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
-    .dashboard-store-card__status,
-  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
-    .dashboard-store-card__meta {
+  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-store-card__status,
+  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-store-card__meta {
     font-size: 8px;
   }
 
-  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
-    .dashboard-store-card__pin,
-  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
-    .dashboard-store-card__open {
+  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-store-card__pin,
+  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-store-card__open {
     width: 24px;
     min-width: 24px;
     min-height: 24px;
   }
 
-  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
-    .dashboard-store-card__pin {
-    right: 32px;
-  }
-
-  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
-    .dashboard-store-card__open {
+  .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-store-card__actions {
+    top: 3px;
     right: 3px;
+    gap: 1px;
   }
 
   .dashboard-cosmic-pagination {
@@ -6279,11 +6283,11 @@ tbody tr[data-selected="true"] {
   }
 }
 
-/* Overdrive: el pozo gravitacional WebGL2 ocupa toda la superficie del
- * dashboard; las superficies operativas se mantienen en primer plano y la UI
- * sigue siendo útil aunque el acelerador no esté disponible. */
+/* Overdrive: el pozo gravitacional WebGL2 ocupa toda la superficie de la app,
+ * incluido el navbar; las superficies operativas se mantienen en primer plano
+ * y la UI sigue siendo útil aunque el acelerador no esté disponible. */
 .dashboard-gargantua .dashboard-gravity-field {
-  position: absolute;
+  position: fixed;
   z-index: 0;
   inset: 0;
   overflow: hidden;
@@ -6314,13 +6318,13 @@ tbody tr[data-selected="true"] {
 
 .dashboard-gargantua .dashboard-cosmic-library {
   position: relative;
-  border-color: rgb(232 181 81 / 0.28);
+  border-color: rgb(232 181 111 / 0.28);
   background:
-    linear-gradient(180deg, rgb(8 10 16 / 0.84), rgb(8 10 16 / 0.58) 54%, rgb(8 10 16 / 0.7)),
-    radial-gradient(circle at 78% 58%, rgb(255 177 67 / 0.07), transparent 42%);
+    linear-gradient(180deg, rgb(8 11 9 / 0.84), rgb(8 11 9 / 0.58) 54%, rgb(8 11 9 / 0.7)),
+    radial-gradient(circle at 78% 58%, rgb(232 181 111 / 0.07), transparent 42%);
   box-shadow:
     0 20px 60px rgb(0 0 0 / 0.3),
-    0 0 0 1px rgb(255 219 132 / 0.035) inset !important;
+    0 0 0 1px rgb(255 231 187 / 0.035) inset !important;
 }
 
 .dashboard-gargantua .dashboard-cosmic-library > * {
@@ -6339,8 +6343,8 @@ tbody tr[data-selected="true"] {
   border: 1px dashed rgb(255 218 135 / 0.22);
   border-radius: 16px;
   background:
-    radial-gradient(circle at 50% 36%, rgb(255 199 91 / 0.1), transparent 22%),
-    linear-gradient(135deg, rgb(21 23 32 / 0.72), rgb(8 10 17 / 0.84));
+    radial-gradient(circle at 50% 36%, rgb(255 218 150 / 0.1), transparent 22%),
+    linear-gradient(135deg, rgb(18 23 24 / 0.72), rgb(8 11 9 / 0.84));
   box-shadow:
     0 0 0 1px rgb(255 219 132 / 0.025) inset,
     0 18px 44px rgb(0 0 0 / 0.18);
@@ -6354,7 +6358,7 @@ tbody tr[data-selected="true"] {
   border-radius: 50%;
   box-shadow:
     0 0 0 12px rgb(255 218 135 / 0.035),
-    0 0 0 28px rgb(113 133 220 / 0.035);
+    0 0 0 28px rgb(100 116 124 / 0.05);
   content: "";
   transform: rotate(-12deg) scaleX(1.45);
 }
@@ -6440,45 +6444,41 @@ tbody tr[data-selected="true"] {
 
 .dashboard-gargantua .dashboard-store-card.is-selected {
   --card-lift: -1px;
-  border-color: rgb(255 201 91 / 0.88);
+  border-color: rgb(255 224 170 / 0.88);
   box-shadow:
     0 18px 42px rgb(0 0 0 / 0.34),
-    0 0 0 1px rgb(255 209 107 / 0.12),
-    0 0 28px rgb(231 170 61 / 0.14) !important;
+    0 0 0 1px rgb(255 224 170 / 0.12),
+    0 0 28px rgb(232 181 111 / 0.14) !important;
 }
 
 /* En modo Comparar, la selección debe sentirse como una segunda órbita de la
  * card, no como un checkbox nativo aislado. El estado vive en el input real
  * para conservar teclado y accesibilidad, mientras `:has` extiende la señal a
  * toda la superficie sin cambiar su altura ni su orden visual. */
-.dashboard-gargantua .dashboard-store-card.is-compare-mode:has(
-    .dashboard-store-card__compare:checked
-  ) {
+.dashboard-gargantua
+.dashboard-store-card.is-compare-mode:has(.dashboard-store-card__compare:checked) {
   --card-lift: -2px;
-  border-color: rgb(255 201 91 / 0.72);
+  border-color: rgb(255 224 170 / 0.72);
   box-shadow:
     0 16px 38px rgb(0 0 0 / 0.3),
-    0 0 0 1px rgb(255 209 107 / 0.1),
-    0 0 24px rgb(231 170 61 / 0.12) !important;
+    0 0 0 1px rgb(255 224 170 / 0.1),
+    0 0 24px rgb(232 181 111 / 0.12) !important;
 }
 
-.dashboard-gargantua .dashboard-store-card.is-compare-mode:has(
-    .dashboard-store-card__compare:checked
-  )::before,
-.dashboard-gargantua .dashboard-store-card.is-compare-mode:has(
-    .dashboard-store-card__compare:checked
-  )::after {
+.dashboard-gargantua
+  .dashboard-store-card.is-compare-mode:has(.dashboard-store-card__compare:checked)::before,
+.dashboard-gargantua
+  .dashboard-store-card.is-compare-mode:has(.dashboard-store-card__compare:checked)::after {
   opacity: 1;
 }
 
-.dashboard-gargantua .dashboard-store-card.is-compare-mode:has(
-    .dashboard-store-card__compare:checked
-  )::after {
+.dashboard-gargantua
+  .dashboard-store-card.is-compare-mode:has(.dashboard-store-card__compare:checked)::after {
   background:
-    linear-gradient(90deg, transparent, rgb(255 226 151 / 0.62), transparent) 50% 0 /
-      58% 1px no-repeat,
-    linear-gradient(90deg, transparent, rgb(231 170 61 / 0.32), transparent) 50% 100% /
-      42% 1px no-repeat;
+    linear-gradient(90deg, transparent, rgb(255 226 151 / 0.62), transparent) 50% 0 / 58% 1px
+    no-repeat,
+    linear-gradient(90deg, transparent, rgb(231 170 61 / 0.32), transparent) 50% 100% / 42% 1px
+    no-repeat;
 }
 
 .dashboard-gargantua .dashboard-store-card__compare {
@@ -6486,8 +6486,7 @@ tbody tr[data-selected="true"] {
   border: 1px solid rgb(255 218 135 / 0.46);
   border-radius: 5px;
   background:
-    radial-gradient(circle at 35% 28%, rgb(255 255 255 / 0.12), transparent 48%),
-    rgb(4 6 10 / 0.86);
+    radial-gradient(circle at 35% 28%, rgb(255 255 255 / 0.12), transparent 48%), rgb(4 6 10 / 0.86);
   box-shadow:
     0 4px 12px rgb(0 0 0 / 0.28),
     0 0 0 1px rgb(255 255 255 / 0.035) inset !important;
@@ -6516,9 +6515,8 @@ tbody tr[data-selected="true"] {
     transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.dashboard-gargantua .dashboard-store-card.is-compare-mode:has(
-    .dashboard-store-card__compare:checked
-  )
+.dashboard-gargantua
+  .dashboard-store-card.is-compare-mode:has(.dashboard-store-card__compare:checked)
   .dashboard-store-card__compare-visual {
   opacity: 1;
   transform: translateZ(27px) scale(1);
@@ -6552,10 +6550,10 @@ tbody tr[data-selected="true"] {
  * una señal de selección nítida sin sumar altura ni crear otra capa. */
 .dashboard-gargantua .dashboard-store-card.is-selected::after {
   background:
-    linear-gradient(90deg, transparent, rgb(255 226 151 / 0.72), transparent) 50% 0 /
-      64% 1px no-repeat,
-    linear-gradient(90deg, transparent, rgb(231 170 61 / 0.38), transparent) 50% 100% /
-      46% 1px no-repeat;
+    linear-gradient(90deg, transparent, rgb(255 226 151 / 0.72), transparent) 50% 0 / 64% 1px
+    no-repeat,
+    linear-gradient(90deg, transparent, rgb(231 170 61 / 0.38), transparent) 50% 100% / 46% 1px
+    no-repeat;
 }
 
 .dashboard-gargantua .dashboard-store-card__button {
@@ -6609,12 +6607,16 @@ tbody tr[data-selected="true"] {
 
 /* Los controles flotantes viven por delante de la superficie 3D de la card;
  * así el parallax no intercepta sus propios botones. */
-.dashboard-gargantua .dashboard-store-card__pin,
-.dashboard-gargantua .dashboard-store-card__open,
+.dashboard-gargantua .dashboard-store-card__actions,
 .dashboard-gargantua .dashboard-store-card__compare {
   z-index: 4;
   transform: translateZ(24px);
   transform-style: preserve-3d;
+}
+
+.dashboard-gargantua .dashboard-store-card__pin,
+.dashboard-gargantua .dashboard-store-card__open {
+  transform: none;
 }
 
 .dashboard-gargantua .dashboard-cosmic-results--list .dashboard-store-card__compare {
@@ -6626,16 +6628,25 @@ tbody tr[data-selected="true"] {
   transform: translateY(-50%) translateZ(27px) scale(0.72);
 }
 
-.dashboard-gargantua .dashboard-cosmic-results--list .dashboard-store-card.is-compare-mode:has(
-    .dashboard-store-card__compare:checked
-  )
+.dashboard-gargantua
+  .dashboard-cosmic-results--list
+  .dashboard-store-card.is-compare-mode:has(.dashboard-store-card__compare:checked)
   .dashboard-store-card__compare-visual {
   transform: translateY(-50%) translateZ(27px) scale(1);
 }
 
+.dashboard-gargantua .dashboard-store-card__hero {
+  transform: none;
+}
+
 .dashboard-gargantua .dashboard-store-card__hero img {
-  transform: scale(1.06) translate3d(var(--card-image-x), var(--card-image-y), 0);
-  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  /* La portada es un asset editorial: se muestra completa y sin parallax
+   * interno para no cortar laterales ni alterar su composición. */
+  object-fit: contain;
+  object-position: center;
+  filter: none;
+  transform: none;
+  transition: none;
 }
 
 /* Fallback intencional para tiendas sin hero: comunica profundidad y no deja
@@ -6648,11 +6659,10 @@ tbody tr[data-selected="true"] {
       transparent 0 19%,
       rgb(255 218 135 / 0.22) 19.5% 20.5%,
       transparent 21% 37%,
-      rgb(126 145 225 / 0.15) 37.5% 38.5%,
+      rgb(100 116 124 / 0.17) 37.5% 38.5%,
       transparent 39%
-    ),
-    radial-gradient(circle at 20% 18%, rgb(255 221 147 / 0.2), transparent 28%),
-    linear-gradient(135deg, rgb(35 33 42 / 0.96), rgb(9 13 23 / 0.98) 58%, rgb(42 27 23));
+    ), radial-gradient(circle at 20% 18%, rgb(255 228 177 / 0.2), transparent 28%),
+    linear-gradient(135deg, rgb(25 28 30 / 0.96), rgb(8 11 9 / 0.98) 58%, rgb(42 27 23));
 }
 
 .dashboard-gargantua .dashboard-store-card__hero.is-empty::after {
@@ -6671,9 +6681,9 @@ tbody tr[data-selected="true"] {
 .dashboard-gargantua .dashboard-store-card__hero-scrim {
   background: linear-gradient(
     180deg,
-    rgb(8 11 18 / 0.28) 0%,
-    rgb(8 11 18 / 0.5) 42%,
-    rgb(8 11 18 / 0.88) 100%
+    rgb(8 11 9 / 0.28) 0%,
+    rgb(8 11 9 / 0.5) 42%,
+    rgb(8 11 9 / 0.88) 100%
   );
 }
 
@@ -6702,9 +6712,9 @@ tbody tr[data-selected="true"] {
 .dashboard-gargantua .dashboard-store-card:hover .dashboard-store-card__hero-scrim {
   background: linear-gradient(
     180deg,
-    rgb(8 11 18 / 0.22) 0%,
-    rgb(8 11 18 / 0.42) 42%,
-    rgb(8 11 18 / 0.84) 100%
+    rgb(8 11 9 / 0.22) 0%,
+    rgb(8 11 9 / 0.42) 42%,
+    rgb(8 11 9 / 0.84) 100%
   );
 }
 
@@ -6720,30 +6730,35 @@ tbody tr[data-selected="true"] {
   opacity: 0.92;
 }
 
+.dashboard-gargantua .dashboard-store-card__actions {
+  border-color: rgb(255 255 255 / 0.16);
+  background: rgb(8 11 9 / 0.68);
+}
+
 .dashboard-gargantua .dashboard-store-card__open {
   border-color: rgb(255 255 255 / 0.18);
-  background: rgb(8 11 18 / 0.48);
+  background: rgb(8 11 9 / 0.48);
   color: var(--cosmic-ink);
 }
 
 .dashboard-gargantua .dashboard-store-card.is-selected .dashboard-store-card__open {
-  border-color: rgb(255 209 107 / 0.5);
-  background: rgb(231 170 61 / 0.14);
+  border-color: rgb(255 224 170 / 0.5);
+  background: rgb(232 181 111 / 0.14);
 }
 
 .dashboard-gargantua .dashboard-store-card__open:hover,
 .dashboard-gargantua .dashboard-store-card__open:focus-visible {
   border-color: var(--cosmic-amber);
-  background: rgb(231 170 61 / 0.24);
+  background: rgb(232 181 111 / 0.24);
   color: var(--cosmic-ink);
 }
 
 .dashboard-gargantua .dashboard-store-detail.is-open {
   z-index: 11;
-  border-color: rgb(255 201 91 / 0.58);
+  border-color: rgb(255 224 170 / 0.58);
   background:
-    radial-gradient(circle at 8% 0%, rgb(255 204 102 / 0.06), transparent 30%),
-    linear-gradient(145deg, rgb(16 19 27 / 0.99), rgb(9 11 18 / 0.99));
+    radial-gradient(circle at 8% 0%, rgb(255 224 170 / 0.06), transparent 30%),
+    linear-gradient(145deg, rgb(17 22 23 / 0.99), rgb(8 11 9 / 0.99));
   box-shadow: 0 20px 48px rgb(0 0 0 / 0.42) !important;
   animation: dashboard-gargantua-detail-arrival 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -6763,8 +6778,7 @@ tbody tr[data-selected="true"] {
 }
 
 @media (max-width: 820px) {
-  .app-root--dashboard-cosmic:has(.dashboard-store-detail.is-open)
-    > .app-header--dashboard-cosmic {
+  .app-root--dashboard-cosmic:has(.dashboard-store-detail.is-open) > .app-header--dashboard-cosmic {
     z-index: 0;
   }
 
@@ -6941,12 +6955,11 @@ tbody tr[data-selected="true"] {
  * contenido: el scroll queda confinado al modal cuando el reporte es largo. */
 .compare-dialog {
   border-color: color-mix(in srgb, var(--cosmic-amber) 42%, var(--cosmic-line-strong));
-  background:
-    linear-gradient(
-      145deg,
-      color-mix(in srgb, var(--cosmic-amber) 6%, var(--cosmic-bg)),
-      var(--cosmic-bg)
-    );
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--cosmic-amber) 6%, var(--cosmic-bg)),
+    var(--cosmic-bg)
+  );
   isolation: isolate;
   box-shadow:
     0 28px 90px rgb(0 0 0 / 0.58),
@@ -7159,7 +7172,6 @@ tbody tr[data-selected="true"] {
     gap: 7px;
     padding: 7px 12px;
   }
-
 }
 
 @media (min-width: 821px) and (min-height: 821px) {
@@ -7240,7 +7252,6 @@ tbody tr[data-selected="true"] {
   .dashboard-gargantua .dashboard-store-detail__actions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
 }
 
 /* A 1024x768 conserva tres columnas legibles, pero necesita cuatro filas más
@@ -7283,9 +7294,9 @@ tbody tr[data-selected="true"] {
   }
 }
 
-/* Overdrive de entrada: la biblioteca se retira y el campo gravitacional
- * toma el foco antes de entregar la navegación a Studio. La cortina vive en
- * el mismo stacking context para que el gesto se sienta como un único plano. */
+/* Entrada a tienda: el botón entrega la navegación después de que Gargantua
+ * haya atraído la cámara. La cortina vive en el mismo stacking context para
+ * que el gesto se sienta como un único plano. */
 .app-root--dashboard-cosmic:has(.dashboard-gargantua.is-store-launching)
   > .app-header--dashboard-cosmic {
   opacity: 0;
@@ -7333,7 +7344,13 @@ tbody tr[data-selected="true"] {
   place-items: center;
   overflow: hidden;
   background:
-    radial-gradient(circle at 50% 50%, transparent 0 8%, rgb(0 0 0 / 0.18) 20%, rgb(0 0 0 / 0.72) 58%, #000 100%),
+    radial-gradient(
+      circle at 50% 50%,
+      transparent 0 8%,
+      rgb(0 0 0 / 0.18) 20%,
+      rgb(0 0 0 / 0.72) 58%,
+      #000 100%
+    ),
     rgb(1 2 5 / 0.22);
   pointer-events: auto;
   animation: dashboard-gargantua-curtain 1460ms cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -7519,109 +7536,192 @@ tbody tr[data-selected="true"] {
   }
 }
 
-/* Inspector temporal para calibrar Gargantua contra las referencias. Vite
- * elimina el montaje en production; la variable sólo existe mientras la
- * ruta Dashboard está viva en desarrollo. */
-.app-root--dashboard-cosmic:has(.dashboard-gargantua[data-gargantua-debug="true"])
-  > .dashboard-page.dashboard-cosmic {
-  z-index: 30;
-}
-
-.app-root--dashboard-cosmic:not(:has(.dashboard-gargantua.is-store-launching))
-  > .app-header--dashboard-cosmic,
-.app-root--dashboard-cosmic:not(:has(.dashboard-gargantua.is-store-launching))
-  .dashboard-cosmic__banners,
-.dashboard-gargantua[data-gargantua-debug="true"]:not(.is-store-launching)
-  .dashboard-cosmic__content {
-  opacity: var(--gargantua-debug-ui-opacity, 1);
-  transition: opacity 180ms ease;
-}
-
-.dashboard-gargantua-debug-controls {
+/* Arranque de la app: la pantalla negra es una escena breve, no un segundo
+ * dashboard. Gargantua aparece desde el negro y se retira mientras el shell
+ * real se arma en bloques escalonados debajo. */
+.app-boot-sequence {
   position: fixed;
-  z-index: 100;
-  top: clamp(78px, 9vh, 96px);
-  left: 50%;
-  display: flex;
-  align-items: center;
-  width: max-content;
-  max-width: calc(100vw - 20px);
-  gap: 10px;
-  margin: 0;
-  padding: 7px 10px 8px;
-  border: 1px solid rgb(255 215 125 / 0.72);
-  border-radius: 999px;
-  background: rgb(3 5 11 / 0.96);
-  box-shadow:
-    0 12px 28px rgb(0 0 0 / 0.48),
-    0 0 0 1px rgb(255 255 255 / 0.08) inset;
-  color: #fff7df;
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  line-height: 1;
-  transform: translateX(-50%);
-  backdrop-filter: blur(14px);
+  z-index: 2000;
+  inset: 0;
+  overflow: hidden;
+  isolation: isolate;
+  background: #000;
+  pointer-events: none;
 }
 
-.dashboard-gargantua-debug-controls legend {
-  padding: 0 4px;
-  color: rgb(255 215 125 / 0.64);
-  font-size: 8px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+.app-boot-sequence .dashboard-gravity-field {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  opacity: 1;
 }
 
-.dashboard-gargantua-debug-controls label {
-  color: var(--cosmic-muted);
-  white-space: nowrap;
+.app-boot-sequence .dashboard-gravity-field canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  mix-blend-mode: screen;
+  opacity: 0;
+  animation: solara-boot-field-in 900ms cubic-bezier(0.16, 1, 0.3, 1) 120ms forwards;
 }
 
-.dashboard-gargantua-debug-controls input[type="range"] {
-  width: clamp(140px, 19vw, 230px);
-  accent-color: var(--cosmic-amber);
-  cursor: ew-resize;
+.app-boot-sequence__veil {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background:
+    radial-gradient(
+      circle at 67% 61%,
+      transparent 0 17%,
+      rgb(0 0 0 / 0.18) 48%,
+      rgb(0 0 0 / 0.72) 100%
+    ), linear-gradient(180deg, rgb(0 0 0 / 0.08), rgb(0 0 0 / 0.3));
+  opacity: 1;
+  pointer-events: none;
+  transition: opacity 280ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.dashboard-gargantua-debug-controls input[type="range"]:focus-visible {
-  outline: 2px solid var(--cosmic-yellow);
-  outline-offset: 3px;
+.app-boot-sequence.is-releasing {
+  animation: solara-boot-overlay-out 1500ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.dashboard-gargantua-debug-controls output {
-  min-width: 32px;
-  color: var(--cosmic-ink);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
+.app-boot-sequence.is-releasing .app-boot-sequence__veil {
+  opacity: 0;
 }
 
-@media (max-width: 600px) {
-  .dashboard-gargantua-debug-controls {
-    top: 76px;
-    width: calc(100vw - 20px);
-    max-width: none;
-    gap: 7px;
-    padding-inline: 8px;
-    font-size: 9px;
+html[data-solara-boot="entering"] .app-root--dashboard-cosmic > .app-header--dashboard-cosmic,
+html[data-solara-boot="entering"] .app-root--dashboard-cosmic .dashboard-cosmic__banners,
+html[data-solara-boot="entering"]
+  .app-root--dashboard-cosmic
+  .dashboard-cosmic__content
+  > .shutdown-status,
+html[data-solara-boot="entering"]
+  .app-root--dashboard-cosmic
+  .dashboard-cosmic__content
+  > .dashboard-cosmic-library {
+  animation: solara-boot-block-in 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+html[data-solara-boot="entering"] .app-root--dashboard-cosmic > .app-header--dashboard-cosmic {
+  animation-delay: 90ms;
+}
+
+html[data-solara-boot="entering"] .app-root--dashboard-cosmic .dashboard-cosmic__banners {
+  animation-delay: 210ms;
+}
+
+html[data-solara-boot="entering"]
+  .app-root--dashboard-cosmic
+  .dashboard-cosmic__content
+  > .shutdown-status {
+  animation-delay: 300ms;
+}
+
+html[data-solara-boot="entering"]
+  .app-root--dashboard-cosmic
+  .dashboard-cosmic__content
+  > .dashboard-cosmic-library {
+  animation-delay: 360ms;
+  animation-name: solara-boot-shell-in;
+}
+
+html[data-solara-boot="entering"] .dashboard-cosmic-library-head {
+  animation: solara-boot-block-in 420ms cubic-bezier(0.16, 1, 0.3, 1) 640ms both;
+}
+
+html[data-solara-boot="entering"] .dashboard-cosmic-toolbar {
+  animation: solara-boot-block-in 390ms cubic-bezier(0.16, 1, 0.3, 1) 790ms both;
+}
+
+html[data-solara-boot="entering"] .dashboard-cosmic-actions {
+  animation: solara-boot-block-in 390ms cubic-bezier(0.16, 1, 0.3, 1) 920ms both;
+}
+
+html[data-solara-boot="entering"] .dashboard-cosmic-results {
+  animation: solara-boot-block-in 460ms cubic-bezier(0.16, 1, 0.3, 1) 1050ms both;
+}
+
+@keyframes solara-boot-field-in {
+  from {
+    opacity: 0;
   }
 
-  .dashboard-gargantua-debug-controls legend {
-    font-size: 7px;
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes solara-boot-overlay-out {
+  from {
+    opacity: 1;
   }
 
-  .dashboard-gargantua-debug-controls input[type="range"] {
-    min-width: 0;
-    flex: 1 1 auto;
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes solara-boot-block-in {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0);
+  }
+
+  68% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes solara-boot-shell-in {
+  from {
+    transform: translate3d(0, 16px, 0);
+  }
+
+  to {
+    transform: translate3d(0, 0, 0);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .app-root--dashboard-cosmic:not(:has(.dashboard-gargantua.is-store-launching))
-    > .app-header--dashboard-cosmic,
-  .app-root--dashboard-cosmic:not(:has(.dashboard-gargantua.is-store-launching))
-    .dashboard-cosmic__banners,
-  .dashboard-gargantua[data-gargantua-debug="true"]:not(.is-store-launching)
-    .dashboard-cosmic__content {
-    transition: none;
+  .app-boot-sequence .dashboard-gravity-field canvas {
+    animation: none;
+    opacity: 1;
+  }
+
+  .app-boot-sequence.is-releasing {
+    animation-duration: 180ms;
+  }
+
+  .app-boot-sequence.is-releasing .app-boot-sequence__veil {
+    transition-duration: 120ms;
+  }
+
+  html[data-solara-boot="entering"] .app-root--dashboard-cosmic > .app-header--dashboard-cosmic,
+  html[data-solara-boot="entering"] .app-root--dashboard-cosmic .dashboard-cosmic__banners,
+  html[data-solara-boot="entering"]
+    .app-root--dashboard-cosmic
+    .dashboard-cosmic__content
+    > .shutdown-status,
+  html[data-solara-boot="entering"]
+    .app-root--dashboard-cosmic
+    .dashboard-cosmic__content
+    > .dashboard-cosmic-library,
+  html[data-solara-boot="entering"] .dashboard-cosmic-library-head,
+  html[data-solara-boot="entering"] .dashboard-cosmic-toolbar,
+  html[data-solara-boot="entering"] .dashboard-cosmic-actions,
+  html[data-solara-boot="entering"] .dashboard-cosmic-results {
+    animation: none;
+    filter: none;
+    opacity: 1;
+    transform: none;
   }
 }
 
@@ -7781,4 +7881,935 @@ tbody tr[data-selected="true"] {
     min-height: 22px;
     margin-top: 5px;
   }
+}
+
+/* La preview de cada tienda es información primaria, no un estado de hover:
+ * la misma portada que se expone como `og:image` ocupa el lado visual de la
+ * card y el resumen operativo mantiene un eje propio y respirable. */
+@media (min-width: 821px) {
+  .dashboard-gargantua
+    .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
+    .dashboard-store-card {
+    overflow: hidden;
+  }
+
+  .dashboard-gargantua
+    .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
+    .dashboard-store-card__button {
+    --dashboard-card-height: clamp(150px, 11.2vw, 174px);
+    grid-template-columns:
+      minmax(
+        0,
+        min(
+          calc(100% - 122px),
+          calc(var(--dashboard-card-height) * var(--dashboard-store-hero-ratio, 1.72))
+        )
+      )
+      minmax(122px, 1fr);
+    grid-template-rows: 38px 34px auto auto auto auto minmax(0, 1fr);
+    height: var(--dashboard-card-height);
+    min-height: var(--dashboard-card-height);
+    align-items: center;
+    justify-items: center;
+    row-gap: 3px;
+    column-gap: 0;
+    padding: 0;
+    text-align: center;
+  }
+
+  .dashboard-gargantua
+    .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
+    .dashboard-store-card__hero {
+    position: relative;
+    inset: auto;
+    grid-column: 1;
+    grid-row: 1 / -1;
+    width: 100%;
+    height: 100%;
+    aspect-ratio: var(--dashboard-store-hero-ratio, 1.72);
+    min-height: 0;
+    align-self: stretch;
+    justify-self: stretch;
+    border-radius: 11px 0 0 11px;
+    opacity: 0.9;
+    box-shadow: inset -1px 0 rgb(255 255 255 / 0.1);
+    transform: none;
+  }
+
+  .dashboard-gargantua
+    .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
+    .dashboard-store-card__hero.is-empty {
+    opacity: 0.3;
+    background:
+      linear-gradient(135deg, rgb(255 255 255 / 0.08) 0 1px, transparent 1px 12px),
+      linear-gradient(180deg, rgb(47 51 63 / 0.9), rgb(18 21 29 / 0.96));
+    background-size:
+      12px 12px,
+      auto;
+  }
+
+  .dashboard-gargantua
+    .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
+    .dashboard-store-card__hero-scrim {
+    background: linear-gradient(
+      90deg,
+      rgb(8 11 18 / 0.06) 0%,
+      rgb(8 11 18 / 0.12) 70%,
+      rgb(8 11 18 / 0.34) 100%
+    );
+  }
+
+  .dashboard-gargantua
+    .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
+    .dashboard-store-card__mark {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: center;
+    width: 34px;
+    height: 34px;
+    margin: 0;
+    transform: none;
+  }
+
+  .dashboard-gargantua
+    .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
+    .dashboard-store-card__button
+    strong {
+    grid-column: 2;
+    grid-row: 3;
+    min-width: 0;
+    padding-inline: 10px;
+    line-height: 1.2;
+    transform: none;
+  }
+
+  .dashboard-gargantua
+    .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
+    .dashboard-store-card__status {
+    grid-column: 2;
+    grid-row: 4;
+    justify-self: center;
+    transform: none;
+  }
+
+  .dashboard-gargantua
+    .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
+    .dashboard-store-card__badge {
+    grid-column: 2;
+    grid-row: 5;
+    justify-self: center;
+    transform: none;
+  }
+
+  .dashboard-gargantua
+    .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
+    .dashboard-store-card__meta {
+    grid-column: 2;
+    justify-self: center;
+    transform: none;
+  }
+
+  .dashboard-gargantua
+    .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
+    .dashboard-store-card__meta {
+    line-height: 1.25;
+  }
+
+  .dashboard-gargantua
+    .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
+    .dashboard-store-card
+    time.dashboard-store-card__meta {
+    align-self: start;
+  }
+
+  .dashboard-gargantua
+    .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
+    .dashboard-store-card__meta:not(time) {
+    grid-row: 6;
+  }
+
+  .dashboard-gargantua
+    .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
+    .dashboard-store-card
+    time.dashboard-store-card__meta {
+    grid-row: 7;
+  }
+}
+
+@media (min-width: 821px) and (max-height: 820px) {
+  .dashboard-gargantua
+    .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
+    .dashboard-store-card__button {
+    --dashboard-card-height: 136px;
+    grid-template-rows: 38px 28px auto auto auto auto minmax(0, 1fr);
+    row-gap: 2px;
+    height: var(--dashboard-card-height);
+    min-height: var(--dashboard-card-height);
+  }
+
+  .dashboard-gargantua
+    .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
+    .dashboard-store-card__mark {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+@media (min-width: 821px) and (max-width: 1120px) {
+  .dashboard-gargantua
+    .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
+    .dashboard-cosmic-store-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1121px) {
+  /* Cuando la página contiene más de tres tiendas, cuatro columnas conservan
+   * la paginación dentro del mismo vidrio sin comprimir la portada ni el rail. */
+  .dashboard-gargantua
+    .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
+    .dashboard-cosmic-store-grid:has(> .dashboard-store-card:nth-child(4)) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  /* El hover conserva la profundidad del hero, pero sin escalarlo: la card
+   * se inclina y se eleva, mientras la portada permanece fiel a su encuadre. */
+  .dashboard-gargantua .dashboard-store-card__hero {
+    transform: translateZ(-14px);
+  }
+}
+
+/* Glassmorphism de superficies: el campo gravitacional queda fuera de esta
+ * capa para conservar intactos su canvas, colores y animación. */
+.app-root--dashboard-cosmic {
+  --cosmic-line: rgb(222 235 249 / 0.16);
+  --cosmic-line-strong: rgb(238 246 255 / 0.28);
+  --cosmic-ink: #f3f7fb;
+  --cosmic-muted: #aab8c8;
+  --cosmic-faint: #8190a4;
+  --cosmic-amber: #c4d2e1;
+  --cosmic-yellow: #edf4fb;
+  --cosmic-surface: rgb(10 16 28 / 0.68);
+  --cosmic-surface-strong: rgb(17 26 42 / 0.82);
+}
+
+.dashboard-gargantua {
+  --cosmic-line: rgb(222 235 249 / 0.16);
+  --cosmic-line-strong: rgb(238 246 255 / 0.28);
+  --cosmic-ink: #f3f7fb;
+  --cosmic-muted: #aab8c8;
+  --cosmic-faint: #8190a4;
+  --cosmic-amber: #c4d2e1;
+  --cosmic-yellow: #edf4fb;
+  --cosmic-surface: rgb(10 16 28 / 0.68);
+  --cosmic-surface-strong: rgb(17 26 42 / 0.82);
+}
+
+.dashboard-gargantua .dashboard-cosmic-library {
+  border-color: rgb(238 246 255 / 0.16);
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.065), rgb(255 255 255 / 0.018)), rgb(7 12 22 / 0.62);
+  box-shadow:
+    0 20px 60px rgb(0 0 0 / 0.3),
+    0 0 0 1px rgb(255 255 255 / 0.065) inset !important;
+}
+
+.dashboard-gargantua .dashboard-cosmic-group h3::before {
+  background: linear-gradient(90deg, rgb(255 255 255 / 0.34), transparent);
+  box-shadow: 0 0 8px rgb(255 255 255 / 0.08);
+}
+
+.app-root--dashboard-cosmic .dashboard-cosmic .button--primary,
+.app-root--dashboard-cosmic .dashboard-cosmic .button--primary:hover {
+  border-color: rgb(238 246 255 / 0.34);
+  background: rgb(255 255 255 / 0.12);
+  color: var(--cosmic-ink);
+  box-shadow: 0 5px 16px rgb(0 0 0 / 0.2);
+}
+
+.app-root--dashboard-cosmic .dashboard-cosmic-search:focus-within,
+.app-root--dashboard-cosmic .dashboard-cosmic-select:focus-within {
+  border-color: rgb(255 255 255 / 0.4);
+  box-shadow: 0 0 0 3px rgb(255 255 255 / 0.08);
+}
+
+.app-root--dashboard-cosmic .dashboard-cosmic-search:hover,
+.app-root--dashboard-cosmic .dashboard-cosmic-select:hover {
+  border-color: rgb(255 255 255 / 0.26);
+}
+
+.app-root--dashboard-cosmic .dashboard-cosmic-view-toggle .icon-button[aria-pressed="true"],
+.app-root--dashboard-cosmic .dashboard-cosmic-view-toggle .icon-button[aria-pressed="true"]:hover,
+.app-root--dashboard-cosmic .dashboard-cosmic-actions .button[aria-pressed="true"] {
+  border-color: rgb(255 255 255 / 0.3);
+  background: rgb(255 255 255 / 0.1);
+  color: var(--cosmic-ink);
+}
+
+.app-root--dashboard-cosmic .dashboard-cosmic *:focus-visible {
+  outline-color: rgb(255 255 255 / 0.72);
+}
+
+.dashboard-gargantua .dashboard-store-card {
+  border-color: rgb(238 246 255 / 0.16);
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.025)), rgb(8 14 25 / 0.7);
+  -webkit-backdrop-filter: blur(12px) saturate(116%);
+  backdrop-filter: blur(12px) saturate(116%);
+}
+
+.dashboard-gargantua .dashboard-store-card:hover,
+.dashboard-gargantua .dashboard-store-card.is-selected {
+  border-color: rgb(244 249 255 / 0.34);
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 0.115), rgb(255 255 255 / 0.035)),
+    rgb(16 25 40 / 0.78);
+  box-shadow:
+    0 18px 42px rgb(0 0 0 / 0.34),
+    0 0 0 1px rgb(255 255 255 / 0.08) inset !important;
+}
+
+/* La selección comparte línea con el panel lateral; el levantamiento queda
+ * reservado al hover para que la grilla no parezca corrida en reposo. */
+.dashboard-gargantua .dashboard-store-card.is-selected {
+  --card-lift: 0px;
+}
+
+.dashboard-gargantua .dashboard-store-card.is-selected:hover {
+  --card-lift: -3px;
+}
+
+.dashboard-gargantua .dashboard-store-card::before {
+  background: radial-gradient(
+    circle at var(--card-glow-x) var(--card-glow-y),
+    rgb(235 246 255 / 0.13),
+    rgb(190 220 255 / 0.035) 20%,
+    transparent 48%
+  );
+}
+
+.dashboard-gargantua .dashboard-store-card::after {
+  border-color: rgb(255 255 255 / 0.1);
+  box-shadow: 0 0 22px rgb(255 255 255 / 0.045) inset !important;
+}
+
+.dashboard-gargantua .dashboard-store-card.is-selected::after {
+  background:
+    linear-gradient(90deg, transparent, rgb(255 255 255 / 0.36), transparent) 50% 0 / 64% 1px
+    no-repeat,
+    linear-gradient(90deg, transparent, rgb(255 255 255 / 0.16), transparent) 50% 100% / 46% 1px
+    no-repeat;
+}
+
+.dashboard-gargantua .dashboard-store-card__actions {
+  border-color: rgb(238 246 255 / 0.18);
+  background: rgb(7 14 25 / 0.74);
+  box-shadow: 0 5px 14px rgb(0 0 0 / 0.28);
+}
+
+.dashboard-gargantua .dashboard-store-card__pin:hover,
+.dashboard-gargantua .dashboard-store-card__pin[aria-pressed="true"] {
+  border-color: rgb(255 255 255 / 0.24);
+  background: rgb(255 255 255 / 0.1);
+  color: #fff;
+}
+
+.dashboard-gargantua .dashboard-store-card__open,
+.dashboard-gargantua .dashboard-store-card.is-selected .dashboard-store-card__open {
+  border-color: rgb(238 246 255 / 0.2);
+  background: rgb(255 255 255 / 0.075);
+  color: var(--cosmic-ink);
+}
+
+.dashboard-gargantua .dashboard-store-card__open:hover,
+.dashboard-gargantua .dashboard-store-card__open:focus-visible {
+  border-color: rgb(255 255 255 / 0.44);
+  background: rgb(255 255 255 / 0.14);
+  color: #fff;
+}
+
+.dashboard-gargantua .dashboard-store-card__badge {
+  border-color: rgb(255 255 255 / 0.2);
+  background: rgb(255 255 255 / 0.06);
+  color: var(--cosmic-amber);
+}
+
+.dashboard-gargantua .dashboard-store-detail.is-open {
+  border-color: rgb(238 246 255 / 0.3);
+}
+
+.dashboard-gargantua .dashboard-store-detail__mark {
+  border-color: rgb(238 246 255 / 0.32);
+  box-shadow: 0 0 22px rgb(255 255 255 / 0.08);
+}
+
+.dashboard-gargantua .dashboard-store-card:has(.dashboard-store-card__button:focus-visible) {
+  border-color: rgb(255 255 255 / 0.46);
+  outline-color: rgb(255 255 255 / 0.68);
+}
+
+.dashboard-gargantua .dashboard-store-card__button:focus-visible {
+  outline-color: rgb(255 255 255 / 0.78);
+}
+
+/* Inspector temporal para aislar el campo gravitacional durante el ajuste
+ * visual. Sólo existe dentro del Studio local y la variable se limpia al
+ * desmontar el dashboard, por lo que no altera el proyecto persistido ni la
+ * exportación del storefront. */
+.app-root--dashboard-cosmic:has(.dashboard-gargantua[data-gargantua-debug="true"])
+  > .dashboard-page.dashboard-cosmic {
+  z-index: 30;
+}
+
+.app-root--dashboard-cosmic:has(.dashboard-gargantua[data-gargantua-debug="true"])
+  > .app-header--dashboard-cosmic,
+.app-root--dashboard-cosmic:has(.dashboard-gargantua[data-gargantua-debug="true"])
+  .dashboard-cosmic__banners,
+.dashboard-gargantua[data-gargantua-debug="true"]:not(.is-store-launching) .dashboard-cosmic__content {
+  opacity: var(--gargantua-debug-ui-opacity, 1);
+  transition: opacity 180ms ease;
+}
+
+.dashboard-gargantua-debug-controls {
+  position: fixed;
+  z-index: 100;
+  top: clamp(78px, 9vh, 96px);
+  left: 50%;
+  display: flex;
+  align-items: center;
+  width: max-content;
+  max-width: calc(100vw - 20px);
+  gap: 10px;
+  margin: 0;
+  padding: 7px 10px 8px;
+  border: 1px solid rgb(255 215 125 / 0.72);
+  border-radius: 999px;
+  background: rgb(3 5 11 / 0.96);
+  box-shadow:
+    0 12px 28px rgb(0 0 0 / 0.48),
+    0 0 0 1px rgb(255 255 255 / 0.08) inset;
+  color: #fff7df;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  transform: translateX(-50%);
+  backdrop-filter: blur(14px);
+}
+
+.dashboard-gargantua-debug-controls legend {
+  padding: 0 4px;
+  color: rgb(255 215 125 / 0.64);
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.dashboard-gargantua-debug-controls label {
+  color: var(--cosmic-muted);
+  white-space: nowrap;
+}
+
+.dashboard-gargantua-debug-controls input[type="range"] {
+  width: clamp(140px, 19vw, 230px);
+  accent-color: var(--cosmic-amber);
+  cursor: ew-resize;
+}
+
+.dashboard-gargantua-debug-controls input[type="range"]:focus-visible {
+  outline: 2px solid var(--cosmic-yellow);
+  outline-offset: 3px;
+}
+
+.dashboard-gargantua-debug-controls output {
+  min-width: 32px;
+  color: var(--cosmic-ink);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+@media (max-width: 600px) {
+  .dashboard-gargantua-debug-controls {
+    top: 76px;
+    width: calc(100vw - 20px);
+    max-width: none;
+    gap: 7px;
+    padding-inline: 8px;
+    font-size: 9px;
+  }
+
+  .dashboard-gargantua-debug-controls legend {
+    font-size: 7px;
+  }
+
+  .dashboard-gargantua-debug-controls input[type="range"] {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-root--dashboard-cosmic:has(.dashboard-gargantua[data-gargantua-debug="true"])
+    > .app-header--dashboard-cosmic,
+  .app-root--dashboard-cosmic:has(.dashboard-gargantua[data-gargantua-debug="true"])
+    .dashboard-cosmic__banners,
+  .dashboard-gargantua[data-gargantua-debug="true"]:not(.is-store-launching)
+    .dashboard-cosmic__content {
+    transition: none;
+  }
+}
+
+/* Sistema de vidrio del dashboard: todas las superficies operativas comparten
+ * el mismo material; el campo gravitacional permanece fuera de esta capa. */
+.app-root--dashboard-cosmic,
+.dashboard-gargantua {
+  --dashboard-glass-surface: rgb(9 16 28 / 0.64);
+  --dashboard-glass-surface-strong: rgb(13 22 36 / 0.78);
+  --dashboard-glass-surface-soft: rgb(255 255 255 / 0.045);
+  --dashboard-glass-border: rgb(232 242 255 / 0.16);
+  --dashboard-glass-border-strong: rgb(242 248 255 / 0.3);
+  --dashboard-glass-highlight: rgb(255 255 255 / 0.075);
+  --dashboard-glass-shadow: 0 18px 48px rgb(0 0 0 / 0.28);
+}
+
+.app-root--dashboard-cosmic > .app-header--dashboard-cosmic {
+  border-bottom-color: var(--dashboard-glass-border);
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.035), transparent),
+    rgb(5 9 17 / 0.72);
+  box-shadow:
+    0 10px 28px rgb(0 0 0 / 0.18),
+    0 1px 0 var(--dashboard-glass-highlight) inset;
+}
+
+.app-root--dashboard-cosmic .app-wordmark__logo {
+  box-shadow: 0 0 24px rgb(255 255 255 / 0.1);
+}
+
+.app-root--dashboard-cosmic .app-header__nav a:hover,
+.app-root--dashboard-cosmic .app-header__nav a[aria-current="page"] {
+  border-bottom-color: rgb(242 248 255 / 0.7);
+}
+
+.app-root--dashboard-cosmic .app-shutdown-button {
+  border-color: var(--dashboard-glass-border);
+  background: var(--dashboard-glass-surface-soft);
+  box-shadow: 0 1px 0 var(--dashboard-glass-highlight) inset;
+}
+
+.app-root--dashboard-cosmic .app-shutdown-button:hover {
+  border-color: rgb(255 160 160 / 0.55);
+  background: rgb(255 120 120 / 0.08);
+}
+
+.app-root--dashboard-cosmic .global-notice,
+.app-root--dashboard-cosmic .global-error,
+.app-root--dashboard-cosmic .global-warning,
+.dashboard-gargantua .shutdown-status--cosmic {
+  border-color: var(--dashboard-glass-border-strong);
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 0.065), transparent 72%),
+    var(--dashboard-glass-surface-strong);
+  box-shadow: var(--dashboard-glass-shadow), 0 1px 0 var(--dashboard-glass-highlight) inset;
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  backdrop-filter: blur(14px) saturate(120%);
+}
+
+.dashboard-gargantua .dashboard-cosmic-library-head,
+.dashboard-gargantua .dashboard-cosmic-toolbar,
+.dashboard-gargantua .dashboard-cosmic-actions {
+  background: rgb(255 255 255 / 0.018);
+  border-color: var(--dashboard-glass-border);
+}
+
+.dashboard-gargantua
+  :is(.dashboard-cosmic-search, .dashboard-cosmic-select, .dashboard-cosmic-view-toggle) {
+  border-color: var(--dashboard-glass-border);
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 0.055), rgb(255 255 255 / 0.018)),
+    var(--dashboard-glass-surface);
+  box-shadow: 0 1px 0 var(--dashboard-glass-highlight) inset;
+  -webkit-backdrop-filter: blur(12px) saturate(116%);
+  backdrop-filter: blur(12px) saturate(116%);
+}
+
+.dashboard-gargantua
+  :is(.dashboard-cosmic-search, .dashboard-cosmic-select, .dashboard-cosmic-view-toggle):hover,
+.dashboard-gargantua
+  :is(.dashboard-cosmic-search, .dashboard-cosmic-select, .dashboard-cosmic-view-toggle):focus-within {
+  border-color: var(--dashboard-glass-border-strong);
+  box-shadow:
+    0 0 0 3px rgb(235 245 255 / 0.07),
+    0 1px 0 var(--dashboard-glass-highlight) inset;
+}
+
+.dashboard-gargantua .dashboard-cosmic-view-toggle .icon-button[aria-pressed="true"],
+.dashboard-gargantua .dashboard-cosmic-view-toggle .icon-button[aria-pressed="true"]:hover,
+.dashboard-gargantua .dashboard-cosmic-actions .button[aria-pressed="true"] {
+  border-color: var(--dashboard-glass-border-strong);
+  background: rgb(255 255 255 / 0.11);
+  color: var(--cosmic-ink);
+}
+
+.dashboard-gargantua .dashboard-cosmic-actions .button,
+.dashboard-gargantua .dashboard-cosmic-comparebar .button,
+.dashboard-gargantua .dashboard-cosmic-pagination .button,
+.dashboard-gargantua .dashboard-cosmic-library-head > .button,
+.dashboard-gargantua .dashboard-store-detail__actions .button {
+  border-color: var(--dashboard-glass-border);
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 0.06), rgb(255 255 255 / 0.018)),
+    var(--dashboard-glass-surface);
+  box-shadow: 0 1px 0 var(--dashboard-glass-highlight) inset;
+}
+
+.dashboard-gargantua .dashboard-cosmic-actions .button:hover,
+.dashboard-gargantua .dashboard-cosmic-comparebar .button:hover,
+.dashboard-gargantua .dashboard-cosmic-pagination .button:hover,
+.dashboard-gargantua .dashboard-cosmic-library-head > .button:hover,
+.dashboard-gargantua .dashboard-store-detail__actions .button:hover {
+  border-color: var(--dashboard-glass-border-strong);
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 0.11), rgb(255 255 255 / 0.035)),
+    var(--dashboard-glass-surface-strong);
+}
+
+.dashboard-gargantua .dashboard-cosmic-actions .button--primary,
+.dashboard-gargantua .dashboard-cosmic-comparebar .button--primary,
+.dashboard-gargantua .dashboard-cosmic-library-head > .button--primary,
+.dashboard-gargantua .dashboard-store-detail__actions .button--primary {
+  border-color: rgb(242 248 255 / 0.36);
+  color: var(--cosmic-ink);
+}
+
+.dashboard-gargantua .dashboard-cosmic-actions .button--quiet,
+.dashboard-gargantua .dashboard-cosmic-comparebar .button--quiet,
+.dashboard-gargantua .dashboard-cosmic-pagination .button--quiet {
+  background: rgb(255 255 255 / 0.025);
+  color: var(--cosmic-muted);
+}
+
+.dashboard-gargantua .dashboard-cosmic-shortcuts kbd {
+  border-color: var(--dashboard-glass-border-strong);
+  background: rgb(255 255 255 / 0.06);
+  color: var(--cosmic-ink);
+  box-shadow: 0 1px 0 var(--dashboard-glass-highlight) inset;
+}
+
+.dashboard-gargantua .dashboard-cosmic-comparebar {
+  padding: 4px;
+  border: 1px solid var(--dashboard-glass-border);
+  border-radius: 10px;
+  background: var(--dashboard-glass-surface-soft);
+  box-shadow: 0 1px 0 var(--dashboard-glass-highlight) inset;
+}
+
+.dashboard-gargantua .dashboard-cosmic-comparebar .button--primary:disabled {
+  border-color: var(--dashboard-glass-border);
+  background: rgb(255 255 255 / 0.045);
+}
+
+.dashboard-gargantua .dashboard-cosmic .empty-state {
+  background: var(--dashboard-glass-surface-soft);
+  box-shadow: 0 1px 0 var(--dashboard-glass-highlight) inset;
+  -webkit-backdrop-filter: blur(12px) saturate(116%);
+  backdrop-filter: blur(12px) saturate(116%);
+}
+
+.dashboard-gargantua .dashboard-cosmic-pagination {
+  border-top-color: var(--dashboard-glass-border);
+}
+
+.dashboard-gargantua .dashboard-store-detail,
+.dashboard-gargantua .dashboard-store-detail.is-open {
+  border-color: var(--dashboard-glass-border-strong);
+  background:
+    linear-gradient(145deg, rgb(255 255 255 / 0.075), rgb(255 255 255 / 0.018)),
+    var(--dashboard-glass-surface-strong);
+  box-shadow: var(--dashboard-glass-shadow), 0 1px 0 var(--dashboard-glass-highlight) inset !important;
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  backdrop-filter: blur(14px) saturate(120%);
+}
+
+/* El detalle entra con blur/opacity, no con translate: su línea superior debe
+ * coincidir con la grilla incluso mientras la animación está corriendo. */
+.dashboard-gargantua .dashboard-store-detail.is-open {
+  animation-name: dashboard-gargantua-detail-glass-in;
+}
+
+@keyframes dashboard-gargantua-detail-glass-in {
+  from {
+    opacity: 0.4;
+    filter: blur(2px);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+.dashboard-gargantua .dashboard-store-detail__close,
+.dashboard-gargantua .dashboard-store-detail__close:hover {
+  border-color: var(--dashboard-glass-border);
+  background: rgb(255 255 255 / 0.05);
+  color: var(--cosmic-muted);
+}
+
+.dashboard-gargantua .dashboard-store-detail__close:hover,
+.dashboard-gargantua .dashboard-store-detail__close:focus-visible {
+  border-color: var(--dashboard-glass-border-strong);
+  background: rgb(255 255 255 / 0.11);
+  color: var(--cosmic-ink);
+}
+
+.dashboard-gargantua .dashboard-store-detail__mark {
+  border-color: var(--dashboard-glass-border-strong);
+  background: radial-gradient(circle at 35% 28%, rgb(255 255 255 / 0.16), rgb(9 16 28 / 0.72) 68%);
+  box-shadow: 0 0 0 4px rgb(255 255 255 / 0.025), 0 0 18px rgb(255 255 255 / 0.06);
+}
+
+.dashboard-gargantua .dashboard-store-detail__context {
+  border-color: var(--dashboard-glass-border);
+  background: rgb(255 255 255 / 0.06);
+  color: var(--cosmic-muted);
+}
+
+.dashboard-gargantua .dashboard-store-detail__actions-secondary,
+.dashboard-gargantua .dashboard-store-detail__actions-danger {
+  border-top-color: var(--dashboard-glass-border);
+}
+
+.dashboard-gargantua .dashboard-store-detail__actions-secondary::before,
+.dashboard-gargantua .dashboard-store-detail__actions-danger::before {
+  background: var(--dashboard-glass-surface-strong);
+  color: var(--cosmic-faint);
+}
+
+.dashboard-gargantua .dashboard-store-detail__actions .button.dashboard-store-detail__calculator,
+.dashboard-gargantua
+  .dashboard-store-detail__actions
+  .button.dashboard-store-detail__calculator:hover,
+.dashboard-gargantua
+  .dashboard-store-detail__actions
+  .button.dashboard-store-detail__calculator:focus-visible {
+  border-color: var(--dashboard-glass-border);
+  background: rgb(255 255 255 / 0.055);
+  color: var(--cosmic-muted);
+}
+
+.dashboard-gargantua .dashboard-store-detail__actions .button.dashboard-store-detail__archive {
+  border-color: rgb(255 214 150 / 0.32);
+  background: rgb(255 190 110 / 0.08);
+  color: #f1c995;
+}
+
+.dashboard-gargantua .dashboard-store-detail__actions .button.dashboard-store-detail__archive:hover,
+.dashboard-gargantua
+  .dashboard-store-detail__actions
+  .button.dashboard-store-detail__archive:focus-visible {
+  border-color: rgb(255 214 150 / 0.56);
+  background: rgb(255 190 110 / 0.14);
+  color: #ffe4bd;
+}
+
+.dashboard-gargantua .dashboard-store-detail__actions .button.dashboard-store-detail__restore {
+  border-color: rgb(145 235 164 / 0.32);
+  background: rgb(112 212 133 / 0.08);
+  color: #bcebc5;
+}
+
+.dashboard-gargantua .dashboard-store-detail__actions .button.dashboard-store-detail__restore:hover,
+.dashboard-gargantua
+  .dashboard-store-detail__actions
+  .button.dashboard-store-detail__restore:focus-visible {
+  border-color: rgb(145 235 164 / 0.56);
+  background: rgb(112 212 133 / 0.14);
+  color: #ddf8e1;
+}
+
+.dashboard-gargantua .dashboard-store-detail__notice {
+  border-color: rgb(145 235 164 / 0.3);
+  background: rgb(112 212 133 / 0.08);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.05) inset;
+}
+
+.dashboard-cosmic-dialog,
+.shutdown-dialog--cosmic {
+  --dashboard-glass-surface-strong: rgb(13 22 36 / 0.78);
+  --dashboard-glass-border: rgb(232 242 255 / 0.16);
+  --dashboard-glass-border-strong: rgb(242 248 255 / 0.3);
+  --dashboard-glass-highlight: rgb(255 255 255 / 0.075);
+  --dashboard-glass-shadow: 0 18px 48px rgb(0 0 0 / 0.28);
+  --cosmic-line: var(--dashboard-glass-border);
+  --cosmic-line-strong: var(--dashboard-glass-border-strong);
+  --cosmic-muted: #aab8c8;
+  --cosmic-faint: #8190a4;
+  --cosmic-amber: #d8e5f1;
+  --cosmic-ink: #f3f7fb;
+  border-color: var(--dashboard-glass-border-strong);
+  background:
+    linear-gradient(145deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.02)),
+    var(--dashboard-glass-surface-strong);
+  box-shadow: var(--dashboard-glass-shadow), 0 1px 0 var(--dashboard-glass-highlight) inset;
+  -webkit-backdrop-filter: blur(16px) saturate(120%);
+  backdrop-filter: blur(16px) saturate(120%);
+}
+
+.dashboard-cosmic-dialog__header,
+.dashboard-cosmic-dialog__actions,
+.dashboard-calculator-dialog__header,
+.dashboard-calculator-dialog__actions {
+  background: rgb(255 255 255 / 0.018);
+  border-color: var(--dashboard-glass-border);
+}
+
+.dashboard-cosmic-dialog input,
+.dashboard-cosmic-dialog select,
+.dashboard-cosmic-dialog textarea {
+  border-color: var(--dashboard-glass-border);
+  background: rgb(7 14 25 / 0.5);
+  box-shadow: 0 1px 0 var(--dashboard-glass-highlight) inset;
+}
+
+.create-store__import,
+.compare-view__store,
+.compare-view__table,
+.compare-view__lists li {
+  border-color: var(--dashboard-glass-border);
+  background: var(--dashboard-glass-surface-soft);
+  box-shadow: 0 1px 0 var(--dashboard-glass-highlight) inset;
+}
+
+.compare-view__row.is-diff,
+.compare-view__lists li.is-diff {
+  border-color: var(--dashboard-glass-border-strong);
+  background: rgb(255 255 255 / 0.075);
+}
+
+body:has(.app-root--dashboard-cosmic) .confirm-dialog {
+  --dashboard-glass-surface-strong: rgb(13 22 36 / 0.78);
+  --dashboard-glass-border: rgb(232 242 255 / 0.16);
+  --dashboard-glass-border-strong: rgb(242 248 255 / 0.3);
+  --dashboard-glass-highlight: rgb(255 255 255 / 0.075);
+  --dashboard-glass-shadow: 0 18px 48px rgb(0 0 0 / 0.28);
+  border-color: var(--dashboard-glass-border-strong);
+  background:
+    linear-gradient(145deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.02)),
+    var(--dashboard-glass-surface-strong);
+  box-shadow: var(--dashboard-glass-shadow), 0 1px 0 var(--dashboard-glass-highlight) inset;
+  -webkit-backdrop-filter: blur(16px) saturate(120%);
+  backdrop-filter: blur(16px) saturate(120%);
+}
+
+/* La calculadora vive en un portal: declara sus propios tokens y conserva el
+ * mismo material aunque ya no herede las variables del root del dashboard. */
+.dashboard-calculator-dialog {
+  --cosmic-line: var(--dashboard-glass-border, rgb(232 242 255 / 0.16));
+  --cosmic-line-strong: var(--dashboard-glass-border-strong, rgb(242 248 255 / 0.3));
+  --cosmic-muted: #aab8c8;
+  --cosmic-faint: #8190a4;
+  --cosmic-amber: #d8e5f1;
+  --cosmic-ink: #f3f7fb;
+  background: rgb(3 7 14 / 0.78);
+}
+
+.dashboard-calculator-dialog__content {
+  border-color: var(--dashboard-glass-border-strong, rgb(242 248 255 / 0.3));
+  background:
+    linear-gradient(145deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.02)),
+    var(--dashboard-glass-surface-strong, rgb(13 22 36 / 0.78));
+  box-shadow: var(--dashboard-glass-shadow, 0 18px 48px rgb(0 0 0 / 0.28)),
+    0 1px 0 var(--dashboard-glass-highlight, rgb(255 255 255 / 0.075)) inset;
+  -webkit-backdrop-filter: blur(16px) saturate(120%);
+  backdrop-filter: blur(16px) saturate(120%);
+}
+
+.dashboard-calculator-dialog__header,
+.dashboard-calculator-dialog__actions {
+  background: rgb(255 255 255 / 0.018);
+  border-color: var(--dashboard-glass-border, rgb(232 242 255 / 0.16));
+}
+
+.dashboard-calculator-dialog__tabs,
+.dashboard-calculator-dialog__base,
+.dashboard-calculator-dialog__examples table,
+.dashboard-calculator-dialog__total,
+.dashboard-calculator-dialog__section--store,
+.dashboard-calculator-dialog__quote,
+.dashboard-calculator-dialog__simulator {
+  border-color: var(--dashboard-glass-border, rgb(232 242 255 / 0.16));
+  background: var(--dashboard-glass-surface-soft, rgb(255 255 255 / 0.045));
+  box-shadow: 0 1px 0 var(--dashboard-glass-highlight, rgb(255 255 255 / 0.075)) inset;
+}
+
+.dashboard-calculator-dialog__tabs button[aria-selected="true"],
+.dashboard-calculator-dialog__examples tbody tr.is-current {
+  border-color: var(--dashboard-glass-border-strong, rgb(242 248 255 / 0.3));
+  background: rgb(255 255 255 / 0.09);
+  color: var(--cosmic-ink);
+}
+
+.dashboard-calculator-dialog__close:hover,
+.dashboard-calculator-dialog__close.icon-button:hover,
+.dashboard-calculator-dialog__close:focus-visible,
+.dashboard-calculator-dialog__close.icon-button:focus-visible {
+  border-color: var(--dashboard-glass-border-strong, rgb(242 248 255 / 0.3));
+  background: rgb(255 255 255 / 0.11);
+  color: var(--cosmic-ink);
+}
+
+.dashboard-calculator-dialog .button--primary,
+.dashboard-calculator-dialog .button--primary:hover {
+  border-color: var(--dashboard-glass-border-strong, rgb(242 248 255 / 0.3));
+  background: rgb(255 255 255 / 0.12);
+  color: var(--cosmic-ink);
+}
+
+.dashboard-calculator-dialog__included,
+.dashboard-calculator-dialog__badge,
+.dashboard-calculator-dialog__stepper .icon-button,
+.dashboard-calculator-dialog__stepper input,
+.dashboard-calculator-dialog__field input {
+  border-color: var(--dashboard-glass-border, rgb(232 242 255 / 0.16));
+  background: rgb(255 255 255 / 0.045);
+  box-shadow: 0 1px 0 var(--dashboard-glass-highlight, rgb(255 255 255 / 0.075)) inset;
+}
+
+.dashboard-calculator-dialog__badge {
+  color: var(--cosmic-muted);
+}
+
+.dashboard-calculator-dialog__field input:focus-visible,
+.dashboard-calculator-dialog__stepper input:focus-visible {
+  border-color: var(--dashboard-glass-border-strong, rgb(242 248 255 / 0.3));
+  box-shadow: 0 0 0 3px rgb(235 245 255 / 0.08);
+}
+
+.dashboard-calculator-dialog__stepper .icon-button:hover {
+  border-color: var(--dashboard-glass-border-strong, rgb(242 248 255 / 0.3));
+  background: rgb(255 255 255 / 0.11);
+  color: var(--cosmic-ink);
+}
+
+.dashboard-gargantua .dashboard-gargantua-debug-controls {
+  border-color: var(--dashboard-glass-border-strong);
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.02)),
+    var(--dashboard-glass-surface-strong);
+  box-shadow: var(--dashboard-glass-shadow), 0 1px 0 var(--dashboard-glass-highlight) inset;
+  color: var(--cosmic-ink);
+}
+
+.dashboard-gargantua .dashboard-gargantua-debug-controls legend {
+  color: var(--cosmic-faint);
+}
+
+.dashboard-gargantua .dashboard-gargantua-debug-controls input[type="range"] {
+  accent-color: #d8e5f1;
+}
+
+.dashboard-gargantua .dashboard-gargantua-debug-controls input[type="range"]:focus-visible {
+  outline-color: var(--dashboard-glass-border-strong);
 }

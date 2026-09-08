@@ -6,6 +6,9 @@ interface GravityFieldProps {
   selectionVisible?: boolean;
   templateSelected?: boolean;
   launchProgress?: number;
+  introDurationMs?: number;
+  pauseWhileAppBooting?: boolean;
+  renderScaleMultiplier?: number;
 }
 
 interface GravityPointer {
@@ -16,6 +19,7 @@ interface GravityPointer {
 // Gargantua conserva una respuesta sutil: queda en el 30% del movimiento
 // anterior para que el fondo no domine la interacción del dashboard.
 const GRAVITY_PARALLAX_RESPONSE = 0.09;
+const GRAVITY_SETTLED_ELAPSED_MS = 6000;
 
 interface GravityWebGLScene {
   gl: WebGL2RenderingContext;
@@ -25,6 +29,7 @@ interface GravityWebGLScene {
   uniforms: {
     resolution: WebGLUniformLocation | null;
     time: WebGLUniformLocation | null;
+    introDuration: WebGLUniformLocation | null;
     pointer: WebGLUniformLocation | null;
     center: WebGLUniformLocation | null;
     disk: WebGLUniformLocation | null;
@@ -58,6 +63,7 @@ out vec4 fragColor;
 
 uniform vec2 uResolution;
 uniform float uTime;
+uniform float uIntroDuration;
 uniform vec2 uPointer;
 uniform vec2 uCenter;
 uniform vec2 uDisk;
@@ -111,7 +117,13 @@ vec3 starLayer(
   float intensity,
   float phase
 ) {
-  vec2 scaledPoint = point * grid;
+  // Keep deterministic sampling without the repeated cross/grid silhouette.
+  // Every star receives a small domain warp and its own streak orientation.
+  vec2 warpedPoint = point + vec2(
+    sin(point.y * 11.0 + phase * 1.7) * 0.014,
+    cos(point.x * 9.0 - phase * 1.3) * 0.011
+  );
+  vec2 scaledPoint = warpedPoint * grid;
   vec2 cell = floor(scaledPoint);
   float seed = hash12(cell + vec2(phase * 2.1, phase * 5.7));
   vec2 jitter = vec2(
@@ -119,15 +131,27 @@ vec3 starLayer(
     hash12(cell + vec2(-7.9, phase * 23.1))
   ) - 0.5;
   vec2 local = fract(scaledPoint) - 0.5 - jitter * 0.72;
-  float enabledStar = smoothstep(threshold - 0.035, threshold + 0.018, seed);
-  float radius = mix(0.014, 0.052, fract(seed * 19.7));
+  float enabledStar = smoothstep(threshold - 0.025, threshold + 0.014, seed);
+  float radius = mix(0.010, 0.034, fract(seed * 19.7));
   float core = exp(-dot(local, local) / (radius * radius));
-  float bloom = exp(-dot(local, local) / (radius * radius * 18.0)) * 0.18;
-  float horizontalRay = exp(-abs(local.y) / (radius * 0.72));
-  float verticalRay = exp(-abs(local.x) / (radius * 0.72));
-  float rays = (horizontalRay + verticalRay) * (1.0 - core) * 0.16;
+  float bloom = exp(-dot(local, local) / (radius * radius * 22.0)) * 0.14;
+  float streakAngle = (seed * 2.0 - 1.0) * 0.75 + sin(phase * 2.4) * 0.18;
+  float sine = sin(streakAngle);
+  float cosine = cos(streakAngle);
+  vec2 streakPoint = vec2(
+    local.x * cosine - local.y * sine,
+    local.x * sine + local.y * cosine
+  );
+  float streakLength = mix(
+    1.0,
+    4.6,
+    1.0 - smoothstep(0.5, 3.8, uTime * 0.001 * (6000.0 / max(uIntroDuration, 1.0)))
+  );
+  float streak = exp(-abs(streakPoint.y) / (radius * 0.52))
+    * exp(-abs(streakPoint.x) / (radius * (1.4 + streakLength * 2.0)));
+  float rays = streak * (1.0 - core) * 0.08;
   float twinkle = 0.82 + 0.18 * sin(uTime * 0.001 * (0.4 + seed * 1.8) + seed * TAU);
-  vec3 color = mix(coolColor, warmColor, smoothstep(0.32, 0.9, seed));
+  vec3 color = mix(coolColor, warmColor, smoothstep(0.62, 0.96, seed));
   return color * enabledStar * (core + bloom + rays) * twinkle * intensity;
 }
 
@@ -147,12 +171,6 @@ float angularArc(float angle, float center, float width) {
   return 1.0 - smoothstep(width * 0.22, width, delta);
 }
 
-float lineDistance(vec2 point, vec2 start, vec2 end) {
-  vec2 direction = end - start;
-  float amount = clamp(dot(point - start, direction) / max(dot(direction, direction), 0.00001), 0.0, 1.0);
-  return length(point - (start + direction * amount));
-}
-
 void main() {
   float aspect = uResolution.x / max(uResolution.y, 1.0);
   vec2 point = gl_FragCoord.xy / uResolution - 0.5;
@@ -160,11 +178,14 @@ void main() {
 
   float launchProgress = clamp(uLaunchProgress, 0.0, 1.0);
   float launchEase = launchProgress * launchProgress * (3.0 - 2.0 * launchProgress);
-  float launchMotion = mix(1.0, 4.8, launchEase);
-  float time = uTime * 0.001 * launchMotion;
+  float sceneSeconds = uTime * 0.001;
+  float sequenceSeconds = sceneSeconds * (6000.0 / max(uIntroDuration, 1.0));
+  float sceneReveal = smoothstep(0.55, 6.0, sequenceSeconds);
+  float introZoom = mix(1.56, 1.0, smoothstep(0.65, 6.2, sequenceSeconds));
+  float time = sceneSeconds * mix(0.38, 1.0, sceneReveal) * mix(1.0, 3.4, launchEase);
   float viewAngle = -0.08 + (uPointer.x - 0.5) * 0.04;
   vec2 cinematicCenter = mix(uCenter, vec2(0.0), launchEase);
-  float cameraZoom = mix(1.0, 0.23, launchEase);
+  float cameraZoom = mix(introZoom, 0.23, launchEase);
   vec2 scenePoint = cinematicCenter + (point - cinematicCenter) * cameraZoom;
   vec2 fromCenter = scenePoint - cinematicCenter;
   float distanceFromCenter = max(length(fromCenter), 0.0001);
@@ -175,9 +196,9 @@ void main() {
   float deflection = 0.052 * exp(-distanceFromCenter / max(uDisk.x * 1.25, 0.01));
   vec2 lensedPoint = scenePoint + lensDirection * deflection / (distanceFromCenter + 0.08);
 
-  vec3 color = vec3(0.0015, 0.0022, 0.006);
+  vec3 color = vec3(0.0008, 0.0012, 0.0032);
   float halo = exp(-length(fromCenter / vec2(max(uDisk.x * 2.8, 0.01), max(uDisk.y * 8.0, 0.01))) * 1.35);
-  color += vec3(0.035, 0.029, 0.105) * halo;
+  color += vec3(0.018, 0.024, 0.052) * halo;
 
   // The sky is a layered field, not a repeated dot pattern: warped dust,
   // chromatic cloud light, and stars at three apparent depths move differently
@@ -191,70 +212,71 @@ void main() {
   float nebulaRibbon = exp(-abs(nebulaPoint.y + sin(nebulaPoint.x * 3.2) * 0.075) * 4.6);
   float nebulaMask = smoothstep(0.31, 0.74, nebulaNoise) * nebulaRibbon;
   vec3 nebulaColor = mix(
-    vec3(0.018, 0.028, 0.13),
-    vec3(0.13, 0.025, 0.075),
+    vec3(0.012, 0.022, 0.055),
+    vec3(0.08, 0.022, 0.042),
     smoothstep(0.38, 0.76, nebulaNoise)
   );
-  color += nebulaColor * nebulaMask * 0.24;
+  color += nebulaColor * nebulaMask * 0.16;
 
   float dustNoise = layeredNoise(nebulaPoint * vec2(5.4, 11.0) + vec2(-time * 0.004, time * 0.003));
   float dustLane = exp(-abs(nebulaPoint.y - sin(nebulaPoint.x * 5.5) * 0.045) * 13.0);
   float dust = smoothstep(0.42, 0.78, dustNoise) * dustLane;
   color *= 1.0 - dust * 0.18;
-  color += vec3(0.055, 0.018, 0.028) * dust * 0.3;
+  color += vec3(0.035, 0.014, 0.018) * dust * 0.22;
 
-  color += starLayer(
+  float starVisibility = mix(0.12, 0.42, sceneReveal);
+  vec3 stars = vec3(0.0);
+  stars += starLayer(
     cosmicPoint * 0.92 + vec2(0.02, -0.015),
-    vec2(22.0, 15.0),
-    0.74,
-    vec3(0.18, 0.27, 0.68),
-    vec3(0.65, 0.31, 0.16),
-    0.52,
+    vec2(16.0, 10.0),
+    0.88,
+    vec3(0.22, 0.29, 0.42),
+    vec3(0.76, 0.53, 0.32),
+    0.25,
     0.7
   );
-  color += starLayer(
+  stars += starLayer(
     cosmicPoint * 1.08 + vec2(-0.11, 0.08),
-    vec2(45.0, 30.0),
-    0.91,
-    vec3(0.3, 0.47, 0.98),
-    vec3(0.96, 0.62, 0.28),
-    0.66,
+    vec2(34.0, 22.0),
+    0.955,
+    vec3(0.30, 0.39, 0.58),
+    vec3(0.9, 0.68, 0.42),
+    0.34,
     1.8
   );
-  color += starLayer(
+  stars += starLayer(
     cosmicPoint * 1.2 + vec2(0.17, -0.12),
-    vec2(78.0, 52.0),
-    0.985,
-    vec3(0.58, 0.72, 1.0),
-    vec3(1.0, 0.77, 0.42),
-    1.08,
+    vec2(62.0, 40.0),
+    0.991,
+    vec3(0.50, 0.59, 0.72),
+    vec3(1.0, 0.78, 0.5),
+    0.5,
     2.9
   );
-  color += starLayer(
-    cosmicPoint * 0.74 + vec2(-0.19, 0.14),
-    vec2(13.0, 9.0),
-    0.91,
-    vec3(0.28, 0.42, 0.92),
-    vec3(1.0, 0.74, 0.39),
-    0.42,
-    4.1
-  );
+  color += stars * starVisibility;
 
+  // Keep the empty space as a separate layer so the first beats of the scene
+  // can reveal the disk progressively instead of flashing the finished ring.
+  vec3 skyColor = color;
   vec2 q = rotatePoint(fromCenter, viewAngle);
   float diskX = max(uDisk.x, 0.01);
   float diskY = max(uDisk.y, 0.01);
   vec2 diskPoint = vec2(q.x / diskX, q.y / diskY);
   float diskRadius = length(diskPoint);
   float diskAngle = atan(diskPoint.y, diskPoint.x);
+  vec2 diskDirection = diskPoint / max(diskRadius, 0.0001);
+  // atan has a branch cut on the horizontal axis. Keep that angle for
+  // periodic angular effects only; the noise must use a continuous direction
+  // vector or it creates a visible seam across the disk.
   float diskNoise = layeredNoise(vec2(
-    diskRadius * 3.6 + diskAngle * 1.8 - time * 0.24,
-    diskAngle * 4.0 + diskRadius * 1.6 + time * 0.08
+    diskRadius * 3.6 + diskDirection.y * 1.8 - time * 0.24,
+    diskDirection.x * 4.0 + diskRadius * 1.6 + time * 0.08
   ));
   float turbulence = 0.5 + 0.5 * sin(
     diskRadius * 42.0 - time * 2.1 + diskAngle * 8.0 + diskNoise * 4.2
   );
   float spiralWave = 0.5 + 0.5 * sin(
-    diskRadius * 29.0 - diskAngle * 7.5 - time * 2.4 + diskNoise * 5.0
+    diskRadius * 29.0 - diskAngle * 8.0 - time * 2.4 + diskNoise * 5.0
   );
 
   // Layered temperature bands approximate the thick relativistic disk.
@@ -263,16 +285,20 @@ void main() {
   float outerMatter = softRing(diskRadius, 1.06, 0.2);
   float frontWeight = smoothstep(-0.45, 0.75, diskPoint.y);
   float backWeight = 0.32 + (1.0 - frontWeight) * 0.68;
-  vec3 innerColor = mix(vec3(0.88, 0.33, 0.11), vec3(1.0, 0.94, 0.74), turbulence);
-  vec3 midColor = mix(vec3(0.42, 0.1, 0.035), vec3(1.0, 0.62, 0.22), turbulence * 0.8);
-  vec3 outerColor = mix(vec3(0.035, 0.045, 0.12), vec3(0.86, 0.34, 0.12), turbulence * 0.64);
-  float relativisticBeaming = 0.72 + smoothstep(-0.15, 0.82, diskPoint.x) * 0.64;
+  vec3 innerColor = mix(vec3(0.68, 0.34, 0.25), vec3(1.0, 0.94, 0.74), turbulence);
+  vec3 midColor = mix(vec3(0.4, 0.2, 0.17), vec3(0.92, 0.54, 0.3), turbulence * 0.8);
+  vec3 outerColor = mix(vec3(0.026, 0.035, 0.062), vec3(0.72, 0.26, 0.08), turbulence * 0.64);
+  float relativisticBeaming = 0.48 + smoothstep(-0.18, 0.78, diskPoint.x) * 1.04;
+  float equatorialHaze = exp(-abs(q.y) / max(diskY * 0.32, 0.01))
+    * smoothstep(1.28, 0.12, diskRadius)
+    * (0.34 + diskNoise * 0.7);
+  color += vec3(0.26, 0.19, 0.12) * equatorialHaze * relativisticBeaming * 0.2;
   color += innerColor * innerMatter * (0.36 + frontWeight * 0.76) * relativisticBeaming;
   color += midColor * midMatter * (0.16 + backWeight * 0.46) * (0.78 + diskNoise * 0.46);
   color += outerColor * outerMatter * (0.12 + diskNoise * 0.1);
 
   float filament = smoothstep(0.72, 0.98, spiralWave) * midMatter;
-  color += mix(vec3(1.0, 0.24, 0.045), vec3(1.0, 0.8, 0.36), frontWeight)
+  color += mix(vec3(0.86, 0.38, 0.28), vec3(1.0, 0.78, 0.48), frontWeight)
     * filament
     * (0.18 + frontWeight * 0.24)
     * relativisticBeaming;
@@ -280,8 +306,8 @@ void main() {
   // The far side is lifted above the silhouette; the near side is brighter.
   float farArc = softRing(diskRadius, 0.9, 0.08) * (1.0 - frontWeight);
   float nearArc = softRing(diskRadius, 0.73, 0.055) * frontWeight;
-  color += vec3(1.0, 0.5, 0.13) * farArc * 0.48;
-  color += vec3(1.0, 0.82, 0.39) * nearArc * 0.82;
+  color += vec3(0.9, 0.55, 0.34) * farArc * 0.48;
+  color += vec3(1.0, 0.84, 0.53) * nearArc * 0.82;
 
   // Hot matter streaks orbit the well at different speeds.
   for (int index = 0; index < 22; index += 1) {
@@ -293,42 +319,50 @@ void main() {
     float particleDistance = length(q - particlePosition);
     float normalizedParticleDistance = particleDistance / (0.003 + (1.0 - seed) * 0.004);
     float streak = exp(-normalizedParticleDistance * normalizedParticleDistance);
-    vec3 particleColor = mix(vec3(1.0, 0.86, 0.48), vec3(0.89, 0.16, 0.045), seed);
+    vec3 particleColor = mix(vec3(1.0, 0.87, 0.57), vec3(0.72, 0.34, 0.28), seed);
     color += particleColor * streak * (0.22 + (1.0 - radius * 0.45) * 0.34);
   }
 
   // Central silhouette and photon ring provide the depth cue.
-  float horizonRadius = diskX * 0.34;
+  float horizonRadius = diskX * 0.48;
   float horizonDistance = length(q);
-  float photonRing = softRing(horizonDistance, horizonRadius * 1.17, diskX * 0.032);
-  float photonHalo = softRing(horizonDistance, horizonRadius * 1.42, diskX * 0.12);
-  float secondaryPhotonRing = softRing(horizonDistance, horizonRadius * 1.62, diskX * 0.022);
-  float outerPhotonHalo = softRing(horizonDistance, horizonRadius * 2.08, diskX * 0.14);
-  float lensEcho = softRing(horizonDistance, horizonRadius * 2.62, diskX * 0.028);
+  float photonRing = softRing(horizonDistance, horizonRadius * 1.12, diskX * 0.015);
+  float photonHalo = softRing(horizonDistance, horizonRadius * 1.34, diskX * 0.1);
+  float secondaryPhotonRing = softRing(horizonDistance, horizonRadius * 1.54, diskX * 0.018);
+  float outerPhotonHalo = softRing(horizonDistance, horizonRadius * 1.9, diskX * 0.13);
+  float lensEcho = softRing(horizonDistance, horizonRadius * 2.36, diskX * 0.024);
   float horizontalCaustic = exp(-abs(q.y) / max(diskY * 0.22, 0.01))
     * exp(-horizonDistance / max(diskX * 2.2, 0.01));
-  color += vec3(1.0, 0.79, 0.42) * photonRing * 1.42;
-  color += vec3(0.68, 0.19, 0.065) * photonHalo * 0.24;
-  color += vec3(0.42, 0.34, 0.95) * secondaryPhotonRing * 0.28;
-  color += vec3(0.24, 0.08, 0.24) * outerPhotonHalo * 0.13;
-  color += vec3(0.92, 0.64, 0.36) * lensEcho * 0.24;
-  color += vec3(1.0, 0.36, 0.08) * horizontalCaustic * 0.13;
-  float eventHorizon = 1.0 - smoothstep(horizonRadius * 0.73, horizonRadius * 1.02, horizonDistance);
+  color += vec3(1.0, 0.86, 0.62) * photonRing * 1.35;
+  color += vec3(0.72, 0.24, 0.07) * photonHalo * 0.12;
+  color += vec3(0.38, 0.34, 0.5) * secondaryPhotonRing * 0.02;
+  // Keep the wide cinematic frame dark; a complete outer circle competes
+  // with the single hot lensing moment in the reference.
+  color += vec3(0.15, 0.18, 0.25) * outerPhotonHalo * 0.0;
+  color += vec3(0.78, 0.56, 0.34) * lensEcho * 0.0;
+  color += vec3(1.0, 0.4, 0.08) * horizontalCaustic * 0.17;
+  float verticalLensedArc = softRing(horizonDistance, horizonRadius * 1.06, diskX * 0.04)
+    * smoothstep(0.12, 0.78, abs(q.y) / max(horizonRadius, 0.001));
+  color += vec3(1.0, 0.66, 0.32) * verticalLensedArc * 0.34;
+  float eventHorizon = 1.0 - smoothstep(horizonRadius * 0.84, horizonRadius * 1.04, horizonDistance);
   color *= 1.0 - eventHorizon * 0.995;
+  float outsideHorizon = 1.0 - eventHorizon;
 
   // Short photon arcs keep the ring alive without becoming a flat outline.
   for (int index = 0; index < 3; index += 1) {
     float item = float(index);
     float arcPhase = time * (0.52 + item * 0.09) + item * 2.1;
     float arc = angularArc(diskAngle, arcPhase, 0.34 + item * 0.07);
-    float arcRadius = 0.47 + item * 0.13;
+    // Keep animation on the outer disk; inner dashed arcs would cut into the
+    // event horizon and read as UI chrome instead of light bending.
+    float arcRadius = 0.92 + item * 0.08;
     float arcBand = softRing(diskRadius, arcRadius, 0.016 + item * 0.006);
     vec3 arcColor = item < 0.5
-      ? vec3(1.0, 0.9, 0.58)
+      ? vec3(1.0, 0.88, 0.62)
       : item < 1.5
-        ? vec3(1.0, 0.48, 0.12)
-        : vec3(0.76, 0.18, 0.06);
-    color += arcColor * arc * arcBand * (0.42 - item * 0.08);
+        ? vec3(0.86, 0.45, 0.31)
+        : vec3(0.7, 0.32, 0.27);
+    color += arcColor * arc * arcBand * (0.42 - item * 0.08) * outsideHorizon;
   }
 
   // Template and normal-store selection remain tied to React state.
@@ -347,15 +381,8 @@ void main() {
     float nodeDistance = length(q - nodePosition);
     float normalizedNodeDistance = nodeDistance / (0.005 + selectedNode * 0.006);
     float node = exp(-normalizedNodeDistance * normalizedNodeDistance) * visible;
-    vec3 nodeColor = mix(vec3(0.5, 0.47, 0.42), vec3(1.0, 0.77, 0.32), selectedNode);
+    vec3 nodeColor = mix(vec3(0.48, 0.51, 0.49), vec3(0.94, 0.75, 0.48), selectedNode);
     color += nodeColor * node * (0.22 + selectedNode * 0.85);
-
-    if (selectedNode > 0.0) {
-      vec2 tetherEnd = nodePosition * 0.18;
-      float normalizedTetherDistance = lineDistance(q, nodePosition, tetherEnd) / 0.0028;
-      float tether = exp(-normalizedTetherDistance * normalizedTetherDistance);
-      color += vec3(0.95, 0.64, 0.24) * tether * 0.12;
-    }
   }
 
   float selectedSignalAngle = PI - 0.28 + (selectedOrbit / max(safeOrbitCount - 1.0, 1.0)) * 0.56 + orbitTime * 0.22;
@@ -369,13 +396,14 @@ void main() {
     * uSelectionVisible
     * (1.0 - uTemplateSelected)
     * step(0.5, orbitCount);
-  color += vec3(1.0, 0.82, 0.42) * signal * 1.4;
+  color += vec3(1.0, 0.84, 0.53) * signal * 1.4;
 
   float sealRadius = diskX * 0.4;
   float sealBand = softRing(horizonDistance, sealRadius, diskX * 0.012) * uTemplateSelected;
-  float sealPhase = (diskAngle + PI) / TAU * 11.0;
-  float sealDash = step(0.48, fract(sealPhase));
-  color += vec3(1.0, 0.78, 0.32) * sealBand * sealDash * 0.54;
+  float sealDash = step(0.0, sin(diskAngle * 11.0 + 0.35));
+  color += vec3(0.92, 0.75, 0.48) * sealBand * sealDash * 0.54 * outsideHorizon;
+
+  color = mix(skyColor, color, sceneReveal);
 
   // Filmic response preserves detail in the bright ring instead of clipping.
   vec3 mapped = 1.0 - exp(-max(color, vec3(0.0)) * 1.32);
@@ -459,6 +487,7 @@ function createGravityWebGLScene(canvas: HTMLCanvasElement): GravityWebGLScene |
     uniforms: {
       resolution: gl.getUniformLocation(program, "uResolution"),
       time: gl.getUniformLocation(program, "uTime"),
+      introDuration: gl.getUniformLocation(program, "uIntroDuration"),
       pointer: gl.getUniformLocation(program, "uPointer"),
       center: gl.getUniformLocation(program, "uCenter"),
       disk: gl.getUniformLocation(program, "uDisk"),
@@ -482,6 +511,7 @@ function drawGravityWebGL(
   width: number,
   height: number,
   time: number,
+  introDurationMs: number,
   pointer: GravityPointer,
   activeIndex: number,
   storeCount: number,
@@ -502,10 +532,12 @@ function drawGravityWebGL(
   const centerX = width * (centerXBase + (parallaxPointer.x - 0.5) * 0.035);
   const centerY = height * (centerYBase + (parallaxPointer.y - 0.35) * 0.045);
   const aspect = width / Math.max(height, 1);
-  // En desktop ancho, Gargantua conserva una escala ampliada sin cambiar tablet/móvil.
+  // La referencia trabaja con un horizonte enorme y un disco que atraviesa
+  // gran parte del encuadre; se conserva el margen lateral para que la UI
+  // siga teniendo aire en desktop y en tablet.
   const diskWidth =
-    Math.min(width * (wideScene ? 0.53 : 0.42), wideScene ? 540 : 430) * compactness;
-  const diskHeight = Math.max(62, diskWidth * 0.29);
+    Math.min(width * (wideScene ? 0.66 : 0.5), wideScene ? 720 : 480) * compactness;
+  const diskHeight = Math.max(68, diskWidth * 0.32);
 
   gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
   gl.clear(gl.COLOR_BUFFER_BIT);
@@ -515,6 +547,7 @@ function drawGravityWebGL(
   gl.bindVertexArray(vertexArray);
   gl.uniform2f(uniforms.resolution, gl.drawingBufferWidth, gl.drawingBufferHeight);
   gl.uniform1f(uniforms.time, time);
+  gl.uniform1f(uniforms.introDuration, introDurationMs);
   gl.uniform2f(uniforms.pointer, parallaxPointer.x, parallaxPointer.y);
   gl.uniform2f(uniforms.center, (centerX / width - 0.5) * aspect, 0.5 - centerY / height);
   gl.uniform2f(uniforms.disk, diskWidth / height, diskHeight / height);
@@ -533,6 +566,9 @@ export function GravityField({
   selectionVisible = true,
   templateSelected = false,
   launchProgress = 0,
+  introDurationMs = 6000,
+  pauseWhileAppBooting = true,
+  renderScaleMultiplier = 1,
 }: GravityFieldProps) {
   const fieldRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -552,7 +588,8 @@ export function GravityField({
   useEffect(() => {
     const field = fieldRef.current;
     const canvas = canvasRef.current;
-    const root = field?.parentElement;
+    const root =
+      field?.closest<HTMLElement>(".app-root--dashboard-cosmic") ?? field?.parentElement;
     if (!field || !canvas || !root) return;
 
     const scene = createGravityWebGLScene(canvas);
@@ -569,13 +606,22 @@ export function GravityField({
     let rootTop = 0;
     let rootWidth = 1;
     let rootHeight = 1;
+    let sceneStartedAt = performance.now();
+    const isAppBooting = () =>
+      pauseWhileAppBooting && document.documentElement.dataset.solaraBoot === "loading";
+    let appBootPaused = isAppBooting();
 
-    const draw = (time: number) => {
+    const draw = (time: number, settleIntro = false) => {
+      if (appBootPaused) return;
+      const elapsed = settleIntro
+        ? GRAVITY_SETTLED_ELAPSED_MS
+        : Math.max(0, time - sceneStartedAt);
       drawGravityWebGL(
         scene,
         width,
         height,
-        reducedMotion ? 0 : time,
+        reducedMotion ? 6000 : elapsed,
+        introDurationMs,
         pointerRef.current,
         activeIndexRef.current,
         storeCountRef.current,
@@ -587,28 +633,56 @@ export function GravityField({
 
     const resize = () => {
       const bounds = root.getBoundingClientRect();
+      const fieldBounds = field.getBoundingClientRect();
       rootLeft = bounds.left;
       rootTop = bounds.top;
       rootWidth = Math.max(1, bounds.width);
       rootHeight = Math.max(1, bounds.height);
-      width = Math.max(1, bounds.width);
-      height = Math.max(1, bounds.height);
+      // The field is fixed to the viewport; using the full document height
+      // compresses the black hole whenever the store library grows taller
+      // than the screen.
+      width = Math.max(1, fieldBounds.width || window.innerWidth);
+      height = Math.max(1, fieldBounds.height || window.innerHeight);
       devicePixelRatio = Math.min(window.devicePixelRatio || 1, 1.25);
       const qualityScale = width >= 1200 ? 0.78 : width >= 700 ? 0.72 : 0.64;
-      const renderScale = Math.min(1, devicePixelRatio * qualityScale);
+      const renderScale = Math.min(1, devicePixelRatio * qualityScale * renderScaleMultiplier);
       canvas.width = Math.max(1, Math.floor(width * renderScale));
       canvas.height = Math.max(1, Math.floor(height * renderScale));
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
-      draw(0);
+      draw(performance.now());
     };
 
-    redrawRef.current = () => draw(0);
+    const syncAppBootState = () => {
+      const next = isAppBooting();
+      if (next === appBootPaused) return;
+      appBootPaused = next;
+      field.dataset.animationState = next ? "paused" : "running";
+      if (next) {
+        if (frame !== undefined) window.cancelAnimationFrame(frame);
+        frame = undefined;
+        return;
+      }
+      // The boot overlay owns the only cinematic entrance. When it releases,
+      // hand the dashboard the settled frame instead of replaying its own zoom.
+      sceneStartedAt = performance.now() - GRAVITY_SETTLED_ELAPSED_MS;
+      draw(performance.now());
+      if (!reducedMotion && document.visibilityState === "visible") {
+        frame = window.requestAnimationFrame(animate);
+      }
+    };
+
+    redrawRef.current = () => {
+      syncAppBootState();
+      draw(performance.now());
+    };
 
     const animate = (time: number) => {
       frame = undefined;
+      syncAppBootState();
+      if (appBootPaused) return;
       draw(time);
-      if (!reducedMotion && document.visibilityState === "visible") {
+      if (!reducedMotion && !appBootPaused && document.visibilityState === "visible") {
         frame = window.requestAnimationFrame(animate);
       }
     };
@@ -626,7 +700,13 @@ export function GravityField({
     };
 
     const handleVisibility = () => {
-      if (document.visibilityState === "visible" && !reducedMotion && frame === undefined) {
+      syncAppBootState();
+      if (
+        document.visibilityState === "visible" &&
+        !reducedMotion &&
+        !appBootPaused &&
+        frame === undefined
+      ) {
         frame = window.requestAnimationFrame(animate);
       }
       if (document.visibilityState === "hidden" && frame !== undefined) {
@@ -640,8 +720,12 @@ export function GravityField({
       if (reducedMotion) {
         if (frame !== undefined) window.cancelAnimationFrame(frame);
         frame = undefined;
-        draw(0);
-      } else if (document.visibilityState === "visible" && frame === undefined) {
+        draw(performance.now(), true);
+      } else if (
+        document.visibilityState === "visible" &&
+        !appBootPaused &&
+        frame === undefined
+      ) {
         frame = window.requestAnimationFrame(animate);
       }
     };
@@ -664,18 +748,28 @@ export function GravityField({
 
     const resizeObserver =
       typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(resize);
+    const bootObserver =
+      pauseWhileAppBooting && typeof MutationObserver !== "undefined"
+        ? new MutationObserver(syncAppBootState)
+        : undefined;
     resizeObserver?.observe(root);
     if (!resizeObserver) window.addEventListener("resize", resize);
+    bootObserver?.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-solara-boot"],
+    });
     root.addEventListener("pointermove", handlePointerMove, { passive: true });
     root.addEventListener("pointerleave", handlePointerLeave);
     document.addEventListener("visibilitychange", handleVisibility);
     addMotionListener();
+    field.dataset.animationState = appBootPaused ? "paused" : "running";
     resize();
-    if (!reducedMotion) frame = window.requestAnimationFrame(animate);
+    if (!reducedMotion && !appBootPaused) frame = window.requestAnimationFrame(animate);
 
     return () => {
       redrawRef.current = null;
       resizeObserver?.disconnect();
+      bootObserver?.disconnect();
       if (!resizeObserver) window.removeEventListener("resize", resize);
       root.removeEventListener("pointermove", handlePointerMove);
       root.removeEventListener("pointerleave", handlePointerLeave);

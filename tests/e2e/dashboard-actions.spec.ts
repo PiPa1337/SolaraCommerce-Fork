@@ -78,7 +78,7 @@ test("archivar confirma, muestra deshacer y restaura la tienda", async ({ page }
       .filter({ hasText: "Tienda archivable QA" })
       .first()
       .locator(".dashboard-store-card__status"),
-  ).toHaveText("Activa");
+  ).toHaveCount(0);
 });
 
 test("eliminar abre el diálogo de seguridad con espera de 30 segundos", async ({ page }) => {

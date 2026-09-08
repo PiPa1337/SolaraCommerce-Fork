@@ -1,10 +1,30 @@
 ### Dashboard paginado sin scroll (2026-09-08)
 
+- Se restaura el inspector temporal de opacidad de Gargantua en el dashboard local para aislar el fondo sin persistir cambios.
+- Se restaura la entrada cinematográfica de `Abrir tienda`: Gargantua atrae la cámara, muestra el nombre de la tienda y entrega el handoff a Studio después del zoom, con cortina de ruta y recorrido reducido para `prefers-reduced-motion`.
+
+- El splash de inicio se reemplaza por un arranque cinematográfico: Gargantua entra desde negro y el dashboard libera cabecera, biblioteca, filtros, acciones y resultados en bloques escalonados, con ruta reducida para `prefers-reduced-motion`.
+- El handoff del boot congela el campo del dashboard en el cuadro final para evitar que Gargantua reaparezca en su encuadre inicial y repita el zoom debajo del overlay.
+- El campo del dashboard queda listo desde el inicio del fade de salida y el velo negro se retira antes de liberarlo, evitando el oscurecimiento transitorio del fondo.
+- La paleta de Gargantua se calibra hacia el contraste de la referencia: vacío casi neutro, bruma azul-gris desaturada, disco blanco-amarillo y bordes salmón/ámbar, sin cambiar los estados semánticos ni el layout.
+- Se elimina el tether lineal del nodo seleccionado en el campo gravitacional; el punto de selección se conserva sin aparentar un rayo saliendo del agujero negro.
+- Se corrige la discontinuidad angular del disco de acreción: el ruido, las espirales y los segmentos del anillo ya no generan una costura visible al cruzar el eje horizontal.
+
+- El overdrive WebGL2 ahora toma el viewport real del fondo fijo, revela Gargantua en una entrada de seis segundos, amplía el horizonte y reemplaza la retícula de estrellas por un campo escaso con estelas irregulares y beaming cálido; el estado de movimiento reducido salta directamente al cuadro estable.
+
+- Las cards de tiendas muestran de forma permanente la misma portada social que alimenta `og:image`; el encuadre adapta su ancho a la proporción real de cada portada para evitar recortes, barras y deformaciones, mientras el hover conserva el realce de la card.
+
+- El índice de cada card usa texto blanco con sombra negra de 1px; favorito y `Abrir` comparten un rail compacto separado de la identidad, y el estado activo deja de competir visualmente con la portada.
+
+- Las superficies del dashboard adoptan un tratamiento glassmorphism frío y translúcido, con spacing vertical reservado para acciones e identidad; el campo gravitacional conserva su canvas y animación cálida sin cambios.
+
+- Se agregó una capa de colaboración native-only de Codex con pre-validación de transporte, resolución acotada de `clientThreadId` a `threadId` y diagnóstico tipado de provisioning; el smoke opt-in exige evidencia read-only del chequeo de site-optimizer.
+
 - El rail desktop del dashboard recupera una escala mínima legible, hace visibles sus grupos de gestión y riesgo, y mantiene estable el espacio del feedback posterior a las acciones.
 - `Respaldar ahora`, `Restaurar tienda` y los estados de calculadora/plantilla protegida expresan mejor su consecuencia sin cambiar los contratos de operación.
 - La card seleccionada reduce capas decorativas redundantes y conserva un único nivel de elevación, manteniendo la identidad Gargantua sin competir con la acción primaria.
 - La apertura de una tienda ahora atraviesa una transición cinematográfica: la biblioteca se retira, Gargantua atrae la cámara hacia el centro, el campo hace fade a negro y Studio aparece detrás de una cortina de ruta con salida suave.
-- El dashboard incorpora un inspector temporal sólo en desarrollo para bajar la opacidad de la interfaz y calibrar Gargantua de forma aislada contra las referencias cinematográficas.
+- El dashboard incorpora un inspector temporal visible también en la app normal para bajar la opacidad de la interfaz y calibrar Gargantua de forma aislada contra las referencias cinematográficas.
 - El lanzamiento conserva una lectura accesible y un recorrido reducido para `prefers-reduced-motion`, además de una cobertura E2E que verifica el paso por Gargantua antes de montar Studio.
 - El layout desktop aprovecha mejor los viewports anchos y ajusta la grilla a la cantidad real de tiendas, evitando columnas vacías en bibliotecas pequeñas.
 - El panel de tienda mejora su ritmo interno y distribuye sus acciones en dos columnas cuando hay altura suficiente; la card de la plantilla protegida mantiene una preview visible y legible también en laptops.
@@ -12,6 +32,7 @@
 - Gargantua amplía levemente su escala sólo en desktop ancho, manteniendo tablet y móvil sin cambios para ganar presencia sin alterar el layout.
 - Gargantua suma otro 15% de escala en desktop ancho; el aumento sigue aislado del layout y no cambia tablet ni móvil.
 - Las cards de tiendas comparten la línea superior del detalle en desktop y conservan un gutter para que el lift de hover no quede recortado por el contenedor.
+- El campo gravitacional ahora cubre también el navbar superior, con una capa translúcida que mantiene legibles la marca y la navegación.
 - La card seleccionada incorpora dos líneas internas de horizonte para mantener visible la relación con el detalle incluso cuando el reset de sombras del dashboard está activo.
 - La cobertura E2E suma el estado sin coincidencias a 320 px, verificando que el vacío estilizado tampoco cree scroll de página ni de panel.
 - Las previews reales del hero ganan presencia calibrada en grilla, rail y móvil; el fallback sin asset conserva su tratamiento tenue para no fingir una captura de home.
@@ -66,8 +87,9 @@
 - En escritorio, la plantilla protegida se mueve debajo del detalle de la tienda
   seleccionada; al colapsar a móvil vuelve a la grilla para conservar el acceso
   y el encaje sin scroll.
-- Las cards de tiendas muestran una preview visual del hero de su home usando
-  assets responsive, con fallback seguro para tiendas legacy o sin hero explícito.
+- Las cards de tiendas muestran una preview visual de la portada social de cada
+  home usando el resolver compartido de `og:image`, con fallback seguro para
+  tiendas legacy o sin portada resoluble.
 - Se simplificó el encabezado de la biblioteca y se compactó el detalle móvil en
   una retícula de acciones más legible, conservando todas las operaciones y el
   comportamiento sin scroll.

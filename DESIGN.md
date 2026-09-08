@@ -15,7 +15,7 @@ colors:
   studio-ink: "#f3f0ea"
   studio-muted: "#9a9a96"
   studio-accent: "#ff6a00"
-  studio-cosmic-amber: "#e7aa3d"
+  studio-cosmic-amber: "#e8b56f"
   white: "#ffffff"
 typography:
   storefront-display:
@@ -82,7 +82,10 @@ pages.
 
 The storefront reference palette is warm, editorial and low-chroma, with a
 terracotta accent. The Studio uses near-black surfaces, warm text and an orange
-working accent. Public theme presets may replace the reference storefront values.
+working accent. The Gargantua dashboard refines that register with a near-neutral
+void (`#080b08`), desaturated blue-gray haze, pale hot-disk highlights and a
+champagne amber (`#e8b56f`). Public theme presets may replace the reference
+storefront values.
 
 ### Primary
 

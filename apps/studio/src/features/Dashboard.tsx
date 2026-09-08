@@ -16,6 +16,7 @@ import {
 } from "@phosphor-icons/react";
 import { isBaseTemplate } from "@solara/project-schema/project-policy";
 import {
+  type CSSProperties,
   memo,
   type KeyboardEvent as ReactKeyboardEvent,
   type RefObject,
@@ -41,8 +42,8 @@ import {
   paginateDashboardItems,
   partitionPinnedProjects,
   storeFaviconSrc,
-  storeHeroAsset,
   storeMark,
+  storeSocialImageAsset,
 } from "../lib/dashboardModel";
 import {
   clearStoredSelectedId,
@@ -137,7 +138,11 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
   const updatedLabel = formatDate(record.updatedAt);
   const protectedTemplate = isBaseTemplate(record.project);
   const faviconSrc = storeFaviconSrc(record.project);
-  const heroAsset = storeHeroAsset(record.project);
+  const heroAsset = storeSocialImageAsset(record.project);
+  const heroRatio =
+    heroAsset && heroAsset.width > 0 && heroAsset.height > 0
+      ? heroAsset.width / heroAsset.height
+      : 1.72;
   return (
     <article
       className={`dashboard-store-card${isSelected ? " is-selected" : ""}${
@@ -160,18 +165,31 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
           </span>
         </>
       ) : null}
-      <button
-        type="button"
-        className="dashboard-store-card__pin"
-        aria-pressed={isPinned}
-        aria-label={isPinned ? "Quitar de fijadas" : "Fijar tienda"}
-        aria-description={record.name}
-        title={`${isPinned ? "Quitar" : "Fijar"} ${record.name} ${isPinned ? "de fijadas" : "en fijadas"}`}
-        data-testid="ui-card-pin"
-        onClick={() => onPin(record.id)}
-      >
-        <Star aria-hidden size={16} weight={isPinned ? "fill" : "regular"} />
-      </button>
+      <div className="dashboard-store-card__actions" role="group" aria-label="Acciones de tienda">
+        <button
+          type="button"
+          className="dashboard-store-card__pin"
+          aria-pressed={isPinned}
+          aria-label={isPinned ? "Quitar de fijadas" : "Fijar tienda"}
+          aria-description={record.name}
+          title={`${isPinned ? "Quitar" : "Fijar"} ${record.name} ${isPinned ? "de fijadas" : "en fijadas"}`}
+          data-testid="ui-card-pin"
+          onClick={() => onPin(record.id)}
+        >
+          <Star aria-hidden size={16} weight={isPinned ? "fill" : "regular"} />
+        </button>
+        <button
+          className="dashboard-store-card__open"
+          type="button"
+          data-testid="ui-card-open"
+          aria-label="Abrir esta tienda"
+          aria-description={record.name}
+          title={`Abrir ${record.name} en el editor`}
+          onClick={() => void onOpen(record.id)}
+        >
+          Abrir <ArrowUpRight aria-hidden size={13} />
+        </button>
+      </div>
       <button
         className="dashboard-store-card__button"
         type="button"
@@ -179,6 +197,7 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
         aria-description={`Selecciona ${record.name} para revisar el detalle. Usá el botón Abrir para entrar al editor.`}
         title={`Seleccionar ${record.name} para revisar el detalle`}
         data-store-card-id={record.id}
+        style={{ "--dashboard-store-hero-ratio": heroRatio } as CSSProperties}
         ref={(element) => {
           if (element) cardButtonRefs.current.set(record.id, element);
           else cardButtonRefs.current.delete(record.id);
@@ -227,7 +246,7 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
               // debe estar disponible al entrar, no esperar a un scroll que no existe.
               loading="eager"
               decoding="async"
-              sizes="(max-width: 560px) 25vw, (max-width: 820px) 33vw, 21vw"
+              sizes="(max-width: 560px) 33vw, (max-width: 820px) 33vw, (max-width: 1120px) 36vw, (max-width: 1500px) 28vw, 22vw"
             />
           ) : null}
           <span className="dashboard-store-card__hero-scrim" />
@@ -241,10 +260,12 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
           )}
         </span>
         <strong title={record.name}>{record.name}</strong>
-        <span className={`dashboard-store-card__status is-${record.status}`}>
-          <span aria-hidden />
-          {statusLabel(record.status)}
-        </span>
+        {record.status !== "active" ? (
+          <span className={`dashboard-store-card__status is-${record.status}`}>
+            <span aria-hidden />
+            {statusLabel(record.status)}
+          </span>
+        ) : null}
         {protectedTemplate ? (
           <span className="dashboard-store-card__badge">Plantilla protegida</span>
         ) : null}
@@ -259,24 +280,15 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
           {formatCompactDate(record.updatedAt)}
         </time>
       </button>
-      <button
-        className="dashboard-store-card__open"
-        type="button"
-        data-testid="ui-card-open"
-        aria-label="Abrir esta tienda"
-        aria-description={record.name}
-        title={`Abrir ${record.name} en el editor`}
-        onClick={() => void onOpen(record.id)}
-      >
-        Abrir <ArrowUpRight aria-hidden size={13} />
-      </button>
     </article>
   );
 });
 
 const GARGANTUA_LAUNCH_DURATION_MS = 1460;
 const GARGANTUA_LAUNCH_HANDOFF = 0.84;
-const GARGANTUA_DEBUG_ENABLED = import.meta.env.DEV || import.meta.env.MODE === "development";
+// El Studio local necesita este inspector también cuando se sirve como bundle
+// normal; sigue siendo estado efímero de la UI y no forma parte del proyecto.
+const GARGANTUA_DEBUG_ENABLED = true;
 
 export function Dashboard({
   projects,

@@ -93,6 +93,95 @@ test("dashboard responde en desktop, tablet y móvil", async ({ page }) => {
   }
 });
 
+test("las portadas conservan su encuadre y el hover anima la card", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(studioUrl);
+
+  const card = page.locator(".dashboard-store-card").filter({ hasText: "Predeterminado" }).first();
+  const heroImage = card.locator(".dashboard-store-card__hero img");
+  await expect(heroImage).toHaveCount(1);
+  await expect
+    .poll(() => heroImage.evaluate((image) => (image as HTMLImageElement).naturalWidth))
+    .toBeGreaterThan(0);
+  await expect(heroImage).toHaveCSS("object-fit", "contain");
+  await expect(heroImage).toHaveCSS("transform", "none");
+
+  const beforeHover = await card.evaluate((element) => getComputedStyle(element).transform);
+  await card.hover();
+  await expect
+    .poll(() => card.evaluate((element) => getComputedStyle(element).transform))
+    .not.toBe(beforeHover);
+});
+
+test("las acciones de la card tienen un rail propio y el indice contrasta", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(studioUrl);
+
+  const card = page.locator(".dashboard-store-card").filter({ hasText: "Predeterminado" }).first();
+  const index = card.locator(".dashboard-store-card__index");
+  await expect(index).toHaveText("1");
+  await expect(card.locator(".dashboard-store-card__status.is-active")).toHaveCount(0);
+  await expect(card.locator(".dashboard-store-card__actions")).toBeVisible();
+
+  const layout = await card.evaluate((element) => {
+    const rect = (selector: string) => {
+      const node = element.querySelector<HTMLElement>(selector);
+      if (!node) throw new Error(`Falta ${selector}`);
+      const bounds = node.getBoundingClientRect();
+      return { left: bounds.left, right: bounds.right, top: bounds.top, bottom: bounds.bottom };
+    };
+    const indexStyle = getComputedStyle(element.querySelector(".dashboard-store-card__index")!);
+    return {
+      card: rect(".dashboard-store-card__button"),
+      actions: rect(".dashboard-store-card__actions"),
+      pin: rect(".dashboard-store-card__pin"),
+      open: rect(".dashboard-store-card__open"),
+      mark: rect(".dashboard-store-card__mark"),
+      indexColor: indexStyle.color,
+      indexShadow: indexStyle.textShadow,
+    };
+  });
+
+  expect(layout.pin.right).toBeLessThanOrEqual(layout.open.left + 1);
+  expect(layout.actions.left).toBeGreaterThanOrEqual(layout.card.left - 1);
+  expect(layout.actions.right).toBeLessThanOrEqual(layout.card.right + 1);
+  expect(layout.actions.bottom).toBeLessThanOrEqual(layout.mark.top + 1);
+  expect(layout.indexColor).toBe("rgb(255, 255, 255)");
+  expect(layout.indexShadow).toContain("1px 1px");
+  expect(layout.indexShadow).toContain("rgb(0, 0, 0)");
+});
+
+test("tres cards con portadas no desbordan la grilla", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(studioUrl);
+
+  await createCleanStore(page, "Tienda de proporción A");
+  await page.getByRole("button", { name: "Volver a tiendas", exact: true }).click();
+  await createCleanStore(page, "Tienda de proporción B");
+  await page.getByRole("button", { name: "Volver a tiendas", exact: true }).click();
+
+  const grid = page.locator(".dashboard-cosmic-store-grid");
+  await expect(grid.locator(".dashboard-store-card")).toHaveCount(3);
+  const layout = await grid.evaluate((element) => {
+    const gridRect = element.getBoundingClientRect();
+    const cards = [...element.querySelectorAll<HTMLElement>(".dashboard-store-card")].map((card) => {
+      const rect = card.getBoundingClientRect();
+      return { left: rect.left, right: rect.right };
+    });
+    return {
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+      gridRight: gridRect.right,
+      cards,
+    };
+  });
+
+  expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth + 1);
+  expect(Math.max(...layout.cards.map((card) => card.right))).toBeLessThanOrEqual(
+    layout.gridRight + 1,
+  );
+});
+
 test("dashboard cosmic muestra datos reales y creación guiada", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(studioUrl);

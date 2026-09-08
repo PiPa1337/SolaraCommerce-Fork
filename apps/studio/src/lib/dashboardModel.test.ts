@@ -14,6 +14,7 @@ import {
   partitionPinnedProjects,
   storeHeroAsset,
   storeMark,
+  storeSocialImageAsset,
 } from "./dashboardModel";
 import type { StoredProject } from "./repository";
 
@@ -46,6 +47,15 @@ describe("modelo del dashboard", () => {
     }
 
     expect(storeHeroAsset(catalogModernStore)?.id).toBe(hero.settings.posterAssetId);
+  });
+
+  it("resuelve la misma imagen social que usa la portada og:image", () => {
+    const project = {
+      ...catalogModernStore,
+      seo: { ...catalogModernStore.seo, socialImageId: "asset-hero" },
+    };
+
+    expect(storeSocialImageAsset(project)?.id).toBe("asset-hero");
   });
 
   it("cuenta cada variante adicional de productos activos aunque no esté disponible", () => {

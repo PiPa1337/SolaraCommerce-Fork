@@ -44,6 +44,7 @@
     "test:fuzz": "corepack pnpm --filter @solara/core test:fuzz && corepack pnpm --filter @solara/studio test:fuzz",
     "test:stress": "corepack pnpm --filter @solara/studio test:stress && corepack pnpm --filter @solara/exporter test:stress && corepack pnpm --filter @solara/site-optimizer test:stress",
     "test:qa": "corepack pnpm --filter @solara/agent-control test:qa",
+    "test:codex-subagent-smoke": "vitest run scripts/codex-subagent-smoke.test.ts",
     "test:diagnostic": "corepack pnpm --filter @solara/project-schema test:diagnostic",
     "test:postbuild": "corepack pnpm --filter @solara/project-schema test:postbuild",
     "test:extended": "corepack pnpm test:fuzz && corepack pnpm test:stress && corepack pnpm test:qa",

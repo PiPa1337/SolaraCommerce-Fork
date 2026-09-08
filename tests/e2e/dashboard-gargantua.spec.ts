@@ -76,6 +76,39 @@ async function seedLibrary(page: Page, count = 120) {
   await page.getByRole("heading", { name: "Tus tiendas", exact: true }).click();
 }
 
+test("el arranque entra desde Gargantua y libera el dashboard", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(url);
+
+  const boot = page.getByTestId("solara-app-boot");
+  await expect(boot).toBeVisible();
+  await expect(boot.locator(".dashboard-gravity-field")).toHaveAttribute("data-renderer", "webgl2");
+  await expect(page.locator(".dashboard-gargantua > .dashboard-gravity-field")).toHaveAttribute(
+    "data-animation-state",
+    "paused",
+  );
+  await expect(boot.locator(".dashboard-gravity-field")).toHaveAttribute(
+    "data-animation-state",
+    "running",
+  );
+  await page.waitForFunction(() => document.documentElement.dataset.solaraBoot === "entering", {
+    timeout: 5_000,
+  });
+  await expect(page.locator(".dashboard-gargantua > .dashboard-gravity-field")).toHaveAttribute(
+    "data-animation-state",
+    "running",
+  );
+  await expect(page.locator(".dashboard-cosmic-library")).toHaveCSS("opacity", "1");
+  await expect(page.getByRole("heading", { name: "Tus tiendas", exact: true })).toBeVisible();
+  await expect(boot).toHaveCount(0, { timeout: 5_000 });
+  await expect(page.locator(".dashboard-gargantua > .dashboard-gravity-field")).toHaveAttribute(
+    "data-animation-state",
+    "running",
+  );
+  await expect(page.getByTestId("gargantua-debug-controls")).toBeVisible();
+  await expect(page.getByLabel("Opacidad de la interfaz del dashboard")).toHaveValue("100");
+});
+
 for (const [width, height] of [
   [1920, 950],
   [1366, 768],
@@ -90,9 +123,14 @@ for (const [width, height] of [
     await page.goto(url);
     await expect(page.getByRole("heading", { name: "Tus tiendas", exact: true })).toBeVisible();
     await seedLibrary(page);
-    await expect(page.locator(".dashboard-gravity-field")).toHaveAttribute("data-renderer", "webgl2");
+    await expect(page.locator(".dashboard-gargantua > .dashboard-gravity-field")).toHaveAttribute(
+      "data-renderer",
+      "webgl2",
+    );
     await expect(page.locator(".dashboard-gargantua > .dashboard-gravity-field")).toHaveCount(1);
-    await expect(page.locator(".dashboard-cosmic-library > .dashboard-gravity-field")).toHaveCount(0);
+    await expect(page.locator(".dashboard-cosmic-library > .dashboard-gravity-field")).toHaveCount(
+      0,
+    );
     await expect(page.locator(".dashboard-cosmic-store-groups .dashboard-store-card")).toHaveCount(
       12,
     );
@@ -153,7 +191,8 @@ test("cards y detalle comparten línea superior y margen para hover", async ({ p
     );
     const detail = document.querySelector<HTMLElement>(".dashboard-store-detail.is-open");
     const results = document.querySelector<HTMLElement>(".dashboard-cosmic-results");
-    if (!card || !detail || !results) throw new Error("No se pudo medir la alineación del dashboard");
+    if (!card || !detail || !results)
+      throw new Error("No se pudo medir la alineación del dashboard");
     const cardRect = card.getBoundingClientRect();
     const detailRect = detail.getBoundingClientRect();
     const resultsRect = results.getBoundingClientRect();
@@ -174,6 +213,43 @@ test("cards y detalle comparten línea superior y margen para hover", async ({ p
   expect(hoveredTop).toBeGreaterThanOrEqual(resultsTop + 10);
 });
 
+test("Gargantua continúa detrás del navbar superior", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(url);
+  await expect(page.getByRole("heading", { name: "Tus tiendas", exact: true })).toBeVisible();
+
+  const metrics = await page.evaluate(() => {
+    const root = document.querySelector<HTMLElement>(".app-root--dashboard-cosmic");
+    const field = document.querySelector<HTMLElement>(".dashboard-gravity-field");
+    const header = document.querySelector<HTMLElement>(".app-header--dashboard-cosmic");
+    if (!root || !field || !header) throw new Error("No se pudo medir el fondo del dashboard");
+    const fieldRect = field.getBoundingClientRect();
+    const rootRect = root.getBoundingClientRect();
+    const headerStyle = getComputedStyle(header);
+    return {
+      fieldPosition: getComputedStyle(field).position,
+      fieldTop: fieldRect.top,
+      fieldBottom: fieldRect.bottom,
+      fieldLeft: fieldRect.left,
+      fieldRight: fieldRect.right,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      headerBackgroundImage: headerStyle.backgroundImage,
+      rootOverflow:
+        root.scrollWidth <= root.clientWidth + 1 && root.scrollHeight <= root.clientHeight + 1,
+      rootRect: { top: rootRect.top, bottom: rootRect.bottom },
+    };
+  });
+
+  expect(metrics.fieldPosition).toBe("fixed");
+  expect(metrics.fieldTop).toBeLessThanOrEqual(0);
+  expect(metrics.fieldBottom).toBeGreaterThanOrEqual(metrics.viewportHeight);
+  expect(metrics.fieldLeft).toBeLessThanOrEqual(0);
+  expect(metrics.fieldRight).toBeGreaterThanOrEqual(metrics.viewportWidth);
+  expect(metrics.headerBackgroundImage).toContain("linear-gradient");
+  expect(metrics.rootOverflow).toBe(true);
+});
+
 test("desktop ajusta la grilla a la cantidad real de tiendas", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(url);
@@ -181,20 +257,20 @@ test("desktop ajusta la grilla a la cantidad real de tiendas", async ({ page }) 
   await seedLibrary(page, 1);
   await page.getByRole("button", { name: "Vista en grilla", exact: true }).click();
 
-  const grid = page.locator(
-    ".dashboard-cosmic-store-groups .dashboard-cosmic-store-grid",
-  );
+  const grid = page.locator(".dashboard-cosmic-store-groups .dashboard-cosmic-store-grid");
   await expect
     .poll(() =>
-      grid.evaluate((element) =>
-        getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).length,
+      grid.evaluate(
+        (element) => getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).length,
       ),
     )
     .toBe(2);
 
-  const cards = await grid.locator(".dashboard-store-card").evaluateAll((elements) =>
-    elements.map((element) => Math.round(element.getBoundingClientRect().width)),
-  );
+  const cards = await grid
+    .locator(".dashboard-store-card")
+    .evaluateAll((elements) =>
+      elements.map((element) => Math.round(element.getBoundingClientRect().width)),
+    );
   expect(cards).toHaveLength(2);
   expect(cards[0]).toBeGreaterThan(350);
   expect(cards[0]).toBe(cards[1]);
@@ -205,7 +281,10 @@ test("preview y detalle mantienen lectura, espaciado y overflow controlado", asy
   await page.goto(url);
   await expect(page.getByRole("heading", { name: "Tus tiendas", exact: true })).toBeVisible();
   await seedLibrary(page, 12);
-  await page.locator(".dashboard-cosmic-store-groups .dashboard-store-card__button").first().click();
+  await page
+    .locator(".dashboard-cosmic-store-groups .dashboard-store-card__button")
+    .first()
+    .click();
   await expect(page.locator(".dashboard-store-detail.is-open")).toBeVisible();
 
   const metrics = await page.evaluate(() => {
@@ -236,7 +315,8 @@ test("preview y detalle mantienen lectura, espaciado y overflow controlado", asy
         };
       }),
       detailOverflow: detail
-        ? detail.scrollWidth > detail.clientWidth + 1 || detail.scrollHeight > detail.clientHeight + 1
+        ? detail.scrollWidth > detail.clientWidth + 1 ||
+          detail.scrollHeight > detail.clientHeight + 1
         : true,
       actionColumns: detail
         ? getComputedStyle(detail.querySelector<HTMLElement>(".dashboard-store-detail__actions")!)
@@ -248,10 +328,11 @@ test("preview y detalle mantienen lectura, espaciado y overflow controlado", asy
             ".dashboard-store-detail__actions-primary",
             ".dashboard-store-detail__actions-secondary",
             ".dashboard-store-detail__actions-danger",
-          ].map((selector) =>
-            getComputedStyle(detail.querySelector<HTMLElement>(selector)!)
-              .gridTemplateColumns.trim()
-              .split(/\s+/).length,
+          ].map(
+            (selector) =>
+              getComputedStyle(detail.querySelector<HTMLElement>(selector)!)
+                .gridTemplateColumns.trim()
+                .split(/\s+/).length,
           )
         : [],
       actionLabels: detail
@@ -264,8 +345,10 @@ test("preview y detalle mantienen lectura, espaciado y overflow controlado", asy
       buttonPadding: buttons.map((button) => {
         const style = getComputedStyle(button);
         return {
-          paddingInline: Number.parseFloat(style.paddingLeft) + Number.parseFloat(style.paddingRight),
-          paddingBlock: Number.parseFloat(style.paddingTop) + Number.parseFloat(style.paddingBottom),
+          paddingInline:
+            Number.parseFloat(style.paddingLeft) + Number.parseFloat(style.paddingRight),
+          paddingBlock:
+            Number.parseFloat(style.paddingTop) + Number.parseFloat(style.paddingBottom),
         };
       }),
     };
@@ -279,10 +362,16 @@ test("preview y detalle mantienen lectura, espaciado y overflow controlado", asy
   expect(metrics.actionGroupColumns.slice(1)).toEqual([2, 2]);
   expect(metrics.actionLabels).toEqual(["Gestionar y respaldar", "Zona de riesgo"]);
   expect(metrics.buttonHeights.every((height) => height >= 38)).toBe(true);
-  expect(metrics.buttonPadding.every(({ paddingInline, paddingBlock }) => paddingInline >= 16 && paddingBlock >= 10)).toBe(true);
+  expect(
+    metrics.buttonPadding.every(
+      ({ paddingInline, paddingBlock }) => paddingInline >= 16 && paddingBlock >= 10,
+    ),
+  ).toBe(true);
 });
 
-test("rail desktop bajo mantiene las acciones de una tienda normal sin scroll", async ({ page }) => {
+test("rail desktop bajo mantiene las acciones de una tienda normal sin scroll", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto(url);
   await expect(page.getByRole("heading", { name: "Tus tiendas", exact: true })).toBeVisible();
@@ -296,12 +385,15 @@ test("rail desktop bajo mantiene las acciones de una tienda normal sin scroll", 
     const root = document.documentElement;
     const detail = document.querySelector<HTMLElement>(".dashboard-store-detail.is-open");
     if (!detail) throw new Error("No se encontró el detalle de una tienda normal");
-    const buttons = [...detail.querySelectorAll<HTMLButtonElement>(".dashboard-store-detail__actions .button")];
+    const buttons = [
+      ...detail.querySelectorAll<HTMLButtonElement>(".dashboard-store-detail__actions .button"),
+    ];
     return {
       rootOverflow:
         root.scrollWidth > root.clientWidth + 1 || root.scrollHeight > root.clientHeight + 1,
       detailOverflow:
-        detail.scrollWidth > detail.clientWidth + 1 || detail.scrollHeight > detail.clientHeight + 1,
+        detail.scrollWidth > detail.clientWidth + 1 ||
+        detail.scrollHeight > detail.clientHeight + 1,
       buttonHeights: buttons.map((button) => Math.round(button.getBoundingClientRect().height)),
       labels: buttons.map((button) => button.textContent?.trim() ?? ""),
     };
@@ -311,7 +403,14 @@ test("rail desktop bajo mantiene las acciones de una tienda normal sin scroll", 
   expect(metrics.detailOverflow).toBe(false);
   expect(metrics.buttonHeights.every((height) => height >= 36)).toBe(true);
   expect(metrics.labels).toEqual(
-    expect.arrayContaining(["Abrir tienda", "Respaldar ahora", "Duplicar", "Calculadora", "Archivar", "Eliminar tienda"]),
+    expect.arrayContaining([
+      "Abrir tienda",
+      "Respaldar ahora",
+      "Duplicar",
+      "Calculadora",
+      "Archivar",
+      "Eliminar tienda",
+    ]),
   );
 });
 
@@ -321,12 +420,15 @@ test("movimiento reducido elimina la profundidad transformada", async ({ page })
   await page.goto(url);
   await expect(page.locator(".dashboard-store-card").first()).toBeVisible();
 
-  const transforms = await page.locator(".dashboard-store-card").first().evaluate((card) => ({
-    card: getComputedStyle(card).transform,
-    button: getComputedStyle(card.querySelector(".dashboard-store-card__button")!).transform,
-    mark: getComputedStyle(card.querySelector(".dashboard-store-card__mark")!).transform,
-    title: getComputedStyle(card.querySelector("strong")!).transform,
-  }));
+  const transforms = await page
+    .locator(".dashboard-store-card")
+    .first()
+    .evaluate((card) => ({
+      card: getComputedStyle(card).transform,
+      button: getComputedStyle(card.querySelector(".dashboard-store-card__button")!).transform,
+      mark: getComputedStyle(card.querySelector(".dashboard-store-card__mark")!).transform,
+      title: getComputedStyle(card.querySelector("strong")!).transform,
+    }));
   expect(transforms).toEqual({
     card: "none",
     button: "none",
@@ -371,7 +473,8 @@ test("el teclado separa revisar estado de abrir la tienda", async ({ page }) => 
   await expect(page.locator(".dashboard-cosmic-actions__legend")).toContainText("Abrir");
 
   const detail = page.getByRole("region", { name: /Tienda seleccionada:/ });
-  if (await detail.isVisible()) await detail.getByRole("button", { name: "Cerrar detalle" }).click();
+  if (await detail.isVisible())
+    await detail.getByRole("button", { name: "Cerrar detalle" }).click();
   const card = page.locator("[data-store-card-id]").first();
   await card.focus();
   await page.keyboard.press("Enter");
@@ -398,12 +501,15 @@ test("abrir una tienda atraviesa Gargantua antes de montar Studio", async ({ pag
   await expect(page.getByTestId("gargantua-launch")).toHaveCount(0);
 });
 
-test("el inspector de opacidad de Gargantua no se publica en production", async ({ page }) => {
+test("el inspector de opacidad de Gargantua está disponible en el dashboard local", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.goto(url);
   await expect(page.getByRole("heading", { name: "Tus tiendas", exact: true })).toBeVisible();
-  await expect(page.getByTestId("gargantua-debug-controls")).toHaveCount(0);
-  await expect(page.locator('[data-gargantua-debug="true"]')).toHaveCount(0);
+  await expect(page.getByTestId("gargantua-debug-controls")).toBeVisible();
+  await expect(page.locator('[data-gargantua-debug="true"]')).toHaveCount(1);
+  await expect(page.getByLabel("Opacidad de la interfaz del dashboard")).toHaveValue("100");
 });
 
 test("las flechas respetan el orden visual después de fijar una tienda", async ({ page }) => {
@@ -413,7 +519,10 @@ test("las flechas respetan el orden visual después de fijar una tienda", async 
   await seedLibrary(page, 12);
 
   const gridCards = page.locator(".dashboard-cosmic-store-groups .dashboard-store-card");
-  const firstId = await gridCards.nth(0).locator("[data-store-card-id]").getAttribute("data-store-card-id");
+  const firstId = await gridCards
+    .nth(0)
+    .locator("[data-store-card-id]")
+    .getAttribute("data-store-card-id");
   const secondCard = gridCards.nth(1);
   const secondId = await secondCard
     .locator("[data-store-card-id]")
@@ -422,7 +531,10 @@ test("las flechas respetan el orden visual después de fijar una tienda", async 
 
   await secondCard.getByTestId("ui-card-pin").click();
   await expect(
-    page.locator(".dashboard-cosmic-store-groups .dashboard-store-card").first().locator("[data-store-card-id]"),
+    page
+      .locator(".dashboard-cosmic-store-groups .dashboard-store-card")
+      .first()
+      .locator("[data-store-card-id]"),
   ).toHaveAttribute("data-store-card-id", secondId);
   await page.locator(`[data-store-card-id="${secondId}"]`).focus();
   await page.keyboard.press("ArrowRight");
@@ -469,7 +581,7 @@ test("120 tiendas: páginas, búsqueda global, fijadas y comparación entre pág
   await compareAction.click();
   await expect(page.getByRole("dialog")).toBeVisible();
   const typographyRow = page
-    .locator('.compare-dialog .compare-view__row')
+    .locator(".compare-dialog .compare-view__row")
     .filter({ hasText: "Tipografía display" })
     .first();
   await expect
@@ -478,7 +590,8 @@ test("120 tiendas: páginas, búsqueda global, fijadas y comparación entre pág
         const values = [...element.querySelectorAll("strong")];
         return {
           wraps: values.every((value) => getComputedStyle(value).whiteSpace === "normal"),
-          overlaps: values[0].getBoundingClientRect().right > values[1].getBoundingClientRect().left,
+          overlaps:
+            values[0].getBoundingClientRect().right > values[1].getBoundingClientRect().left,
         };
       }),
     )
@@ -509,15 +622,19 @@ test("120 tiendas: páginas, búsqueda global, fijadas y comparación entre pág
   await page.getByRole("button", { name: "Vista en lista" }).click();
   await expect(page.locator(".dashboard-cosmic-store-groups .dashboard-store-card")).toHaveCount(5);
   await expect(page.locator(".dashboard-cosmic-side > .dashboard-store-card")).toHaveCount(0);
-  await expect(page.locator(".dashboard-cosmic-store-groups .dashboard-store-card__badge")).toHaveCount(1);
+  await expect(
+    page.locator(".dashboard-cosmic-store-groups .dashboard-store-card__badge"),
+  ).toHaveCount(1);
   const mainListGrid = page.locator(
     ".dashboard-cosmic-results--list .dashboard-cosmic-store-groups > .dashboard-cosmic-group .dashboard-cosmic-store-grid",
   );
   await expect
     .poll(() =>
-      mainListGrid.first().evaluate((element) =>
-        getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).length,
-      ),
+      mainListGrid
+        .first()
+        .evaluate(
+          (element) => getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).length,
+        ),
     )
     .toBe(1);
 });
@@ -625,7 +742,9 @@ test("vista lista móvil conserva la densidad y no crea scroll", async ({ page }
   await seedLibrary(page, 12);
   await page.getByRole("button", { name: "Vista en lista", exact: true }).click();
 
-  await expect(page.locator(".dashboard-cosmic-results--list .dashboard-store-card")).toHaveCount(5);
+  await expect(page.locator(".dashboard-cosmic-results--list .dashboard-store-card")).toHaveCount(
+    5,
+  );
   await expect
     .poll(() =>
       page

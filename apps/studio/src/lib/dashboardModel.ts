@@ -1,3 +1,4 @@
+import { resolveSocialImage } from "@solara/exporter";
 import type { StoredProject } from "./repository";
 
 export type DashboardStatusFilter = "all" | "active" | "archived";
@@ -125,6 +126,13 @@ export function storeHeroAsset(
   return assetIds
     .map((assetId) => project.assets.find((asset) => asset.id === assetId))
     .find((asset) => asset !== undefined);
+}
+
+/** Devuelve el mismo asset que el exporter usa para la portada `og:image`. */
+export function storeSocialImageAsset(
+  project: StoredProject["project"],
+): StoredProject["project"]["assets"][number] | undefined {
+  return resolveSocialImage(project).asset;
 }
 
 export interface HealthAuditCacheEntry {

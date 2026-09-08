@@ -22,6 +22,7 @@ import { ConfirmDialog } from "./components/ConfirmDialog";
 import { ToastProvider } from "./components/Toast";
 import { Button, InlineError } from "./components/Ui";
 import { Dashboard } from "./features/Dashboard";
+import { GravityField } from "./features/dashboard/GravityField";
 import type { LocalStorageStatus } from "./lib/localStorage";
 import { downloadBlob } from "./lib/projectArchive";
 import {
@@ -81,6 +82,71 @@ const ComponentGallery = lazy(() =>
 const Studio = lazy(() =>
   import("./features/Studio").then(({ Studio: Component }) => ({ default: Component })),
 );
+
+const APP_BOOT_FIELD_REVEAL_MS = 1_500;
+const APP_BOOT_EXIT_MS = 1_500;
+
+function StudioBootSequence({ ready }: { ready: boolean }) {
+  const [phase, setPhase] = useState<"loading" | "releasing" | "done">("loading");
+  const startedAtRef = useRef(0);
+  const reducedMotion =
+    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const fieldRevealDuration = reducedMotion ? 240 : APP_BOOT_FIELD_REVEAL_MS;
+  const exitDuration = reducedMotion ? 240 : APP_BOOT_EXIT_MS;
+
+  useEffect(() => {
+    startedAtRef.current = performance.now();
+    document.documentElement.dataset.solaraBoot = "loading";
+    return () => {
+      delete document.documentElement.dataset.solaraBoot;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!ready) return;
+
+    const elapsed = performance.now() - startedAtRef.current;
+    const revealWait = Math.max(0, fieldRevealDuration - elapsed);
+    let exitTimer: number | undefined;
+    const releaseTimer = window.setTimeout(() => {
+      document.documentElement.dataset.solaraBoot = "entering";
+      setPhase("releasing");
+      exitTimer = window.setTimeout(() => {
+        delete document.documentElement.dataset.solaraBoot;
+        setPhase("done");
+      }, exitDuration);
+    }, revealWait);
+
+    return () => {
+      window.clearTimeout(releaseTimer);
+      if (exitTimer !== undefined) window.clearTimeout(exitTimer);
+    };
+  }, [exitDuration, fieldRevealDuration, ready]);
+
+  if (phase === "done") return null;
+
+  return (
+    <div
+      className={`app-boot-sequence${phase === "releasing" ? " is-releasing" : ""}`}
+      data-testid="solara-app-boot"
+      role="status"
+      aria-live="polite"
+    >
+      <GravityField
+        activeIndex={0}
+        storeCount={0}
+        selectionVisible={false}
+        templateSelected={false}
+        launchProgress={0}
+        introDurationMs={fieldRevealDuration}
+        pauseWhileAppBooting={false}
+        renderScaleMultiplier={0.7}
+      />
+      <div className="app-boot-sequence__veil" aria-hidden="true" />
+      <span className="visually-hidden">Preparando tu espacio local…</span>
+    </div>
+  );
+}
 
 type StoreLaunchCurtainPhase = "idle" | "covering" | "releasing";
 
@@ -178,10 +244,22 @@ function AppInner() {
       </Suspense>
     );
   }
-  return <StudioShell />;
+  return <StudioShellWithBoot />;
 }
 
-function StudioShell() {
+function StudioShellWithBoot() {
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  const handleInitialLoadComplete = useCallback(() => setInitialLoadComplete(true), []);
+
+  return (
+    <>
+      <StudioShell onInitialLoadComplete={handleInitialLoadComplete} />
+      <StudioBootSequence ready={initialLoadComplete} />
+    </>
+  );
+}
+
+function StudioShell({ onInitialLoadComplete }: { onInitialLoadComplete: () => void }) {
   const [projects, setProjects] = useState<StoredProject[]>([]);
   const [active, setActive] = useState<StoreProjectV1>();
   const [storeLaunchCurtain, setStoreLaunchCurtain] = useState<StoreLaunchCurtainPhase>("idle");
@@ -399,9 +477,10 @@ function StudioShell() {
         setError(reason instanceof Error ? reason.message : "No se pudo abrir Studio.");
       } finally {
         setLoading(false);
+        onInitialLoadComplete();
       }
     })();
-  }, [notify, persistToDisk, refreshBrowser, refreshDisk]);
+  }, [notify, onInitialLoadComplete, persistToDisk, refreshBrowser, refreshDisk]);
 
   useEffect(() => {
     const onOnline = () => setIsOnline(true);
@@ -475,27 +554,7 @@ function StudioShell() {
   };
 
   if (loading) {
-    return (
-      <ToastProvider>
-        <main className="boot-screen">
-          <img
-            className="brand-mark brand-mark--orbit"
-            src="/branding/solara-orbit-64.png"
-            srcSet="/branding/solara-orbit-32.png 32w, /branding/solara-orbit-64.png 64w, /branding/solara-orbit-128.png 128w, /branding/solara-orbit-256.png 256w"
-            sizes="64px"
-            alt=""
-            width={64}
-            height={64}
-            decoding="async"
-            fetchPriority="high"
-          />
-          <h1>SolaraCommerce</h1>
-          <p className="boot-screen__subtitle">
-            Sincronizando tu espacio local — tiendas, catálogos y respaldos
-          </p>
-        </main>
-      </ToastProvider>
-    );
+    return null;
   }
 
   const banners = (
@@ -585,9 +644,7 @@ function StudioShell() {
                 decoding="async"
               />
               <h1>SolaraCommerce</h1>
-              <p className="boot-screen__subtitle">
-                Abriendo tu tienda — catálogo y contenido al instante
-              </p>
+              <p className="boot-screen__subtitle">Cargando el editor…</p>
             </main>
           }
         >
@@ -861,12 +918,10 @@ function StudioShell() {
                   if (diskProject) {
                     const draft = await getRecoveryDraft(diskProject.id);
                     if (draft && JSON.stringify(draft.project) !== JSON.stringify(diskProject)) {
-                      const recoveryDecision = await new Promise<RecoveryDraftDecision>(
-                        (resolve) => {
-                          pendingRecoverResolverRef.current = resolve;
-                          setPendingRecover({ projectId: diskProject.id, draft: draft.project });
-                        },
-                      );
+                      const recoveryDecision = await new Promise<RecoveryDraftDecision>((resolve) => {
+                        pendingRecoverResolverRef.current = resolve;
+                        setPendingRecover({ projectId: diskProject.id, draft: draft.project });
+                      });
                       project = await resolveRecoveryDraftDecision(
                         recoveryDecision,
                         diskProject,
