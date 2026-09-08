@@ -80,11 +80,45 @@ function Get-CommandDetail {
   return $detail
 }
 
+function Invoke-PnpmCommand {
+  param([string[]]$Arguments)
+
+  $corepackCommand = Get-Command corepack.cmd -ErrorAction SilentlyContinue
+  if (-not $corepackCommand) { $corepackCommand = Get-Command corepack -ErrorAction SilentlyContinue }
+  if (-not $corepackCommand) { throw "Corepack no está disponible. Instalá una versión actual de Node.js." }
+
+  $commandArguments = ($Arguments | ForEach-Object { [string]$_ }) -join " "
+  $start = New-Object System.Diagnostics.ProcessStartInfo
+  $start.FileName = $env:ComSpec
+  if ([string]::IsNullOrWhiteSpace($start.FileName)) {
+    $start.FileName = Join-Path $env:SystemRoot "System32\cmd.exe"
+  }
+  $start.Arguments = '/d /s /c call "' + $corepackCommand.Source + '" pnpm ' + $commandArguments
+  $start.WorkingDirectory = $projectRoot
+  $start.UseShellExecute = $false
+  $start.CreateNoWindow = $true
+  $start.RedirectStandardOutput = $true
+  $start.RedirectStandardError = $true
+
+  $process = New-Object System.Diagnostics.Process
+  $process.StartInfo = $start
+  if (-not $process.Start()) { throw "No se pudo iniciar Corepack." }
+  $outputTask = $process.StandardOutput.ReadToEndAsync()
+  $errorTask = $process.StandardError.ReadToEndAsync()
+  $process.WaitForExit()
+  [pscustomobject]@{
+    ExitCode = $process.ExitCode
+    Output = $outputTask.Result
+    Error = $errorTask.Result
+  }
+}
+
 function Write-LauncherFailure {
   param([object]$Failure)
   try {
     New-Item -ItemType Directory -Path $logsDirectory -Force | Out-Null
-    Add-Content -LiteralPath $launcherErrorLog -Value ((Get-Date).ToString("s") + " " + [string]$Failure)
+    $detail = ($Failure | Out-String).Trim()
+    Add-Content -LiteralPath $launcherErrorLog -Value ((Get-Date).ToString("s") + " " + $detail)
   } catch {
   }
 }
@@ -199,19 +233,14 @@ try {
 
   if (-not (Test-Path -LiteralPath (Join-Path $projectRoot "node_modules\.modules.yaml"))) {
     Write-LauncherStatus "Preparando dependencias por primera vez..."
-    if ($Json) {
-      $installOutput = @(& corepack pnpm install --frozen-lockfile 2>&1)
-      $installExitCode = $LASTEXITCODE
-      if ($installExitCode -ne 0) {
-        $detail = Get-CommandDetail -Lines $installOutput
-        if ([string]::IsNullOrWhiteSpace($detail)) { $detail = "sin detalles adicionales" }
-        throw "La instalación de dependencias no pudo completarse: $detail"
-      }
-    } else {
-      & corepack pnpm install --frozen-lockfile
-      if ($LASTEXITCODE -ne 0) {
-        throw "La instalación de dependencias no pudo completarse."
-      }
+    $installResult = Invoke-PnpmCommand -Arguments @("install", "--frozen-lockfile")
+    if ($installResult.ExitCode -ne 0) {
+      $detail = Get-CommandDetail -Lines @($installResult.Error, $installResult.Output)
+      if ([string]::IsNullOrWhiteSpace($detail)) { $detail = "sin detalles adicionales" }
+      throw "La instalación de dependencias no pudo completarse: $detail"
+    }
+    if (-not $Json -and -not [string]::IsNullOrWhiteSpace($installResult.Output)) {
+      Write-Output $installResult.Output.TrimEnd()
     }
   }
 
@@ -233,19 +262,14 @@ try {
 
   if ($needsBuild) {
     Write-LauncherStatus "Actualizando SolaraCommerce..."
-    if ($Json) {
-      $buildOutput = @(& corepack pnpm --filter "@solara/studio" build 2>&1)
-      $buildExitCode = $LASTEXITCODE
-      if ($buildExitCode -ne 0) {
-        $detail = Get-CommandDetail -Lines $buildOutput
-        if ([string]::IsNullOrWhiteSpace($detail)) { $detail = "sin detalles adicionales" }
-        throw "No se pudo construir la aplicación: $detail"
-      }
-    } else {
-      & corepack pnpm --filter "@solara/studio" build
-      if ($LASTEXITCODE -ne 0) {
-        throw "No se pudo construir la aplicación."
-      }
+    $buildResult = Invoke-PnpmCommand -Arguments @("--filter", "@solara/studio", "build")
+    if ($buildResult.ExitCode -ne 0) {
+      $detail = Get-CommandDetail -Lines @($buildResult.Error, $buildResult.Output)
+      if ([string]::IsNullOrWhiteSpace($detail)) { $detail = "sin detalles adicionales" }
+      throw "No se pudo construir la aplicación: $detail"
+    }
+    if (-not $Json -and -not [string]::IsNullOrWhiteSpace($buildResult.Output)) {
+      Write-Output $buildResult.Output.TrimEnd()
     }
   }
 
@@ -341,7 +365,7 @@ try {
   Write-LaunchResult -SessionId $sessionId -Port $port -Url $url
   exit 0
 } catch {
-  Write-LauncherFailure -Failure $_.Exception.ToString()
+  Write-LauncherFailure -Failure $_
   if ($Json) {
     [Console]::Error.WriteLine($_.Exception.Message)
   } else {

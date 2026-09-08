@@ -15,6 +15,29 @@ export const RESPONSIVE_IMAGE_MAX_WIDTH = 1800;
 /** Marca estable para distinguir la receta materializada de las variantes. */
 export const IMAGE_ASSET_RECIPE = "responsive-export-v1";
 
+function isValidIcoEntryImage(view: DataView, offset: number, size: number): boolean {
+  if (
+    size >= 8 &&
+    view.getUint8(offset) === 0x89 &&
+    view.getUint8(offset + 1) === 0x50 &&
+    view.getUint8(offset + 2) === 0x4e &&
+    view.getUint8(offset + 3) === 0x47 &&
+    view.getUint8(offset + 4) === 0x0d &&
+    view.getUint8(offset + 5) === 0x0a &&
+    view.getUint8(offset + 6) === 0x1a &&
+    view.getUint8(offset + 7) === 0x0a
+  ) {
+    return true;
+  }
+  if (size < 12) return false;
+  const headerSize = view.getUint32(offset, true);
+  if (headerSize === 12) {
+    return view.getUint16(offset + 4, true) > 0 && view.getUint16(offset + 6, true) > 0;
+  }
+  if (headerSize < 40 || headerSize > size) return false;
+  return view.getInt32(offset + 4, true) !== 0 && view.getInt32(offset + 8, true) !== 0;
+}
+
 /**
  * Valida la estructura binaria de un ICO, no sólo sus cuatro bytes iniciales.
  * El exportador puede recibir assets legacy, pero nunca debe preservar como
@@ -41,7 +64,8 @@ export function isValidIco(bytes: Uint8Array | undefined): boolean {
       height > 256 ||
       size === 0 ||
       offset < directorySize ||
-      offset > bytes.byteLength - size
+      offset > bytes.byteLength - size ||
+      !isValidIcoEntryImage(view, offset, size)
     ) {
       return false;
     }

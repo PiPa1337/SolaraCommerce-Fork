@@ -764,6 +764,9 @@ function needsResponsiveImageRepair(asset: StoreProjectV1["assets"][number]): bo
 }
 
 export function needsImageOptimization(asset: StoreProjectV1["assets"][number]): boolean {
+  // El favicon tiene un contrato binario propio; no debe entrar al pipeline
+  // responsive aunque sea un legacy que luego reparará el exporter.
+  if (asset.kind !== "image" || asset.mimeType === "image/x-icon") return false;
   return !isOptimizedImageAsset(asset) || needsResponsiveImageRepair(asset);
 }
 

@@ -14,13 +14,17 @@
 - El exportador compartido siempre publica `favicon.ico` como ICO válido y
   reconstruye favicons legados WebP usando su fallback PNG, conservando seis
   resoluciones y la vista previa.
-- El Studio sólo permite seleccionar favicons ICO y el canal del agente rechaza
-  adjuntar otros formatos como `seo.favicon`.
+- El contrato compartido valida el directorio, offsets y payloads PNG/DIB del
+  ICO; Studio y las mutaciones de core bloquean favicons inválidos, y el canal
+  del agente valida los bytes reales antes de adjuntarlos.
+- El exportador comprueba su propio `favicon.ico` como postcondición, por lo que
+  una regresión no puede publicar un sitio con un favicon inválido.
 
 **Tests**
 
 - Se agregó regresión para el favicon legado de Stylo y validación de staging y
-  attach del agente.
+  attach del agente, además de pruebas de falsos ICO truncados y de la barrera
+  final de exportación.
 
 ### Formulario mobile sin espacio de email (2026-09-08)
 

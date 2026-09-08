@@ -9,6 +9,7 @@ using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
 
@@ -283,13 +284,23 @@ internal sealed class TrayServices
             {
                 StringBuilder outputBuilder = new StringBuilder();
                 StringBuilder stderrBuilder = new StringBuilder();
+                TaskCompletionSource<bool> outputReady = new TaskCompletionSource<bool>();
+                TaskCompletionSource<bool> stderrReady = new TaskCompletionSource<bool>();
                 process.OutputDataReceived += delegate(object sender, DataReceivedEventArgs args)
                 {
-                    if (args.Data != null) outputBuilder.AppendLine(args.Data);
+                    if (args.Data != null)
+                    {
+                        lock (outputBuilder) outputBuilder.AppendLine(args.Data);
+                        outputReady.TrySetResult(true);
+                    }
                 };
                 process.ErrorDataReceived += delegate(object sender, DataReceivedEventArgs args)
                 {
-                    if (args.Data != null) stderrBuilder.AppendLine(args.Data);
+                    if (args.Data != null)
+                    {
+                        lock (stderrBuilder) stderrBuilder.AppendLine(args.Data);
+                        stderrReady.TrySetResult(true);
+                    }
                 };
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
@@ -307,9 +318,12 @@ internal sealed class TrayServices
                 // WaitForExit(timeout) no espera el EOF de los streams. Un breve
                 // margen permite entregar la última línea sin bloquearse por los
                 // handles heredados del proceso Node persistente.
-                Thread.Sleep(150);
-                string output = outputBuilder.ToString();
-                string stderr = stderrBuilder.ToString();
+                if (outputBuilder.Length == 0) outputReady.Task.Wait(1000);
+                if (stderrBuilder.Length == 0) stderrReady.Task.Wait(1000);
+                string output;
+                string stderr;
+                lock (outputBuilder) output = outputBuilder.ToString();
+                lock (stderrBuilder) stderr = stderrBuilder.ToString();
                 Log("launcher-exit=" + process.ExitCode.ToString(CultureInfo.InvariantCulture) +
                     " output=" + CompactLogDetail(output) + " stderr=" + CompactLogDetail(stderr));
                 if (process.ExitCode != 0)
@@ -364,6 +378,8 @@ internal sealed class TrayServices
         }
         catch (Exception exception)
         {
+            try { CloseSessionsCreatedSince(existingSessionIds); }
+            catch { }
             error = StripAnsi(exception.Message);
             if (string.IsNullOrWhiteSpace(error)) error = "No se pudo ejecutar el launcher.";
             Log("launcher-exception=" + CompactLogDetail(exception.ToString()));
@@ -874,6 +890,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         {
             try
             {
+                services.Log("restart-worker-begin");
                 int sessionCount = services.DiscoverSessions().Count;
                 if (sessionCount < 1) sessionCount = 1;
 
@@ -884,7 +901,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
                     return;
                 }
 
-                string executablePath = Application.ExecutablePath;
+                string executablePath = Path.Combine(services.ApplicationRoot, "Abrir SolaraCommerce.exe");
+                if (!File.Exists(executablePath)) executablePath = Application.ExecutablePath;
                 string workingDirectory = Path.GetDirectoryName(executablePath);
                 ProcessStartInfo start = new ProcessStartInfo();
                 start.FileName = executablePath;
@@ -892,19 +910,22 @@ internal sealed class TrayApplicationContext : ApplicationContext
                     " --reopen-sessions " + sessionCount.ToString(CultureInfo.InvariantCulture) +
                     " --root " + QuoteArgument(services.ApplicationRoot);
                 start.WorkingDirectory = string.IsNullOrEmpty(workingDirectory) ? services.ApplicationRoot : workingDirectory;
-                start.UseShellExecute = true;
+                start.UseShellExecute = false;
                 start.CreateNoWindow = true;
                 Process replacement = Process.Start(start);
                 if (replacement == null) throw new InvalidOperationException("Windows no devolvió la nueva instancia del tray.");
+                services.Log("restart-helper-launched pid=" + replacement.Id.ToString(CultureInfo.InvariantCulture));
 
                 dispatcher.BeginInvoke((MethodInvoker)delegate
                 {
+                    services.Log("restart-owner-disposing");
                     DisposeTray();
                     ExitThread();
                 });
             }
             catch (Exception exception)
             {
+                services.Log("restart-exception=" + exception.ToString());
                 PostRestartFailure(exception.Message);
             }
         });
