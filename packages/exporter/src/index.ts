@@ -4,7 +4,6 @@
  * y produce el sitio estático sin incluir estado interno del editor.
  */
 
-import { normalizeSearchTokens } from "@solara/core";
 import {
   type CanvasBinding,
   canvasEntityAttributes,
@@ -14,8 +13,8 @@ import {
 } from "@solara/module-sdk";
 import {
   getModuleDefinition,
-  MODULE_STYLE_BLOCKS,
   MOBILE_HERO_SQUARE_FIX,
+  MODULE_STYLE_BLOCKS,
   moduleRegistry,
   type PageRenderContext,
   PRODUCT_GALLERY_MOBILE_FIX,
@@ -42,6 +41,7 @@ import {
   getCategoryAncestors,
   getCategoryBreadcrumb,
   getCategoryProductIds,
+  isValidIco,
   personalizeWhatsAppGreeting,
   resolveLegalCountryName,
   StoreProjectV1Schema,
@@ -258,7 +258,7 @@ function formatMoney(amount: number, project: StoreProjectV1): string {
   return formatPrice(amount, {
     currency: project.currency,
     locale: project.locale,
-    priceFractionDisplay: (project as any).priceFractionDisplay ?? "always",
+    priceFractionDisplay: project.priceFractionDisplay,
   });
 }
 
@@ -330,7 +330,6 @@ import {
 } from "./assets.js";
 import {
   breadcrumbData,
-  faqPageData,
   itemListData,
   itemListFromSnapshots,
   productStructuredData,
@@ -456,6 +455,41 @@ function sourceExtension(source: string, fallback: string): string {
 
 export function dataUrlBytes(source: string): Uint8Array | undefined {
   return parseDataUrl(source)?.bytes;
+}
+
+function faviconSourcesForProject(project: StoreProjectV1): {
+  ico?: Uint8Array;
+  png?: Uint8Array;
+} {
+  const asset = project.assets.find((candidate) => candidate.id === project.seo.faviconAssetId);
+  if (!asset) return {};
+  let png: Uint8Array | undefined;
+  const sources = [asset.source, asset.fallbackSource].filter(
+    (source): source is string => typeof source === "string" && source.length > 0,
+  );
+  for (const source of sources) {
+    const bytes = dataUrlBytes(source);
+    const mimeType = imageMimeTypeFromBytes(bytes);
+    if (mimeType === "image/x-icon" && bytes) return { ico: bytes };
+    if (mimeType === "image/png" && bytes && !png) png = bytes;
+  }
+  return png ? { png } : {};
+}
+
+function faviconIcoForProject(project: StoreProjectV1): Uint8Array {
+  const sources = faviconSourcesForProject(project);
+  const favicon = sources.ico ?? buildFaviconIco(project.identity.brandName, sources.png);
+  if (!isValidIco(favicon)) {
+    throw new Error("El renderer no pudo construir un favicon.ico ICO válido.");
+  }
+  return favicon;
+}
+
+function assertExportedFavicon(files: ReadonlyMap<string, string | Uint8Array>): void {
+  const favicon = files.get("favicon.ico");
+  if (!(favicon instanceof Uint8Array) || !isValidIco(favicon)) {
+    throw new Error("La exportación no produjo un favicon.ico ICO válido.");
+  }
 }
 
 function publicAssetPath(
@@ -671,6 +705,12 @@ function previewAssetMarkup(
     return `<script>
 (() => {
   const paths = ${paths};
+  const hydrateFavicon = () => {
+    document.querySelectorAll("[data-solara-preview-favicon]").forEach((element) => {
+      const source = element.getAttribute("data-solara-preview-favicon");
+      if (source) element.setAttribute("href", source);
+    });
+  };
   const receivedSources = new Map();
   const objectUrls = new Map();
   const requestedPaths = new Set(paths);
@@ -780,6 +820,7 @@ function previewAssetMarkup(
     if (event.data?.type !== "solara-preview-assets-response") return;
     void hydrate(event.data.sources || {});
   });
+  hydrateFavicon();
   window.parent.postMessage({ type: "solara-preview-assets-request", paths }, "*");
 })();
 </script>`;
@@ -789,6 +830,10 @@ function previewAssetMarkup(
   return `<script type="application/json" id="solara-preview-assets">${serialized}</script>
 <script>
  (async () => {
+  document.querySelectorAll("[data-solara-preview-favicon]").forEach((element) => {
+    const source = element.getAttribute("data-solara-preview-favicon");
+    if (source) element.setAttribute("href", source);
+  });
   const payload = document.getElementById("solara-preview-assets");
   if (!payload) return;
   try {
@@ -1654,30 +1699,11 @@ function renderDocument(
       : undefined;
   const effectiveVideo = pageVideo ?? productVideo;
   const faviconAsset = imageFor(project, project.seo.faviconAssetId);
-  const faviconMimeType = faviconAsset
-    ? (imageMimeTypeFromSource(faviconAsset.source, faviconAsset.mimeType) ?? "image/x-icon")
-    : undefined;
-  const faviconHref =
-    faviconAsset && faviconMimeType !== "image/x-icon" && faviconAsset.source
-      ? assetHref(project, faviconAsset.source)
-      : assetHref(project, "/favicon.ico");
+  const faviconMimeType = "image/x-icon";
+  const faviconHref = assetHref(project, "/favicon.ico");
   const faviconFallbackHref = faviconAsset?.fallbackSource
     ? assetHref(project, faviconAsset.fallbackSource)
     : undefined;
-  const keywords = [
-    project.identity.brandName,
-    page.title,
-    ...project.categories
-      .filter((category) => !category.parentId && category.status !== "hidden")
-      .map((category) => category.title),
-    ...project.collections
-      .filter((collection) => collection.status !== "hidden")
-      .map((collection) => collection.title),
-  ]
-    .flatMap((value) => normalizeSearchTokens(value))
-    .filter((value, index, values) => value.length >= 3 && values.indexOf(value) === index)
-    .slice(0, 24)
-    .join(", ");
   const author = project.identity.brandName || project.identity.legalName;
   const publisher = project.identity.legalName || author;
   const nonIndexablePage = ["search", "cart", "checkout", "not-found"].includes(page.pageType);
@@ -1834,7 +1860,7 @@ function renderDocument(
     : `<meta name="twitter:card" content="summary">`;
 
   return `<!doctype html>
-<html lang="${escapeAttribute(project.locale)}" data-store-id="${escapeAttribute(project.id)}" data-currency="${escapeAttribute(project.currency)}" data-price-fraction-display="${escapeAttribute((project as any).priceFractionDisplay ?? "always")}"${whatsAppAttributes}${publicCopyAttribute} data-solara-runtime-features="${escapeAttribute((manifest?.runtimeFeatures ?? []).join(","))}"${baseHrefAttribute}${serviceWorkerAttribute}>
+<html lang="${escapeAttribute(project.locale)}" data-store-id="${escapeAttribute(project.id)}" data-currency="${escapeAttribute(project.currency)}" data-price-fraction-display="${escapeAttribute(project.priceFractionDisplay)}"${whatsAppAttributes}${publicCopyAttribute} data-solara-runtime-features="${escapeAttribute((manifest?.runtimeFeatures ?? []).join(","))}"${baseHrefAttribute}${serviceWorkerAttribute}>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -2281,7 +2307,7 @@ function buildPages(
         body,
         structuredData: [
           breadcrumbData(project, categoryBreadcrumbItems(project, category)),
-          itemListData(project, category.title, canonicalPath, paginated),
+          itemListData(project, category.title, paginated),
         ],
         ...(categoryImage ? { image: categoryImage } : {}),
         ...(categoryImage ? { preloadImage: categoryImage } : {}),
@@ -3393,22 +3419,7 @@ ${
   const logoBytes = logoAsset ? dataUrlBytes(logoAsset.source) : undefined;
   files.set("icons/icon-192.png", generateStoreIconPng(publicProject, 192, logoBytes));
   files.set("icons/icon-512.png", generateStoreIconPng(publicProject, 512, logoBytes));
-  {
-    const customFaviconAsset = project.assets.find(
-      (asset) => asset.id === project.seo.faviconAssetId,
-    );
-    const customFaviconBytes = customFaviconAsset
-      ? dataUrlBytes(customFaviconAsset.source)
-      : undefined;
-    const validCustomFavicon =
-      customFaviconBytes && imageMimeTypeFromBytes(customFaviconBytes) === "image/x-icon"
-        ? customFaviconBytes
-        : undefined;
-    files.set(
-      "favicon.ico",
-      validCustomFavicon ?? buildFaviconIco(publicProject.identity.brandName),
-    );
-  }
+  files.set("favicon.ico", faviconIcoForProject(project));
   files.set("offline/index.html", buildOfflinePage(publicProject));
   files.set("manifest.webmanifest", buildWebManifest(publicProject));
   const precacheContent = new Map<string, string | Uint8Array>([
@@ -3563,6 +3574,7 @@ export function exportProject(projectInput: StoreProjectV1, options: ExportOptio
       options.recoveryFiles,
     ),
   );
+  assertExportedFavicon(files);
   return { files, audit, optimization };
 }
 
@@ -4054,6 +4066,12 @@ export function renderPreviewHtml(
     ),
   );
   document = prefixDocumentHrefs(project, document);
+  const previewFaviconHref = `data:image/x-icon;base64,${toBase64Bytes(faviconIcoForProject(project))}`;
+  const previewFaviconAttribute = ` data-solara-preview-favicon="${escapeAttribute(previewFaviconHref)}"`;
+  document = document.replace(
+    /(<link rel="(?:icon|shortcut icon)" href="[^"]*\/favicon\.ico")/g,
+    `$1${previewFaviconAttribute}`,
+  );
   const usedSources = new Map(
     [...previewAssets.sources].filter(([path]) => document.includes(path)),
   );
@@ -4098,6 +4116,17 @@ function toBase64(value: string): string {
     return btoa(binary);
   }
   return Buffer.from(value, "utf8").toString("base64");
+}
+
+function toBase64Bytes(value: Uint8Array): string {
+  if (typeof btoa === "function") {
+    let binary = "";
+    value.forEach((byte) => {
+      binary += String.fromCharCode(byte);
+    });
+    return btoa(binary);
+  }
+  return Buffer.from(value).toString("base64");
 }
 
 export function createProjectArchive(projectInput: StoreProjectV1): string {

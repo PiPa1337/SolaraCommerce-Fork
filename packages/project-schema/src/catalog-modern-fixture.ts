@@ -619,6 +619,7 @@ export const catalogModernStore = StoreProjectV2Schema.parse({
         videoAssetId: "",
         backgroundImageId: "asset-hero",
         backgroundDarkness: 60,
+        benefitIconRadius: 8,
         slides: [],
         autoplay: false,
         intervalMs: 6000,

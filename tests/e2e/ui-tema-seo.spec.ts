@@ -1,6 +1,6 @@
 import type { Server } from "node:http";
 import { expect, type Locator, type Page, test } from "@playwright/test";
-import { createCleanStore } from "./project-helpers";
+import { createCleanStore, resetStudioIndexedDb } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 /**
@@ -25,17 +25,7 @@ test.afterAll(async () => {
 });
 
 async function setupCleanStore(page: Page, name: string): Promise<void> {
-  await page.goto(studioUrl);
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolve, reject) => {
-        const request = indexedDB.deleteDatabase("solara-commerce-studio");
-        request.addEventListener("success", () => resolve());
-        request.addEventListener("error", () => reject(request.error));
-        request.addEventListener("blocked", () => reject(new Error("La base quedó bloqueada.")));
-      }),
-  );
-  await page.reload();
+  await resetStudioIndexedDb(page, studioUrl);
   await createCleanStore(page, name);
 }
 
@@ -263,7 +253,6 @@ test("R3-P7-B5: las vistas previas de Google/OG/WhatsApp reflejan el título de 
   const homeTitleInput = page.locator('input[aria-label="Título SEO"]').first();
   await expect(homeTitleInput).toBeVisible();
   await homeTitleInput.fill("Título único de la vista previa");
-  await page.waitForTimeout(900);
 
   await page.getByRole("tab", { name: "SEO", exact: true }).click();
   await expect(page.getByRole("heading", { name: "SEO y Google" })).toBeVisible();

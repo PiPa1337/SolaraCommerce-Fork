@@ -193,13 +193,16 @@ export function buildScaleDemoProject(): StoreProjectV1 {
     productIds: [],
     imageId,
   }));
+  const templateProduct = demo.products[0];
+  if (!templateProduct) throw new Error("La demo no tiene un producto base para clonar.");
   const products = Array.from({ length: 200 }, (_, index) => {
     const category = categories[index % categories.length];
+    if (!category) throw new Error("La demo no tiene categorías para asignar productos.");
     const collectionIds = demo.collections.map((collection) => collection.id);
     return {
-      ...structuredClone(demo.products[0]),
+      ...structuredClone(templateProduct),
       id: `predeterminado-product-${index + 1}`,
-      variants: structuredClone(demo.products[0].variants).map((variant, variantIndex) => ({
+      variants: structuredClone(templateProduct.variants).map((variant, variantIndex) => ({
         ...variant,
         id: `predeterminado-product-${index + 1}-variant-${variantIndex + 1}`,
       })),

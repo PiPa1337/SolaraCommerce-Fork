@@ -7,6 +7,7 @@
  */
 import type { Server } from "node:http";
 import { expect, test } from "@playwright/test";
+import { resetStudioIndexedDb } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 120_000 : 90_000);
@@ -24,22 +25,8 @@ test.afterAll(async () => {
   await stopStudioServer(server);
 });
 
-async function resetIndexedDb(page: import("@playwright/test").Page) {
-  await page.goto(studioUrl);
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolveDelete, reject) => {
-        const request = indexedDB.deleteDatabase("solara-commerce-studio");
-        request.addEventListener("success", () => resolveDelete());
-        request.addEventListener("error", () => reject(request.error));
-      }),
-  );
-  await page.reload();
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-}
-
 async function openDemoStore(page: import("@playwright/test").Page) {
-  await resetIndexedDb(page);
+  await resetStudioIndexedDb(page, studioUrl);
   await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
   await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
   await page.getByRole("tab", { name: "Exportar", exact: true }).click();
@@ -61,7 +48,7 @@ async function createAuditStore(page: import("@playwright/test").Page) {
 test("el resumen de salud muestra el mismo conteo de críticos que bloquea la producción", async ({
   page,
 }) => {
-  await resetIndexedDb(page);
+  await resetStudioIndexedDb(page, studioUrl);
   await createAuditStore(page);
   await page.getByRole("tab", { name: "Exportar", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Exportar" })).toBeVisible();
@@ -149,10 +136,11 @@ test("P8-B6: el historial de exportaciones registra y se borra con confirmación
   await expect(page.getByTestId("ui-export-result")).toContainText("Exportación correcta", {
     timeout: 90_000,
   });
-  await page.waitForTimeout(600);
 
   const history = page.getByTestId("ui-export-history");
+  await expect(history).toBeVisible();
   const items = history.getByTestId("ui-export-history-item");
+  await expect(items.first()).toBeVisible();
   const count = await items.count();
   console.log("P8-B6 ítems del historial:", count);
   expect(count).toBeGreaterThan(0);
@@ -189,6 +177,30 @@ test("R4-P8-B5: exportar producción pasa por confirmación y completa las etapa
   page,
 }) => {
   await openDemoStore(page);
+  await page.evaluate(() => {
+    const directory = (
+      name: string,
+    ): {
+      name: string;
+      getDirectoryHandle(childName: string): Promise<ReturnType<typeof directory>>;
+      getFileHandle(): Promise<{
+        createWritable(): Promise<{ write(): Promise<void>; close(): Promise<void> }>;
+      }>;
+    } => ({
+      name,
+      getDirectoryHandle: async (childName) => directory(`${name}/${childName}`),
+      getFileHandle: async () => ({
+        createWritable: async () => ({
+          write: async () => undefined,
+          close: async () => undefined,
+        }),
+      }),
+    });
+    Object.defineProperty(window, "showDirectoryPicker", {
+      configurable: true,
+      value: async () => directory("playwright-export"),
+    });
+  });
   await page.getByTestId("ui-export-production").click();
   const dialog = page.getByRole("dialog", { name: "Exportar sitio de producción" });
   await expect(dialog).toBeVisible();

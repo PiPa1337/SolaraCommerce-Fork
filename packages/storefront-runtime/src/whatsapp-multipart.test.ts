@@ -1,6 +1,6 @@
 import { referenceStore } from "@solara/project-schema/fixture";
 import { describe, expect, it } from "vitest";
-import type { CartLine } from "./index";
+import type { CartLine, WhatsAppMessageProject } from "./index";
 import {
   buildWhatsAppMessage,
   buildWhatsAppUrl,
@@ -22,13 +22,8 @@ function makeProduct(overrides: Partial<CartLine> = {}): CartLine {
     ...overrides,
   };
 }
-function makeStore(overrides: any = {}) {
-  return {
-    ...referenceStore,
-    ...overrides,
-    whatsapp: { ...referenceStore.whatsapp, ...(overrides.whatsapp || {}) },
-    publicCopy: { ...referenceStore.publicCopy, ...(overrides.publicCopy || {}) },
-  };
+function makeStore(): WhatsAppMessageProject {
+  return referenceStore;
 }
 const customer = {
   name: "Malena Ortiz",
@@ -41,26 +36,26 @@ const PHONE = "5491123456789";
 describe("WhatsApp multiparte - builder v2", () => {
   it("renglon con cantidad, variante y subtotal exacto en centavos", () => {
     const msg = buildWhatsAppMessage(
-      makeStore() as any,
+      makeStore(),
       [makeProduct({ title: "Vaso", variantTitle: "x50", unitPrice: 19650, quantity: 3 })],
       customer,
     );
-    expect(msg).toContain("- 3x Vaso (x50) = " + formatMoney(19650 * 3));
+    expect(msg).toContain(`- 3x Vaso (x50) = ${formatMoney(19650 * 3)}`);
     expect(msg).toContain(formatMoney(19650 * 3));
   });
   it("cantidad 1 omite el prefijo y variante Unica se oculta", () => {
     const msg = buildWhatsAppMessage(
-      makeStore() as any,
+      makeStore(),
       [makeProduct({ title: "Papel", variantTitle: "Única", unitPrice: 17550, quantity: 1 })],
       customer,
     );
-    expect(msg).toContain("- Papel = " + formatMoney(17550));
+    expect(msg).toContain(`- Papel = ${formatMoney(17550)}`);
     expect(msg).not.toContain("1x Papel");
     expect(msg).not.toContain("(Única)");
   });
   it("una sola parte: sin headers de parte, sin ID, con total y cliente", () => {
     const parts = splitOrderParts(
-      makeStore() as any,
+      makeStore(),
       [makeProduct({ title: "A", variantTitle: "V1", unitPrice: 100000, quantity: 2 })],
       customer,
     );
@@ -74,7 +69,7 @@ describe("WhatsApp multiparte - builder v2", () => {
   });
   it("sanitiza titulos: colapsa whitespace y elimina asteriscos", () => {
     const msg = buildWhatsAppMessage(
-      makeStore() as any,
+      makeStore(),
       [makeProduct({ title: "Remera\n*Con*  Salto", variantTitle: "V1\nV2" })],
       customer,
     );
@@ -84,7 +79,7 @@ describe("WhatsApp multiparte - builder v2", () => {
   });
   it("translitera acentos en titulos pero preserva la enie y los datos del cliente", () => {
     const msg = buildWhatsAppMessage(
-      makeStore() as any,
+      makeStore(),
       [makeProduct({ title: "Copa térmica", variantTitle: "Niño" })],
       { ...customer, name: "José García", notes: "año 2026" },
     );
@@ -94,12 +89,12 @@ describe("WhatsApp multiparte - builder v2", () => {
   });
   it("dedupe: lineas identicas se fusionan sumando cantidad", () => {
     const parts = splitOrderParts(
-      makeStore() as any,
+      makeStore(),
       [makeProduct({ quantity: 1 }), makeProduct({ quantity: 2 })],
       customer,
     );
     expect(parts.length).toBe(1);
-    expect(parts[0]).toContain("3x Producto Base (Variante Base) = " + formatMoney(150000 * 3));
+    expect(parts[0]).toContain(`3x Producto Base (Variante Base) = ${formatMoney(150000 * 3)}`);
   });
 });
 
@@ -119,19 +114,18 @@ describe("WhatsApp multiparte - split", () => {
   it("60 renglones: 2 partes 50+10 con headers, subtotales que suman el total", () => {
     const lines = cart60();
     const total = lines.reduce((s, l) => s + l.unitPrice * l.quantity, 0);
-    const parts = splitOrderParts(makeStore() as any, lines, customer);
+    const parts = splitOrderParts(makeStore(), lines, customer);
     expect(parts.length).toBe(2);
     expect(parts[0]).toMatch(/\*Pedido #[0-9A-F]{4} · Parte 1 de 2\*/);
     expect(parts[1]).toMatch(/\*Pedido #[0-9A-F]{4} · Parte 2 de 2\*/);
     const fp = (parts[0] as string).match(/Pedido #([0-9A-F]{4})/)?.[1];
     expect(parts[1] as string).toContain(`Pedido #${fp}`);
     const sub1 = lines.slice(0, 50).reduce((s, l) => s + l.unitPrice * l.quantity, 0);
-    const sub2 = total - sub1;
-    expect(parts[0]).toContain("Subtotal de esta parte: " + formatMoney(sub1));
+    expect(parts[0]).toContain(`Subtotal de esta parte: ${formatMoney(sub1)}`);
     expect(parts[0]).toContain("Sigue en la parte 2 →");
     expect(parts[0]).not.toContain("Malena Ortiz");
     expect(parts[0]).not.toContain("Total del pedido");
-    expect(parts[1]).toContain("Total del pedido: " + formatMoney(total));
+    expect(parts[1]).toContain(`Total del pedido: ${formatMoney(total)}`);
     expect(parts[1]).toContain("Malena Ortiz");
     expect(parts[1]).toContain("✓ Fin del pedido (2/2)");
     expect(parts[1]).not.toContain("Sigue en la parte");
@@ -150,7 +144,7 @@ describe("WhatsApp multiparte - split", () => {
         quantity: 1,
       }),
     );
-    const parts = splitOrderParts(makeStore() as any, lines, customer);
+    const parts = splitOrderParts(makeStore(), lines, customer);
     expect(parts.length).toBe(12);
     expect(parts[11]).toContain("productos mas (incluidos en el total)");
     expect(parts[11]).toContain("✓ Fin del pedido (12/12)");

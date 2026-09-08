@@ -16,7 +16,7 @@ import { expect, type Locator, type Page, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { StoreProjectV1Schema, type Theme } from "@solara/project-schema";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
-import { createCleanStore } from "./project-helpers";
+import { createCleanStore, resetStudioIndexedDb } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 150_000 : 90_000);
@@ -80,32 +80,9 @@ test.afterAll(async () => {
   await stopStudioServer(server);
 });
 
-async function resetIndexedDb(page: Page): Promise<void> {
-  await page.goto(studioUrl);
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolveDelete, reject) => {
-        const request = indexedDB.deleteDatabase("solara-commerce-studio");
-        request.addEventListener("success", () => resolveDelete());
-        request.addEventListener("error", () => reject(request.error));
-        request.addEventListener("blocked", () => reject(new Error("La base quedó bloqueada.")));
-      }),
-  );
-  await page.reload();
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-}
-
 async function setupCleanStore(page: Page, name: string): Promise<void> {
-  await resetIndexedDb(page);
+  await resetStudioIndexedDb(page, studioUrl);
   await createCleanStore(page, name);
-}
-
-async function openDemoStore(page: Page): Promise<void> {
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
-  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
-    timeout: 30_000,
-  });
 }
 
 async function openThemeTab(page: Page): Promise<void> {

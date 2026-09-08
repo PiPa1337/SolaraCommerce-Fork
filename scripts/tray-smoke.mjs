@@ -9,7 +9,9 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const trayExe = join(repositoryRoot, "Abrir SolaraCommerce.exe");
+const trayExe = process.env.SOLARA_TRAY_EXE
+  ? resolve(process.env.SOLARA_TRAY_EXE)
+  : join(repositoryRoot, "Abrir SolaraCommerce.exe");
 const serveScript = join(repositoryRoot, "packages", "exporter", "scripts", "serve.mjs");
 const ports = Array.from({ length: 8 }, (_, index) => 4173 + index);
 const children = new Set();
@@ -386,6 +388,33 @@ async function main() {
       await closeServer(mismatch);
     } else {
       skipped.push("puerto reasignado: ningún puerto libre");
+    }
+
+    available = await freePorts();
+    if (available.length >= 1) {
+      const timeoutPort = available[0];
+      const timeoutId = "session-sin-respuesta";
+      const timeoutServer = await startMock(timeoutPort, (request, response) => {
+        response.setHeader("Content-Type", "application/json");
+        if (request.url === "/__solara/session") {
+          setTimeout(() => response.end(JSON.stringify({ managed: true, sessionId: timeoutId })), 1200).unref();
+          return;
+        }
+        response.statusCode = 404;
+        response.end("{}");
+      });
+      const timeoutPath = await writeRecord(
+        root,
+        record(root, timeoutPort, timeoutId, token()),
+      );
+      const timeoutCheck = await runTray(root, "--diagnostic-list");
+      assert.equal(timeoutCheck.result.count, 1);
+      await stat(timeoutPath);
+      await rm(timeoutPath, { force: true });
+      await delay(1300);
+      await closeServer(timeoutServer);
+    } else {
+      skipped.push("sesión no responsiva: ningún puerto libre");
     }
 
     available = await freePorts();

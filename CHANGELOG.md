@@ -1,10 +1,76 @@
-### Reinicio real de la aplicación desde el tray (2026-09-07)
+### Integración de Impeccable para el agente de código (2026-09-08)
+
+**Added**
+
+- Se incorporó Impeccable de forma proyecto-local para que el agente de código
+  detecte problemas visuales en Studio y storefront mediante el hook de Codex.
+- Se agregaron `PRODUCT.md`, `DESIGN.md` y la configuración compartida de diseño,
+  preservando la separación entre tokens del editor y del sitio público.
+
+### Favicon consistente en todas las tiendas (2026-09-08)
 
 **Fixed**
 
-- `Reiniciar aplicación` deja de relanzar únicamente el proceso del tray: cierra
-  y vuelve a levantar las sesiones Node/Studio activas, conservando su cantidad,
-  validando el registro HTTP de cada sesión y abriendo las URLs nuevas.
+- El exportador compartido siempre publica `favicon.ico` como ICO válido y
+  reconstruye favicons legados WebP usando su fallback PNG, conservando seis
+  resoluciones y la vista previa.
+- El Studio sólo permite seleccionar favicons ICO y el canal del agente rechaza
+  adjuntar otros formatos como `seo.favicon`.
+
+**Tests**
+
+- Se agregó regresión para el favicon legado de Stylo y validación de staging y
+  attach del agente.
+
+### Formulario mobile sin espacio de email (2026-09-08)
+
+**Fixed**
+
+- El formulario de contacto V2 deja de reservar la línea del estado cuando está
+  vacía, por lo que al ocultar el botón de email el bloque se adapta al único
+  canal visible.
+
+**Tests**
+
+- Se agregó una prueba responsive con `showEmailButton: false` que verifica un
+  solo botón, sin alto residual ni overflow horizontal.
+
+### Banda móvil editable para los beneficios del hero (2026-09-08)
+
+**Changed**
+
+- Los tres beneficios configurables del hero V2 ahora se presentan en mobile
+  como una banda única debajo de la imagen, con iconos enmarcados, jerarquía
+  de título/descripción y superficie derivada del tema.
+- La banda incorpora más espacio vertical entre filas y en sus bordes para
+  mejorar la lectura en pantallas pequeñas.
+- Se quitan las líneas horizontales de la banda para conservar una superficie
+  continua entre los tres items.
+- El radio de los marcos de iconos mobile queda disponible como ajuste numérico
+  del Hero en el constructor, de 0 a 18 px, con 8 px como valor predeterminado.
+- Se conserva el repeater del constructor y no se agrega un botón de consulta;
+  desktop y tablet mantienen su composición existente.
+
+**Tests**
+
+- La prueba responsive del hero verifica la superficie, la columna de icono,
+  el ancho del rail y la ausencia de CTA dentro de la banda móvil.
+
+### Reinicio real de la aplicación desde el tray (2026-09-08)
+
+**Fixed**
+
+- `Reiniciar aplicación` cierra las sesiones Node/Studio en segundo plano y un
+  auxiliar espera la salida completa del tray anterior antes de tomar el mutex
+  y volver a levantar la misma cantidad de sesiones.
+- El menú evita dobles clics durante el cierre y conserva la bandeja disponible
+  si el reinicio falla.
+- El cierre espera que cada puerto quede realmente libre antes de reutilizarlo;
+  una sesión que no responde pero conserva su puerto ya no se trata como huérfana.
+- Los fallos del launcher ya no aparecen como un diálogo vacío cuando su salida
+  contiene sólo códigos ANSI o devuelve una respuesta nula.
+- El launcher conserva la salida del servidor en `.solara-runtime/logs/` y
+  devuelve los detalles de instalación o build cuando fallan.
 - El reinicio vuelve a pasar por el launcher administrado, por lo que detecta y
   recompila cambios recientes del Studio antes de servirlos.
 

@@ -409,6 +409,7 @@ const heroSettings = z.object({
   videoAssetId: z.string().default(""),
   backgroundImageId: z.string().default(""),
   backgroundDarkness: z.number().int().min(0).max(90).default(60),
+  benefitIconRadius: z.number().int().min(0).max(18).default(8),
   slides: z.array(heroSlideSchema).default([]),
   autoplay: z.boolean().default(false),
   intervalMs: z.number().int().min(3000).max(15000).default(6000),
@@ -554,9 +555,11 @@ function renderHeroBenefits(
   extraClass = "",
   ariaLabel = "Beneficios",
   editorContext?: CanvasEditorContext,
+  inlineStyle?: string,
 ): string {
   if (benefits.length === 0) return "";
-  return `<ul class="catalog-hero-benefits ${extraClass}" data-hero-benefits aria-label="${escapeAttribute(ariaLabel)}">${benefits
+  const styleAttribute = inlineStyle ? ` style="${escapeAttribute(inlineStyle)}"` : "";
+  return `<ul class="catalog-hero-benefits ${extraClass}" data-hero-benefits aria-label="${escapeAttribute(ariaLabel)}"${styleAttribute}>${benefits
     .map((benefit) => {
       const icon = catalogHeroBenefitIcons[benefit.icon] ?? catalogHeroBenefitIcons.check ?? "";
       const itemId = "id" in benefit && typeof benefit.id === "string" ? benefit.id : undefined;
@@ -644,6 +647,7 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
       "videoAssetId",
       "backgroundImageId",
       "backgroundDarkness",
+      "benefitIconRadius",
       "slides",
       "autoplay",
       "intervalMs",
@@ -684,6 +688,14 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
       min: 0,
       max: 90,
       step: 5,
+    },
+    {
+      key: "benefitIconRadius",
+      type: "number",
+      label: "Radio de íconos mobile (px)",
+      min: 0,
+      max: 18,
+      step: 1,
     },
     {
       key: "slides",
@@ -945,6 +957,7 @@ export const catalogHero: ModuleDefinition<"catalog-hero", z.infer<typeof heroSe
             "catalog-hero-benefits--band",
             copy.hero.benefits,
             canvasContext(context),
+            `--catalog-hero-benefit-icon-radius:${Math.min(Math.max(settings.benefitIconRadius, 0), 18)}px`,
           )
         : "";
     const titleLinesMarkup = isV2Hero

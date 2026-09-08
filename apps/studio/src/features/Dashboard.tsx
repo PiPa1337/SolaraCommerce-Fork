@@ -792,19 +792,16 @@ export function Dashboard({
         ) : null}
 
         <section className="dashboard-cosmic-library" aria-labelledby={libraryTitleId}>
-          <header className="dashboard-cosmic-library__header">
-            <div>
-              <h1 id={libraryTitleId}>Tus tiendas</h1>
-            </div>
-            <div className="dashboard-cosmic-library__header-actions">
-              <span className="dashboard-cosmic-count" aria-live="polite" aria-atomic="true">
-                {visible.length} visibles
-              </span>
-              <Button ref={createButtonRef} variant="primary" icon={Plus} onClick={openCreate}>
-                Nueva tienda
-              </Button>
-            </div>
-          </header>
+          <h1 id={libraryTitleId} className="visually-hidden">
+            Tus tiendas
+          </h1>
+          <span
+            className="dashboard-cosmic-count visually-hidden"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            {visible.length} visibles
+          </span>
 
           <DashboardToolbar
             query={query}
@@ -834,6 +831,9 @@ export function Dashboard({
               onClick={() => void backupAll()}
             >
               {backingUp !== undefined ? `Respaldando ${backingUp}` : "Respaldar todo"}
+            </Button>
+            <Button ref={createButtonRef} variant="primary" icon={Plus} onClick={openCreate}>
+              Nueva tienda
             </Button>
             {compareMode ? (
               <div className="dashboard-cosmic-comparebar">

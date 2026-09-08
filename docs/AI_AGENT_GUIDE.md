@@ -274,7 +274,8 @@ usar el upload por chunks:
 ```
 
 El host valida tamaño, firma binaria, MIME, SHA-256 y dimensiones reales (mínimo 32×32 px) de PNG,
-JPEG, WebP o GIF. Staging no modifica una tienda. La respuesta devuelve
+JPEG, WebP, GIF o ICO. Staging no modifica una tienda. Para `seo.favicon`, el asset debe ser
+un ICO válido; PNG/WebP/GIF no pueden adjuntarse directamente como favicon. La respuesta devuelve
 `assetId`; usarlo en el mismo plan:
 
 ```json

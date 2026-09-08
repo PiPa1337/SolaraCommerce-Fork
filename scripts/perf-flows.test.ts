@@ -2,12 +2,10 @@ import { performance } from "node:perf_hooks";
 import { describe, it } from "vitest";
 import { createProjectArchive, readProjectArchive } from "../apps/studio/src/lib/projectArchive";
 import { generatePerformanceFixture } from "../packages/core/src/performance";
-import { auditProject } from "../packages/exporter/src/audit";
 import { exportProject, renderPreviewHtml } from "../packages/exporter/src/index";
 import { ensureCatalogModernV2Sections } from "../packages/project-schema/src/catalog-modern-template";
 import type { StoreProjectV1 } from "../packages/project-schema/src/index";
 import { catalogScaleStore } from "../packages/project-schema/src/scale-fixture";
-import { optimizeProject } from "../packages/site-optimizer/src/index";
 
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = "";
@@ -31,14 +29,6 @@ function serializeSiteFiles(files: ReadonlyMap<string, string | Uint8Array>): st
 function measure(label: string, fn: () => unknown): unknown {
   const s = performance.now();
   const r = fn();
-  const e = performance.now();
-  console.log(`    ${label}: ${(e - s).toFixed(0)} ms`);
-  return r;
-}
-
-async function measureAsync(label: string, fn: () => Promise<unknown>): Promise<unknown> {
-  const s = performance.now();
-  const r = await fn();
   const e = performance.now();
   console.log(`    ${label}: ${(e - s).toFixed(0)} ms`);
   return r;

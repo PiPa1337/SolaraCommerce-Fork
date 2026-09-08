@@ -41,6 +41,7 @@ import {
   createProjectArchive,
   EXPORTER_RENDERER_FINGERPRINT,
   exportProject,
+  imageMimeTypeFromSource,
   readProjectArchive,
 } from "@solara/exporter";
 import {
@@ -49,11 +50,13 @@ import {
   CollectionSchema,
   type ImageAsset,
   ImageAssetSchema,
+  isValidIco,
   type Product,
   ProductSchema,
   type StoreProjectV1,
   StoreProjectV2Schema,
 } from "@solara/project-schema";
+import { isCatalogModernSentinelValue } from "@solara/project-schema/catalog-modern-guidance";
 import { buildCatalogModernProject } from "@solara/project-schema/catalog-modern-template";
 import {
   applyCatalogModernUpgrade,
@@ -337,7 +340,9 @@ function planWarnings(project: StoreProjectV1, diff: PlanDiff): string[] {
   // ejemplo: un clon que no los reemplace se vería terminado sin serlo.
   const hasDemoProducts = project.products.some(
     (product) =>
-      /^product-placeholder-\d+$/.test(product.id) || /^Producto \d+$/.test(product.title),
+      /^product-placeholder-\d+$/.test(product.id) ||
+      isCatalogModernSentinelValue(product.title) ||
+      isCatalogModernSentinelValue(product.description),
   );
   if (hasDemoProducts) {
     warnings.push(
@@ -384,6 +389,26 @@ function imageDimensions(mimeType: AssetStageParams["mimeType"], bytes: Uint8Arr
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     if (view.getUint32(0) === 0x89504e47 && view.getUint32(4) === 0x0d0a1a0a) {
       return { width: view.getUint32(16), height: view.getUint32(20) };
+    }
+  }
+  if (
+    mimeType === "image/x-icon" &&
+    isValidIco(bytes) &&
+    byte(0) === 0 &&
+    byte(1) === 0 &&
+    byte(2) === 1 &&
+    byte(3) === 0
+  ) {
+    const count = byte(4) | (byte(5) << 8);
+    if (count > 0 && bytes.length >= 6 + count * 16) {
+      let width = 0;
+      let height = 0;
+      for (let index = 0; index < count; index += 1) {
+        const offset = 6 + index * 16;
+        width = Math.max(width, byte(offset) || 256);
+        height = Math.max(height, byte(offset + 1) || 256);
+      }
+      if (width > 0 && height > 0) return { width, height };
     }
   }
   if (
@@ -443,7 +468,9 @@ function validateImageSignature(mimeType: AssetStageParams["mimeType"], bytes: U
         starts([0x47, 0x49, 0x46, 0x38, 0x39, 0x61]))) ||
     (mimeType === "image/webp" &&
       starts([0x52, 0x49, 0x46, 0x46]) &&
-      String.fromCharCode(...bytes.subarray(8, 12)) === "WEBP");
+      String.fromCharCode(...bytes.subarray(8, 12)) === "WEBP") ||
+    (mimeType === "image/x-icon" &&
+      isValidIco(bytes));
   if (!valid) fail("ASSET_SIGNATURE_INVALID", "El contenido no coincide con el MIME declarado.");
 }
 
@@ -2699,6 +2726,21 @@ export class AgentController {
               "ASSET_NOT_STAGED",
               `El asset ${operation.assetId} no está staged en esta sesión.`,
             );
+          if (operation.target === "seo.favicon") {
+            const faviconAsset =
+              staged?.asset ?? project.assets.find((asset) => asset.id === operation.assetId);
+            const faviconIsIco =
+              !!faviconAsset &&
+              /^data:/i.test(faviconAsset.source) &&
+              imageMimeTypeFromSource(faviconAsset.source, faviconAsset.mimeType) ===
+                "image/x-icon";
+            if (!faviconIsIco) {
+              fail(
+                "FAVICON_NOT_ICO",
+                "El favicon debe ser un asset ICO válido; subilo con mimeType image/x-icon.",
+              );
+            }
+          }
           let assets = project.assets;
           if (!assetExists) {
             if (!staged)

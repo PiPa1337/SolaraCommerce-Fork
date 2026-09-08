@@ -1,5 +1,6 @@
 import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
+import { resetStudioIndexedDb } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 /** Fase 12 — Un perfil limpio queda con la única demo Predeterminado V2. */
@@ -18,20 +19,6 @@ test.afterAll(async () => {
   await stopStudioServer(server);
 });
 
-async function wipeIndexedDb(page: Page): Promise<void> {
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolve, reject) => {
-        const request = indexedDB.deleteDatabase("solara-commerce-studio");
-        request.addEventListener("success", () => resolve());
-        request.addEventListener("error", () => reject(request.error));
-        request.addEventListener("blocked", () =>
-          reject(new Error("No se pudo limpiar la base de Studio.")),
-        );
-      }),
-  );
-}
-
 async function openStore(page: Page, cardId: string): Promise<void> {
   const card = page.locator(`[data-store-card-id="${cardId}"]`);
   await card.click();
@@ -40,12 +27,7 @@ async function openStore(page: Page, cardId: string): Promise<void> {
 }
 
 test("el dashboard muestra sólo Predeterminado V2", async ({ page }) => {
-  await page.goto(studioUrl);
-  await wipeIndexedDb(page);
-  await page.reload();
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
-    timeout: 30_000,
-  });
+  await resetStudioIndexedDb(page, studioUrl, 30_000);
 
   const cards = page.locator("[data-store-card-id]");
   await expect(cards).toHaveCount(1, { timeout: 15_000 });
@@ -64,20 +46,7 @@ test("el dashboard muestra sólo Predeterminado V2", async ({ page }) => {
 });
 
 test("P9-B5: el aviso global de reset se cierra y no vuelve a aparecer", async ({ page }) => {
-  await page.goto(studioUrl);
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolve, reject) => {
-        const request = indexedDB.deleteDatabase("solara-commerce-studio");
-        request.addEventListener("success", () => resolve());
-        request.addEventListener("error", () => reject(request.error));
-        request.addEventListener("blocked", () =>
-          reject(new Error("No se pudo limpiar la base de Studio.")),
-        );
-      }),
-  );
-  await page.reload();
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await resetStudioIndexedDb(page, studioUrl);
 
   const notice = page.locator(".global-notice");
   const hadNotice = (await notice.count()) > 0;
@@ -95,20 +64,7 @@ test("P9-B5: el aviso global de reset se cierra y no vuelve a aparecer", async (
 });
 
 test("P2-B5: el avatar de Predeterminado conserva sus iniciales", async ({ page }) => {
-  await page.goto(studioUrl);
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolve, reject) => {
-        const request = indexedDB.deleteDatabase("solara-commerce-studio");
-        request.addEventListener("success", () => resolve());
-        request.addEventListener("error", () => reject(request.error));
-        request.addEventListener("blocked", () =>
-          reject(new Error("No se pudo limpiar la base de Studio.")),
-        );
-      }),
-  );
-  await page.reload();
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await resetStudioIndexedDb(page, studioUrl);
 
   const marks = await page.locator(".dashboard-store-card__mark").allInnerTexts();
   console.log("P2-B5 marks:", JSON.stringify(marks));
@@ -118,20 +74,7 @@ test("P2-B5: el avatar de Predeterminado conserva sus iniciales", async ({ page 
 
 test("R3-P9-B5: el dashboard no desborda en viewport móvil", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(studioUrl);
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolve, reject) => {
-        const request = indexedDB.deleteDatabase("solara-commerce-studio");
-        request.addEventListener("success", () => resolve());
-        request.addEventListener("error", () => reject(request.error));
-        request.addEventListener("blocked", () =>
-          reject(new Error("No se pudo limpiar la base de Studio.")),
-        );
-      }),
-  );
-  await page.reload();
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await resetStudioIndexedDb(page, studioUrl);
 
   const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
   console.log("R3-P9-B5 scrollWidth móvil:", scrollWidth);
@@ -140,24 +83,11 @@ test("R3-P9-B5: el dashboard no desborda en viewport móvil", async ({ page }) =
 
 test("R4-P2-B5: la vista en lista del dashboard alterna y persiste", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(studioUrl);
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolve, reject) => {
-        const request = indexedDB.deleteDatabase("solara-commerce-studio");
-        request.addEventListener("success", () => resolve());
-        request.addEventListener("error", () => reject(request.error));
-        request.addEventListener("blocked", () =>
-          reject(new Error("No se pudo limpiar la base de Studio.")),
-        );
-      }),
-  );
-  await page.reload();
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await resetStudioIndexedDb(page, studioUrl);
 
   const listButton = page.getByRole("button", { name: "Vista en lista" });
   await listButton.click();
-  await page.waitForTimeout(600);
+  await expect(listButton).toHaveAttribute("aria-pressed", "true");
   const listActive = await listButton.getAttribute("aria-pressed");
   console.log("R4-P2-B5 lista activa:", listActive);
   expect(listActive).toBe("true");
@@ -173,24 +103,11 @@ test("R4-P2-B5: la vista en lista del dashboard alterna y persiste", async ({ pa
 
 test("R5-P5-B5: el filtro de estado del dashboard persiste al recargar", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(studioUrl);
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolve, reject) => {
-        const request = indexedDB.deleteDatabase("solara-commerce-studio");
-        request.addEventListener("success", () => resolve());
-        request.addEventListener("error", () => reject(request.error));
-        request.addEventListener("blocked", () =>
-          reject(new Error("No se pudo limpiar la base de Studio.")),
-        );
-      }),
-  );
-  await page.reload();
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await resetStudioIndexedDb(page, studioUrl);
 
   const filter = page.getByRole("combobox", { name: "Estado" });
   await filter.selectOption("archived");
-  await page.waitForTimeout(500);
+  await expect(filter).toHaveValue("archived");
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
   const persisted = await page.getByRole("combobox", { name: "Estado" }).inputValue();

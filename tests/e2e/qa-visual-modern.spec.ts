@@ -21,6 +21,10 @@ const routes = [
 ];
 
 test("P8-3: capturas del sitio catalogModern para auditoria visual", async ({ browser }) => {
+  if (process.env.SOLARA_QA_VISUAL !== "1") {
+    test.skip(true, "El barrido visual requiere SOLARA_QA_VISUAL=1.");
+    return;
+  }
   const server = createServer((request, response) => {
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
     const requested = decodeURIComponent(url.pathname).replace(/^\/+/, "");

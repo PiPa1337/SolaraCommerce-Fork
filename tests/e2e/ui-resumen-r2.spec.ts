@@ -15,7 +15,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { type StoreProjectV1, StoreProjectV1Schema } from "@solara/project-schema";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
-import { createCleanStore, openMutableScaleStore } from "./project-helpers";
+import { createCleanStore, openMutableScaleStore, resetStudioIndexedDb } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 150_000 : 90_000);
@@ -125,21 +125,6 @@ test.afterAll(async () => {
   await new Promise<void>((resolveClosing) => editedServer.close(() => resolveClosing()));
 });
 
-async function resetIndexedDb(page: Page): Promise<void> {
-  await page.goto(studioUrl);
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolveDelete, reject) => {
-        const request = indexedDB.deleteDatabase("solara-commerce-studio");
-        request.addEventListener("success", () => resolveDelete());
-        request.addEventListener("error", () => reject(request.error));
-        request.addEventListener("blocked", () => reject(new Error("La base quedó bloqueada.")));
-      }),
-  );
-  await page.reload();
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-}
-
 async function openResumenTab(page: Page): Promise<void> {
   await page.getByRole("tab", { name: "Resumen", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Resumen" })).toBeVisible();
@@ -193,7 +178,7 @@ async function prepareWhatsAppOrder(page: Page, baseUrl: string): Promise<string
 test("sentinel: el número placeholder se muestra vacío con error y badge Pendiente", async ({
   page,
 }) => {
-  await resetIndexedDb(page);
+  await resetStudioIndexedDb(page, studioUrl);
   await createCleanStore(page, "Tienda R2 sentinel");
   await openResumenTab(page);
 
@@ -208,7 +193,7 @@ test("sentinel: el número placeholder se muestra vacío con error y badge Pendi
 });
 
 test("validación 8-15 dígitos: badge y error inline cambian con cada estado", async ({ page }) => {
-  await resetIndexedDb(page);
+  await resetStudioIndexedDb(page, studioUrl);
   await createCleanStore(page, "Tienda R2 validación");
   await openResumenTab(page);
 
@@ -238,7 +223,7 @@ test("validación 8-15 dígitos: badge y error inline cambian con cada estado", 
 test("editar número y saludo: efecto real en preview y persistencia al recargar", async ({
   page,
 }) => {
-  await resetIndexedDb(page);
+  await resetStudioIndexedDb(page, studioUrl);
   const editableStoreId = await openMutableScaleStore(page, "Tienda R2 editable");
   await openResumenTab(page);
 

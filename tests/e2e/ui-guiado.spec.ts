@@ -1,6 +1,6 @@
 import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
-import { createCleanStore } from "./project-helpers";
+import { createCleanStore, resetStudioIndexedDb } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 /**
@@ -28,17 +28,7 @@ test.afterAll(async () => {
 });
 
 async function setupCleanStore(page: Page, name: string): Promise<void> {
-  await page.goto(studioUrl);
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolve, reject) => {
-        const request = indexedDB.deleteDatabase("solara-commerce-studio");
-        request.addEventListener("success", () => resolve());
-        request.addEventListener("error", () => reject(request.error));
-        request.addEventListener("blocked", () => reject(new Error("La base quedó bloqueada.")));
-      }),
-  );
-  await page.reload();
+  await resetStudioIndexedDb(page, studioUrl);
   await createCleanStore(page, name);
 }
 
@@ -207,8 +197,10 @@ test("Respaldar y adoptar cambios aplica la actualización y persiste (H8-24)", 
   const storeName = "Tienda actualizable";
   await setupCleanStore(page, storeName);
 
-  // Deja que el autosave del primer arranque se asiente antes de sembrar.
-  await page.waitForTimeout(900);
+  // El seed directo requiere que la creación inicial ya esté persistida.
+  await expect(page.locator(".save-indicator")).toHaveClass(/save-indicator--saved/, {
+    timeout: 15_000,
+  });
   await seedTemplateVersion(page, storeName, 1);
 
   await page.reload();

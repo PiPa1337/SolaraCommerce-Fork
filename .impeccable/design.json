@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-08T06:03:48.9989308Z",
+  "title": "Design System: SolaraCommerce",
+  "extensions": {
+    "colorMeta": {
+      "storefront-background": {
+        "role": "neutral",
+        "displayName": "Warm paper",
+        "canonical": "#f7f5f0",
+        "tonalRamp": ["#25231f", "#514d45", "#777168", "#9f988e", "#c2bcb2", "#d9d4cb", "#eae6df", "#f7f5f0"]
+      },
+      "storefront-accent": {
+        "role": "primary",
+        "displayName": "Terracotta accent",
+        "canonical": "#a63d2f",
+        "tonalRamp": ["#35100b", "#5d1d15", "#7e2a20", "#a63d2f", "#bd685c", "#d0958c", "#e4bbb5", "#f4dfdc"]
+      },
+      "studio-accent": {
+        "role": "primary",
+        "displayName": "Studio orange",
+        "canonical": "#ff6a00",
+        "tonalRamp": ["#351600", "#6b2d00", "#a34600", "#ff6a00", "#ff8a3d", "#ffab73", "#ffd0ad", "#fff0e5"]
+      }
+    },
+    "typographyMeta": {
+      "storefront-display": {
+        "displayName": "Editorial serif",
+        "purpose": "Public Catalog Modern headings and primary display moments."
+      },
+      "studio-ui": {
+        "displayName": "Studio UI sans",
+        "purpose": "Dense editor controls, navigation and operational text."
+      }
+    },
+    "shadows": [
+      {
+        "name": "studio-panel",
+        "value": "0 24px 60px rgba(0, 0, 0, 0.44)",
+        "purpose": "Separate editor panels from the dark application shell."
+      },
+      {
+        "name": "studio-float",
+        "value": "0 8px 24px rgba(0, 0, 0, 0.36)",
+        "purpose": "Lift transient Studio controls and floating surfaces."
+      }
+    ],
+    "motion": [
+      {
+        "name": "storefront-fast",
+        "value": "180ms var(--solara-motion-easing, ease)",
+        "purpose": "Theme-controlled public control state transitions."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "prefers-reduced-motion: reduce",
+        "purpose": "Public and Studio motion must resolve to the final state."
+      }
+    ],
+    "breakpoints": [
+      { "name": "mobile-boundary", "value": "768px" },
+      { "name": "desktop-boundary", "value": "1200px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Storefront primary action",
+      "kind": "button",
+      "refersTo": "storefront-primary-action",
+      "description": "Theme-colored public action with a 48px minimum target.",
+      "html": "<button class=\"ds-storefront-primary\">Continuar</button>",
+      "css": ".ds-storefront-primary { background: var(--solara-accent, #a63d2f); color: var(--solara-accent-text, #fff); min-height: 48px; padding: .75rem 1.1rem; border: 1px solid transparent; border-radius: var(--solara-radius, 2px); font: inherit; } .ds-storefront-primary:focus-visible { outline: 3px solid color-mix(in srgb, var(--solara-accent, #a63d2f), var(--solara-accent-text, #fff) 28%); outline-offset: 3px; }"
+    },
+    {
+      "name": "Studio panel",
+      "kind": "card",
+      "refersTo": "studio-panel",
+      "description": "Dark editor surface using the existing panel radius and shadow tokens.",
+      "html": "<section class=\"ds-studio-panel\"><h2>Panel</h2></section>",
+      "css": ".ds-studio-panel { background: var(--surface, #111214); color: var(--ink, #f3f0ea); padding: 24px; border: 1px solid var(--line, rgb(255 255 255 / .08)); border-radius: var(--radius-panel, 16px); box-shadow: var(--shadow-panel, 0 24px 60px rgba(0,0,0,.44)); } .ds-studio-panel h2 { margin: 0; font: inherit; font-weight: 600; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "A precise local workshop with an editorial public face",
+    "overview": "SolaraCommerce separates a dense dark editing environment from a theme-driven public storefront. The visual system is evidence-led and preserves the existing renderer, responsive contract and store-owned tokens.",
+    "keyCharacteristics": [
+      "Theme-driven public surfaces",
+      "Dense but legible Studio controls",
+      "Editorial V2 rhythm without sacrificing utility",
+      "Accessible, reduced-motion and no-JavaScript fallbacks"
+    ],
+    "rules": [
+      { "name": "The Shared Renderer Rule", "body": "Preview and export must preserve the same semantic public tree.", "section": "overview" },
+      { "name": "The Two Registers Rule", "body": "Studio tokens stay isolated from storefront tokens.", "section": "colors" },
+      { "name": "The Useful Final State Rule", "body": "Motion and responsive states must remain useful when effects are removed.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do derive public styling from the active store theme.",
+      "Do preserve keyboard, reduced-motion and no-JavaScript behavior."
+    ],
+    "donts": [
+      "Don't introduce a new visual family during a narrow refinement.",
+      "Don't change persisted data or native-agent operations to satisfy a visual finding."
+    ]
+  }
+}

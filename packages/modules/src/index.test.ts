@@ -1721,6 +1721,7 @@ describe("catalog-hero V2: contrato de markup para motion (beneficios y líneas)
     expect(html.match(/class="catalog-hero-benefit" data-hero-benefit/g) ?? []).toHaveLength(6);
     expect(html).toContain('class="catalog-hero-benefits catalog-hero-benefits--copy"');
     expect(html).toContain('class="catalog-hero-benefits catalog-hero-benefits--band"');
+    expect(html).toContain('--catalog-hero-benefit-icon-radius:8px');
     expect(html.match(/class="catalog-hero-benefit-icon"/g) ?? []).toHaveLength(6);
     expect(html).toContain(
       'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"',
@@ -1876,6 +1877,7 @@ describe("catalog-hero V2: contrato de markup para motion (beneficios y líneas)
 
     const defaults = schema.parse({});
     expect(defaults.benefits).toHaveLength(3);
+    expect(defaults.benefitIconRadius).toBe(8);
     expect(defaults.benefits[0]?.icon).toBe("truck");
     expect(defaults.benefits[0]?.title).toBe("Envíos a todo el país");
     expect(schema.safeParse({ benefits: [{ icon: "truck", title: "Sin id" }] }).success).toBe(
@@ -1892,6 +1894,21 @@ describe("catalog-hero V2: contrato de markup para motion (beneficios y líneas)
       }).success,
     ).toBe(false);
     expect(schema.safeParse({ benefits: [{ id: "a", title: "A" }] }).success).toBe(true);
+
+    const custom = renderSections(
+      catalogModernV2Store,
+      [
+        {
+          ...heroSection(catalogModernV2Store),
+          settings: {
+            ...heroSection(catalogModernV2Store).settings,
+            benefitIconRadius: 18,
+          },
+        },
+      ],
+      { pageType: "home" },
+    );
+    expect(custom).toContain('--catalog-hero-benefit-icon-radius:18px');
   });
 });
 

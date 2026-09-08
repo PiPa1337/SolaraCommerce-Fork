@@ -27,10 +27,8 @@ test("P3-B2: el pane conserva scroll y foco al cambiar de pestaña y reabrir", a
     .locator(".dashboard-store-card__button")
     .dblclick();
   await page.locator(".studio-shell").waitFor({ timeout: 30000 });
-  await page.waitForTimeout(1000);
 
   await page.getByRole("tab", { name: "Constructor", exact: true }).click();
-  await page.waitForTimeout(1500);
   const pane = page.locator(".editor-pane");
   await expect(pane).toBeVisible();
   await pane.scrollIntoViewIfNeeded();
@@ -43,31 +41,33 @@ test("P3-B2: el pane conserva scroll y foco al cambiar de pestaña y reabrir", a
   );
 
   await page.getByRole("tab", { name: "Resumen", exact: true }).click();
-  await page.waitForTimeout(1200);
+  await expect(page.getByRole("tab", { name: "Resumen", exact: true })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
   await page.getByRole("tab", { name: "Constructor", exact: true }).click();
-  await page.waitForTimeout(1500);
+  await expect(page.getByRole("tab", { name: "Constructor", exact: true })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
   const scrollAfter = await page.evaluate(
     () => document.querySelector<HTMLElement>(".editor-pane")?.scrollTop ?? 0,
   );
   console.log("P3-B2 scroll: antes", scrollBefore, "después", scrollAfter);
   expect(Math.abs(scrollAfter - scrollBefore)).toBeLessThanOrEqual(5);
 
-  await page
-    .getByRole("button", { name: "Cerrar panel de edición" })
-    .click()
-    .catch(() => undefined);
-  await page.waitForTimeout(600);
-  const closed = await page
-    .locator(".editor-pane")
-    .evaluate((el) => el.classList.contains("editor-pane--closed"));
+  await page.getByRole("button", { name: "Cerrar panel de edición" }).click();
+  await expect(pane).toHaveClass(/editor-pane--closed/);
+  const closed = await pane.evaluate((el) => el.classList.contains("editor-pane--closed"));
   console.log("P3-B2 pane cerrado:", closed);
   await page.getByRole("tab", { name: "Resumen", exact: true }).click();
-  await page.waitForTimeout(800);
+  await expect(page.getByRole("tab", { name: "Resumen", exact: true })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
   await page.getByRole("tab", { name: "Constructor", exact: true }).click();
-  await page.waitForTimeout(1200);
-  const reopened = await page
-    .locator(".editor-pane")
-    .evaluate((el) => el.classList.contains("editor-pane--open"));
+  await expect(pane).toHaveClass(/editor-pane--open/);
+  const reopened = await pane.evaluate((el) => el.classList.contains("editor-pane--open"));
   console.log("P3-B2 pane reabierto al volver:", reopened);
   expect(reopened).toBe(true);
 });
@@ -82,7 +82,6 @@ test("R4-P3-B5: el panel cerrado se conserva al recargar la tienda", async ({ pa
     .locator(".dashboard-store-card__button")
     .dblclick();
   await page.locator(".studio-shell").waitFor({ timeout: 30000 });
-  await page.waitForTimeout(1000);
 
   const storeId = await page.evaluate(
     () => document.querySelector(".studio-shell")?.getAttribute("data-project-id") ?? "",
@@ -99,7 +98,6 @@ test("R4-P3-B5: el panel cerrado se conserva al recargar la tienda", async ({ pa
     .locator(".dashboard-store-card__button")
     .dblclick();
   await page.locator(".studio-shell").waitFor({ timeout: 30000 });
-  await page.waitForTimeout(1000);
   const closed = await page
     .locator(".editor-pane")
     .evaluate((el) => el.classList.contains("editor-pane--closed"));

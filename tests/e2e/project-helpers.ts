@@ -11,6 +11,27 @@ export async function createCleanStore(page: Page, name = "Tienda de prueba"): P
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
 }
 
+export async function resetStudioIndexedDb(
+  page: Page,
+  studioUrl: string,
+  headingTimeout = 20_000,
+): Promise<void> {
+  await page.goto(studioUrl);
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolveDelete, reject) => {
+        const request = indexedDB.deleteDatabase("solara-commerce-studio");
+        request.addEventListener("success", () => resolveDelete());
+        request.addEventListener("error", () => reject(request.error));
+        request.addEventListener("blocked", () => reject(new Error("La base quedó bloqueada.")));
+      }),
+  );
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+    timeout: headingTimeout,
+  });
+}
+
 /** Abre una copia mutable de la plantilla protegida conservando el catálogo de escala. */
 export async function openMutableScaleStore(
   page: Page,

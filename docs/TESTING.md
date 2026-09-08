@@ -144,6 +144,25 @@ se derivan de los specs y scripts actuales, no se fijan en esta guía. Los tests
 visuales se activan sólo con `VISUAL_REVIEW_STAGE=...` y escriben en
 `test-results/visual-review/`, que no se versiona.
 
+### Impeccable: revisión visual complementaria
+
+El skill proyecto-local de Impeccable ejecuta un detector automático sobre las
+ediciones de UI mediante el hook de Codex y permite elegir revisiones como
+`audit`, `critique` y `polish`. Sus hallazgos son evidencia adicional: no
+reemplazan los contratos de este documento ni los gates del repositorio.
+
+Para una modificación visual, conservar la secuencia proporcional vigente:
+
+```powershell
+corepack pnpm check:micro
+corepack pnpm test:e2e:smoke
+```
+
+Usar `corepack pnpm test:e2e:smoke:full` y la suite responsive al cerrar cambios
+en módulos públicos, renderer, storefront o Preview. No versionar screenshots,
+caches ni sesiones producidas bajo `.impeccable/`; sólo se comparten sus
+artefactos de contexto y revisión que estén expresamente documentados.
+
 ## Política de estabilidad E2E (2026-08-21)
 
 Un gate que falla intermitentemente entrena al equipo a ignorar el rojo.

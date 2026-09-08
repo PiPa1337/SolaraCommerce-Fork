@@ -1,5 +1,6 @@
 import {
   IMAGE_ASSET_RECIPE,
+  isValidIcoDataUrl,
   type ImageAsset,
   RESPONSIVE_IMAGE_MAX_WIDTH,
   type StoreProjectV1,
@@ -47,6 +48,7 @@ function isStructurallyOptimizedImageAsset(asset: ImageAsset): boolean {
   if (asset.mimeType === "image/x-icon") {
     return (
       dataUrlMimeType(asset.source) === "image/x-icon" &&
+      isValidIcoDataUrl(asset.source) &&
       isDataUrlWithMime(asset.fallbackSource, new Set(["image/png"])) &&
       hasExpectedResponsiveSources(asset, "image/png") &&
       asset.width <= 256 &&

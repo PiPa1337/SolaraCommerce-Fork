@@ -5,7 +5,13 @@
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { buildIndexableRoutes, publicProductTitle } from "@solara/site-optimizer";
 import { escapeHtml, escapeXml } from "./html.js";
-import { decodePngRgba, encodePngPalette, quantizeRgba, scaleRgbaBilinear } from "./pwa-png.js";
+import {
+  decodePngRgba,
+  encodePngPalette,
+  encodePngRgba,
+  quantizeRgba,
+  scaleRgbaBilinear,
+} from "./pwa-png.js";
 import { absoluteUrl, baseUrlPathname } from "./urls.js";
 
 const SHA256_K = new Uint32Array([
@@ -225,28 +231,71 @@ export function buildServiceWorker(
   return lines.join(String.fromCharCode(10));
 }
 
-/**
- * Genera un archivo .ico binario valido que embebe un PNG de 64x64.
- * El formato ICO soporta PNG embebido desde Windows Vista.
- */
-export function buildFaviconIco(seed: string): Uint8Array {
-  const png = generateIconPng(seed, 64);
+const FAVICON_SIZES = [16, 32, 48, 64, 128, 256] as const;
+
+function squarePng(
+  source: { width: number; height: number; rgba: Uint8Array },
+  size: number,
+): Uint8Array {
+  const scale = Math.max(size / source.width, size / source.height);
+  const scaledWidth = Math.max(size, Math.round(source.width * scale));
+  const scaledHeight = Math.max(size, Math.round(source.height * scale));
+  const scaled = scaleRgbaBilinear(
+    source.rgba,
+    source.width,
+    source.height,
+    scaledWidth,
+    scaledHeight,
+  );
+  const offsetX = Math.floor((scaledWidth - size) / 2);
+  const offsetY = Math.floor((scaledHeight - size) / 2);
+  const cropped = new Uint8Array(size * size * 4);
+  for (let row = 0; row < size; row += 1) {
+    const start = ((row + offsetY) * scaledWidth + offsetX) * 4;
+    cropped.set(scaled.subarray(start, start + size * 4), row * size * 4);
+  }
+  return encodePngRgba(cropped, size, size);
+}
+
+function encodeIcoPngs(images: readonly { size: number; png: Uint8Array }[]): Uint8Array {
+  if (images.length === 0) throw new Error("Un favicon ICO necesita al menos una imagen.");
   const header = new Uint8Array(6);
-  const view = new DataView(header.buffer);
-  view.setUint16(0, 0, true); // reserved
-  view.setUint16(2, 1, true); // type: icon
-  view.setUint16(4, 1, true); // count: 1 image
-  const entry = new Uint8Array(16);
-  const entryView = new DataView(entry.buffer);
-  entry[0] = 64; // width 64
-  entry[1] = 64; // height 64
-  entry[2] = 0; // palette
-  entry[3] = 0; // reserved
-  entryView.setUint16(4, 1, true); // color planes
-  entryView.setUint16(6, 32, true); // bits per pixel
-  entryView.setUint32(8, png.byteLength, true); // data size
-  entryView.setUint32(12, 22, true); // data offset (6 + 16)
-  return concatBytes(header, entry, png);
+  const headerView = new DataView(header.buffer);
+  headerView.setUint16(0, 0, true); // reserved
+  headerView.setUint16(2, 1, true); // type: icon
+  headerView.setUint16(4, images.length, true);
+  const entries = new Uint8Array(images.length * 16);
+  let offset = header.byteLength + entries.byteLength;
+  images.forEach((image, index) => {
+    const entry = entries.subarray(index * 16, (index + 1) * 16);
+    const entryView = new DataView(entry.buffer, entry.byteOffset, entry.byteLength);
+    entry[0] = image.size >= 256 ? 0 : image.size;
+    entry[1] = image.size >= 256 ? 0 : image.size;
+    entry[2] = 0; // palette
+    entry[3] = 0; // reserved
+    entryView.setUint16(4, 1, true); // color planes
+    entryView.setUint16(6, 32, true); // bits per pixel
+    entryView.setUint32(8, image.png.byteLength, true);
+    entryView.setUint32(12, offset, true);
+    offset += image.png.byteLength;
+  });
+  return concatBytes(header, entries, ...images.map((image) => image.png));
+}
+
+/**
+ * Genera un .ico válido. Cuando recibe un PNG del proyecto conserva su arte
+ * en seis tamaños; si no puede decodificarlo usa un icono determinista seguro.
+ */
+export function buildFaviconIco(seed: string, sourcePng?: Uint8Array): Uint8Array {
+  const decoded = sourcePng ? decodePngRgba(sourcePng) : undefined;
+  if (decoded) {
+    return encodeIcoPngs(
+      FAVICON_SIZES.map((size) => ({ size, png: squarePng(decoded, size) })),
+    );
+  }
+  return encodeIcoPngs(
+    FAVICON_SIZES.map((size) => ({ size, png: generateIconPng(seed, size) })),
+  );
 }
 
 export function buildRssFeed(project: StoreProjectV1): string | undefined {

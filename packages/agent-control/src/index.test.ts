@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createLocalProjectStorage } from "../../exporter/scripts/local-project-storage.mjs";
 import { createProjectArchive, readProjectArchive } from "../../exporter/src/index";
+import { buildFaviconIco } from "../../exporter/src/pwa";
 import { buildCatalogModernProject } from "../../project-schema/src/catalog-modern-template";
 import { StoreProjectV2Schema } from "../../project-schema/src/index";
 import { createAgentController } from "./index";
@@ -329,6 +330,63 @@ describe("control nativo del agente", () => {
         salesChannels: ["WhatsApp"],
         revisionAt: "2026-08-31T12:00:00.000Z",
       });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("acepta sólo ICO válidos como favicon en el canal del agente", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-agent-favicon-"));
+    try {
+      const storage = createLocalProjectStorage({
+        applicationRoot: root,
+        projectsRoot: join(root, "proyectos"),
+        stagingRoot: join(root, ".solara-runtime", "transactions"),
+      });
+      const controller = createAgentController({ storage, applicationRoot: root });
+      const png = await controller.stageAsset({
+        name: "no-es-favicon.png",
+        alt: "No es favicon",
+        mimeType: "image/png",
+        source: { kind: "base64", data: validPng },
+      });
+      const baseOperations = [
+        {
+          type: "store.create" as const,
+          storeId: "store-agent-favicon",
+          name: "Tienda favicon",
+          slug: "tienda-favicon",
+          source: { kind: "clean" as const },
+        },
+      ];
+      await expect(
+        controller.createPlan({
+          operations: [
+            ...baseOperations,
+            { type: "asset.attach", assetId: png.assetId, target: "identity.logo" as const },
+            { type: "asset.attach", assetId: png.assetId, target: "seo.favicon" as const },
+          ],
+        }),
+      ).rejects.toMatchObject({ code: "FAVICON_NOT_ICO" });
+
+      const ico = await controller.stageAsset({
+        name: "favicon.ico",
+        alt: "Favicon válido",
+        mimeType: "image/x-icon",
+        source: { kind: "base64", data: Buffer.from(buildFaviconIco("agente")).toString("base64") },
+      });
+      const plan = await controller.createPlan({
+        operations: [
+          ...baseOperations,
+          { type: "asset.attach", assetId: png.assetId, target: "identity.logo" as const },
+          { type: "asset.attach", assetId: ico.assetId, target: "seo.favicon" as const },
+        ],
+      });
+      await controller.commitPlan({ planId: plan.planId });
+      const current = await storage.readCurrent("store-agent-favicon");
+      if (!current) throw new Error("Falta el respaldo de la tienda de favicon.");
+      const project = readProjectArchive(Buffer.from(current.bytes).toString("utf8"));
+      expect(project.seo.faviconAssetId).toBe(ico.assetId);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

@@ -4474,6 +4474,9 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   color: var(--catalog-muted);
   font-size: .78rem;
 }
+.cm.v2 .contact-form-status:empty {
+  display: none;
+}
 .cm.v2 .contact-channel-list {
   display: grid;
 }
@@ -5301,6 +5304,63 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
     .cm.v2 .catalog-announcement-inner {
       padding-left: 1rem;
       padding-right: 3.25rem;
+    }
+  }
+  /* En mobile el repeater editable de confianza se agrupa en una banda sobria
+     debajo del hero: cada item conserva su icono y copy, sin sumar un CTA no
+     editable ni alterar la composición de escritorio. */
+  @media (max-width: 767px) {
+    .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial .catalog-hero-benefits--band {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 1rem;
+      width: 100%;
+      margin: 0;
+      padding: .75rem 1rem 1rem;
+      background: color-mix(in srgb, var(--solara-accent) 6%, var(--catalog-paper));
+    }
+    .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial .catalog-hero-benefits--band .catalog-hero-benefit {
+      display: grid;
+      grid-template-columns: 2.25rem minmax(0, 1fr);
+      align-items: center;
+      gap: .75rem;
+      min-height: 3.4rem;
+      padding: .45rem 0;
+    }
+    .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial .catalog-hero-benefits--band .catalog-hero-benefit + .catalog-hero-benefit {
+      padding-left: 0;
+      border-left: 0;
+    }
+    .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial .catalog-hero-benefits--band .catalog-hero-benefit-icon {
+      display: grid;
+      place-items: center;
+      width: 2.25rem;
+      height: 2.25rem;
+      padding: .5rem;
+      border: 1px solid color-mix(in srgb, var(--solara-accent) 22%, var(--catalog-border));
+      border-radius: var(--catalog-hero-benefit-icon-radius, calc(var(--catalog-v2-radius) + .35rem));
+      background: color-mix(in srgb, var(--solara-accent) 12%, var(--catalog-paper));
+      color: var(--solara-accent);
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial .catalog-hero-benefits--band .catalog-hero-benefit-icon svg {
+      width: 1.15rem;
+      height: 1.15rem;
+    }
+    .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial .catalog-hero-benefits--band .catalog-hero-benefit-copy {
+      gap: .18rem;
+    }
+    .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial .catalog-hero-benefits--band .catalog-hero-benefit-copy strong {
+      color: var(--catalog-ink);
+      font-size: .82rem;
+      line-height: 1.2;
+      letter-spacing: .01em;
+    }
+    .cm.v2 [data-solara-module="catalog-hero"].catalog-hero-editorial .catalog-hero-benefits--band .catalog-hero-benefit-copy small {
+      color: var(--catalog-muted);
+      font-size: .72rem;
+      line-height: 1.38;
     }
   }
 `,

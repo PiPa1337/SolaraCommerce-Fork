@@ -312,7 +312,7 @@ test("catálogo real: el segmented cambia la vista y la paginación navega las 5
   await expect(prev).toBeDisabled();
   await expect(next).toBeDisabled();
   await expect(pagination.locator(".ui-pagination__page")).toHaveCount(1);
-  await page.getByLabel("Nombre de Remera esencial de algodón").isVisible();
+  await expect(page.getByLabel("Nombre de Remera esencial de algodón")).toBeVisible();
 
   const size = pagination.getByLabel("Filas por página");
   await size.selectOption("25");

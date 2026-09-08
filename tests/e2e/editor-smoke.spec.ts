@@ -6,8 +6,8 @@
  * verifica su elemento clave (heading/testid).
  */
 import type { Server } from "node:http";
-import { expect, type Page, test } from "@playwright/test";
-import { openMutableScaleStore } from "./project-helpers";
+import { expect, test } from "@playwright/test";
+import { openMutableScaleStore, resetStudioIndexedDb } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 240_000 : 180_000);
@@ -25,42 +25,18 @@ test.afterAll(async () => {
   await stopStudioServer(server);
 });
 
-async function openDashboard(page: Page): Promise<void> {
-  await page.goto(studioUrl);
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
-    timeout: 30_000,
-  });
-}
-
-/** Entra a la tienda demo desde un dashboard ya cargado. */
-async function openDemoStore(page: Page): Promise<void> {
-  await openMutableScaleStore(page, "Tienda smoke mutable");
-}
-
 test("recorre el editor de punta a punta: tabs, producto, sección, exportación y vuelta", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await openDashboard(page);
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolveDelete, reject) => {
-        const request = indexedDB.deleteDatabase("solara-commerce-studio");
-        request.addEventListener("success", () => resolveDelete());
-        request.addEventListener("error", () => reject(request.error));
-      }),
-  );
-  await page.reload();
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
-    timeout: 30_000,
-  });
+  await resetStudioIndexedDb(page, studioUrl, 30_000);
 
   await expect(
     page.locator('[data-store-card-id="store-modo-sur-demo"]'),
     "la tienda Predeterminado aparece en el dashboard",
   ).toBeVisible();
 
-  await openDemoStore(page);
+  await openMutableScaleStore(page, "Tienda smoke mutable");
 
   const tabs: Array<{ tab: string; heading: string }> = [
     { tab: "Preparar", heading: "Preparar tienda" },
@@ -126,7 +102,7 @@ test("recorre el editor de punta a punta: tabs, producto, sección, exportación
 
 test("archiva la tienda demo desde el dashboard y la restaura", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await openDashboard(page);
+  await resetStudioIndexedDb(page, studioUrl, 30_000);
 
   await openMutableScaleStore(page, "Tienda smoke archivable");
   await page.getByRole("button", { name: "Volver a tiendas" }).click();

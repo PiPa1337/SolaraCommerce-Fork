@@ -59,7 +59,6 @@ async function delayExporterChunk(
   });
   let delayed = false;
   await page.route("**/assets/*.js", async (route) => {
-    const request = route.request();
     if (delayed) {
       await route.continue();
       return;

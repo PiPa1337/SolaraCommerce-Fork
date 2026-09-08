@@ -408,7 +408,7 @@
       "properties": {
         "name": { "type": "string" },
         "alt": { "type": "string" },
-        "mimeType": { "enum": ["image/png", "image/jpeg", "image/webp", "image/gif"] },
+        "mimeType": { "enum": ["image/png", "image/jpeg", "image/webp", "image/gif", "image/x-icon"] },
         "source": {
           "oneOf": [
             {

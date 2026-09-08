@@ -5,7 +5,7 @@
  */
 import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
-import { openMutableScaleStore } from "./project-helpers";
+import { openMutableScaleStore, resetStudioIndexedDb } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 let server: Server;
@@ -23,17 +23,7 @@ test.afterAll(async () => {
 });
 
 async function openCatalog(page: Page) {
-  await page.goto(studioUrl);
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolveDelete, reject) => {
-        const request = indexedDB.deleteDatabase("solara-commerce-studio");
-        request.addEventListener("success", () => resolveDelete());
-        request.addEventListener("error", () => reject(request.error));
-      }),
-  );
-  await page.reload();
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await resetStudioIndexedDb(page, studioUrl);
   await openMutableScaleStore(page, SCALE_STORE_NAME);
   await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Catálogo" })).toBeVisible();
@@ -72,17 +62,20 @@ test("ordena por precio y por producto sobre el conjunto filtrado", async ({ pag
   const descending = await priceValues(page);
   expect(descending).toEqual([...descending].sort((a, b) => b - a));
 
+  const titlesLocator = page.locator('tbody input[aria-label^="Nombre de"]');
   await page.getByRole("button", { name: "Producto", exact: true }).click();
-  const titles = await page
-    .locator('tbody input[aria-label^="Nombre de"]')
-    .evaluateAll((inputs) => inputs.map((input) => (input as HTMLInputElement).value));
-  expect(titles).toEqual(
-    [...titles].sort((a, b) => {
-      const left = a.toLowerCase();
-      const right = b.toLowerCase();
-      return left === right ? 0 : left < right ? -1 : 1;
-    }),
-  );
+  const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
+  await expect
+    .poll(async () => {
+      const titles = await titlesLocator.evaluateAll((inputs) =>
+        inputs.map((input) => (input as HTMLInputElement).value),
+      );
+      return titles.every((title, index) => {
+        const previous = titles[index - 1];
+        return index === 0 || (previous !== undefined && collator.compare(previous, title) <= 0);
+      });
+    })
+    .toBe(true);
 });
 
 test("oculta y persiste columnas configurables", async ({ page }) => {
@@ -205,6 +198,8 @@ test("los atajos editan, duplican y archivan la selección sin tocar formularios
   await rows.nth(targetIndex).getByRole("checkbox").check();
   await blurFocus(page);
 
+  const pagination = page.getByTestId("ui-pagination");
+  const totalBefore = Number((await pagination.innerText()).match(/de (\d+)/)?.[1] ?? 0);
   await page.keyboard.press("e");
   const dialog = page.locator("dialog.product-dialog");
   await expect(dialog).toBeVisible();
@@ -212,7 +207,7 @@ test("los atajos editan, duplican y archivan la selección sin tocar formularios
   await expect(dialog).toBeHidden();
 
   await page.keyboard.press("d");
-  await expect(page.getByText(/51 productos y /)).toBeVisible();
+  await expect(pagination).toContainText(`de ${totalBefore + 1}`);
 
   // T4.12: archivar por Supr pasa por el diálogo de confirmación unificado.
   await page.keyboard.press("Delete");
@@ -270,10 +265,9 @@ test("P5-B5: archivar un producto inline y restaurarlo sin perder la fila", asyn
   await firstTrigger.click();
   const statusSelect = page.getByTestId("ui-status-edit").first();
   await statusSelect.selectOption("archived");
-  await page.waitForTimeout(600);
-  const labelAfter = await rows.first().locator(".status-label").innerText();
-  console.log("P5-B5 estado tras archivar:", JSON.stringify(labelAfter));
-  expect(labelAfter).toContain("Archivad");
+  const labelAfter = rows.first().locator(".status-label");
+  await expect(labelAfter).toContainText("Archivad");
+  console.log("P5-B5 estado tras archivar:", JSON.stringify(await labelAfter.innerText()));
 
   const namesAfter = await rows.locator("td").nth(1).allInnerTexts();
   expect(namesAfter).toContain(firstRowName);
@@ -282,10 +276,9 @@ test("P5-B5: archivar un producto inline y restaurarlo sin perder la fila", asyn
   await archivedTrigger.click();
   const archivedSelect = page.getByTestId("ui-status-edit").first();
   await archivedSelect.selectOption("active");
-  await page.waitForTimeout(600);
-  const labelRestored = await rows.first().locator(".status-label").innerText();
-  console.log("P5-B5 estado tras restaurar:", JSON.stringify(labelRestored));
-  expect(labelRestored).toContain("Activo");
+  const labelRestored = rows.first().locator(".status-label");
+  await expect(labelRestored).toContainText("Activo");
+  console.log("P5-B5 estado tras restaurar:", JSON.stringify(await labelRestored.innerText()));
 });
 
 test("P5-B6: la búsqueda por término de estado filtra archivados", async ({ page }) => {
@@ -297,20 +290,29 @@ test("P5-B6: la búsqueda por término de estado filtra archivados", async ({ pa
   await firstTrigger.click();
   const statusSelect = page.getByTestId("ui-status-edit").first();
   await statusSelect.selectOption("archived");
-  await page.waitForTimeout(600);
+  await expect(rows.first().locator(".status-label")).toContainText("Archivad");
 
-  await page.getByPlaceholder("Buscar por producto, marca o estado").fill("archiv");
-  await page.waitForTimeout(600);
-  const labels = await page.locator("tbody tr .status-label").allInnerTexts();
+  const search = page.getByPlaceholder("Buscar por producto, marca o estado");
+  await search.fill("archiv");
+  const visibleLabels = page.locator("tbody tr .status-label");
+  await expect
+    .poll(
+      async () =>
+        (await visibleLabels.allInnerTexts()).every((label) =>
+          label.toLowerCase().includes("archivad"),
+        ),
+      { timeout: 5_000 },
+    )
+    .toBe(true);
+  const labels = await visibleLabels.allInnerTexts();
   console.log("P5-B6 estados visibles tras buscar 'archiv':", JSON.stringify(labels.slice(0, 5)));
   expect(labels.length).toBeGreaterThan(0);
   for (const label of labels) {
     expect(label.toLowerCase()).toContain("archivad");
   }
 
-  await page.getByPlaceholder("Buscar por producto, marca o estado").fill("");
-  await page.waitForTimeout(600);
-  await rows.first().locator(".status-label").waitFor();
+  await search.fill("");
+  await expect(rows).toHaveCount(50);
 });
 
 test("R3-P5-B5: el paginado del catálogo respeta el tamaño elegido", async ({ page }) => {
@@ -318,23 +320,22 @@ test("R3-P5-B5: el paginado del catálogo respeta el tamaño elegido", async ({ 
 
   const rows = page.locator("tbody tr");
   await expect(rows.first()).toBeVisible();
+  const pagination = page.getByTestId("ui-pagination");
+  const totalItems = Number((await pagination.innerText()).match(/de (\d+)/)?.[1] ?? 0);
   const sizeSelect = page.getByRole("combobox", { name: "Filas por página" });
   await sizeSelect.selectOption("25");
-  await page.waitForTimeout(700);
-  const count25 = await rows.count();
-  console.log("R3-P5-B5 filas con 25 por página:", count25);
-  expect(count25).toBe(25);
+  await expect(pagination).toContainText(`1–25 de ${totalItems}`);
+  await expect(rows).toHaveCount(25);
+  console.log("R3-P5-B5 filas con 25 por página:", await rows.count());
 
   const pageButton = page.getByRole("group", { name: "Páginas" }).getByRole("button", {
     name: "2",
     exact: true,
   });
   await pageButton.click();
-  await page.waitForTimeout(700);
-  const countPage2 = await rows.count();
-  console.log("R3-P5-B5 filas en página 2:", countPage2);
-  expect(countPage2).toBeGreaterThan(0);
-  expect(countPage2).toBeLessThanOrEqual(25);
+  await expect(pagination).toContainText(`26–50 de ${totalItems}`);
+  await expect(rows).toHaveCount(25);
+  console.log("R3-P5-B5 filas en página 2:", await rows.count());
 });
 
 test("R4-P5-B5: el export CSV descarga productos con encabezado", async ({ page }) => {

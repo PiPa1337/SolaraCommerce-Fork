@@ -30,6 +30,7 @@ import {
   applyCatalogModernUpgrade,
   planCatalogModernUpgrade,
 } from "@solara/project-schema/catalog-modern-upgrade";
+import { resetStudioIndexedDb } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 150_000 : 90_000);
@@ -113,21 +114,6 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   await stopStudioServer(server);
 });
-
-async function resetIndexedDb(page: Page): Promise<void> {
-  await page.goto(studioUrl);
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolveDelete, reject) => {
-        const request = indexedDB.deleteDatabase("solara-commerce-studio");
-        request.addEventListener("success", () => resolveDelete());
-        request.addEventListener("error", () => reject(request.error));
-        request.addEventListener("blocked", () => reject(new Error("La base quedó bloqueada.")));
-      }),
-  );
-  await page.reload();
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-}
 
 async function openDemoStore(page: Page): Promise<void> {
   await page.locator(`[data-store-card-id="${DEMO_PROJECT_ID}"]`).click();
@@ -274,8 +260,7 @@ async function readUpgradeSnapshot(page: Page): Promise<UpgradeSnapshot> {
 /** Rutina compartida: sembrar el estado PRE-upgrade, abrir la tienda demo y
  *  llegar al panel "Actualización disponible". */
 async function prepareUpgradePanel(page: Page): Promise<void> {
-  await resetIndexedDb(page);
-  await page.waitForTimeout(900);
+  await resetStudioIndexedDb(page, studioUrl);
   await seedUpgradeState(page);
   await page.reload();
   await openDemoStore(page);

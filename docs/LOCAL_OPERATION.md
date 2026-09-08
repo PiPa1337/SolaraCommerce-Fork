@@ -22,12 +22,14 @@ El tray se genera con `corepack pnpm build:tray` y queda como
 icono por checkout. Su menú contextual muestra la cantidad de sesiones activas,
 permite abrir una nueva, abrir o cerrar una sesión concreta, reiniciar la
 aplicación o salir. `Reiniciar aplicación` cierra las sesiones gestionadas de
-forma autenticada y vuelve a levantar la misma cantidad; al iniciar una sesión
-nueva, el launcher recompila el Studio si detecta fuentes más recientes y abre
-las URLs resultantes. `Salir` sólo termina cuando todas las sesiones gestionadas
-pudieron cerrarse. El tray refresca el registro
-periódicamente y también detecta sesiones que ya estaban abiertas antes de
-iniciarlo.
+forma autenticada en segundo plano y un auxiliar espera la salida completa del
+tray anterior antes de tomar el mutex y volver a levantar la misma cantidad; el
+cierre sólo reutiliza un puerto cuando quedó realmente libre. Al iniciar una
+sesión nueva, el launcher recompila el Studio si detecta fuentes más recientes,
+conserva logs del servidor en `.solara-runtime/logs/` y abre las URLs resultantes.
+`Salir` sólo termina cuando todas las sesiones gestionadas pudieron cerrarse. El
+tray refresca el registro periódicamente y también detecta sesiones que ya
+estaban abiertas antes de iniciarlo.
 
 ## Biblioteca de tiendas
 

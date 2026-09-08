@@ -439,7 +439,6 @@ test("A21.3 el picker de imagen social cambia el campo y el preview de Open Grap
   const panel = seoPanel(page);
   const select = panel.getByLabel("Portada del sitio", { exact: true });
   const ogImage = page.getByTestId("ui-seo-preview-og").locator("img");
-  const whatsappPreview = page.getByTestId("ui-seo-preview-whatsapp");
 
   await expect(select.locator('option[value=""]')).toContainText(
     "Usar la primera imagen disponible",

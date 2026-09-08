@@ -302,31 +302,31 @@ export function buildCatalogModernProject(
 
     const products = Array.from({ length: options.placeholderProductCount ?? 5 }, (_, index) => {
       const categoryIndex = index % categoryBlueprints.length;
-      const [categoryTitle] = categoryBlueprints[categoryIndex];
+      const [categoryTitle] = categoryBlueprints[categoryIndex] ?? categoryBlueprints[0];
       return {
-      id: `product-placeholder-${index + 1}`,
-      slug: `producto-${index + 1}`,
-      title: `${categoryTitle} ${index + 1}`,
-      description: `Producto de ${categoryTitle.toLowerCase()} pensado para ofrecer calidad, practicidad y una excelente experiencia de compra.`,
-      status: "active" as const,
-      brand: brandName,
-      categoryIds: [`category-placeholder-${categoryIndex + 1}`],
-      collectionIds: ["collection-placeholder-1"],
-      tags: [categoryTitle.toLowerCase(), "catalogo-base"],
-      imageIds: [placeholderAsset.id],
-      variants: [
-        {
-          id: `variant-placeholder-${index + 1}`,
-          title: "Unica",
-          price: 1000,
-          available: true,
-          optionValues: {},
-          sku: `P${index + 1}`,
-          stockStatus: "in_stock" as const,
-        },
-      ],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+        id: `product-placeholder-${index + 1}`,
+        slug: `producto-${index + 1}`,
+        title: `${categoryTitle} ${index + 1}`,
+        description: `Producto de ${categoryTitle.toLowerCase()} pensado para ofrecer calidad, practicidad y una excelente experiencia de compra.`,
+        status: "active" as const,
+        brand: brandName,
+        categoryIds: [`category-placeholder-${categoryIndex + 1}`],
+        collectionIds: ["collection-placeholder-1"],
+        tags: [categoryTitle.toLowerCase(), "catalogo-base"],
+        imageIds: [placeholderAsset.id],
+        variants: [
+          {
+            id: `variant-placeholder-${index + 1}`,
+            title: "Unica",
+            price: 1000,
+            available: true,
+            optionValues: {},
+            sku: `P${index + 1}`,
+            stockStatus: "in_stock" as const,
+          },
+        ],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
     });
     const categories = categoryBlueprints.map(([title, description, slug], index) => ({

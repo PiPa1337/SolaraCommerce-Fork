@@ -78,11 +78,6 @@ function previewBody(page: Page): Locator {
   return page.frameLocator('iframe[title="Vista previa desktop"]').locator("body");
 }
 
-/** El div raíz del sitio público (lleva data-color-mode, data-design-family…). */
-function previewPage(page: Page): Locator {
-  return page.frameLocator('iframe[title="Vista previa desktop"]').locator(".solara-page");
-}
-
 function previewBackground(page: Page): () => Promise<string> {
   return () => previewRoot(page).evaluate((element) => getComputedStyle(element).backgroundColor);
 }

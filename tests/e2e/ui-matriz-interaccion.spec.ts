@@ -14,7 +14,7 @@
  */
 import type { Server } from "node:http";
 import { expect, type Locator, type Page, test } from "@playwright/test";
-import { createCleanStore, openMutableScaleStore } from "./project-helpers";
+import { createCleanStore, openMutableScaleStore, resetStudioIndexedDb } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 120_000 : 90_000);
@@ -44,25 +44,8 @@ const PIXEL_TEAL_PNG = Buffer.from(
 
 const IMAGE_INPUT = 'input[type="file"][accept*="image/"]';
 
-async function resetIndexedDb(page: Page): Promise<void> {
-  await page.goto(studioUrl);
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolve, reject) => {
-        const request = indexedDB.deleteDatabase("solara-commerce-studio");
-        request.addEventListener("success", () => resolve());
-        request.addEventListener("error", () => reject(request.error));
-        request.addEventListener("blocked", () => reject(new Error("La base quedó bloqueada.")));
-      }),
-  );
-  await page.reload();
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
-    timeout: 20_000,
-  });
-}
-
 async function openDemoStore(page: Page): Promise<void> {
-  await resetIndexedDb(page);
+  await resetStudioIndexedDb(page, studioUrl);
   await openMutableScaleStore(page, "Tienda escala matriz");
 }
 
@@ -98,13 +81,6 @@ async function openCreateDialog(page: Page): Promise<Locator> {
   const dialog = page.locator("dialog.product-dialog");
   await expect(dialog).toBeVisible();
   return dialog;
-}
-
-async function saveProduct(dialog: Locator, create: boolean): Promise<void> {
-  await dialog
-    .getByRole("button", { name: create ? "Guardar borrador" : "Guardar cambios" })
-    .click();
-  await expect(dialog).toBeHidden();
 }
 
 async function setRowStatus(page: Page, rowIndex: number, value: string, label: string) {
@@ -333,7 +309,7 @@ test.describe("Producto", () => {
 
 test.describe("Assets", () => {
   test("subir un asset lo hace aparecer y reemplazarlo conserva su nombre", async ({ page }) => {
-    await resetIndexedDb(page);
+    await resetStudioIndexedDb(page, studioUrl);
     await createCleanStore(page, "Tienda recursos matriz");
     await page.getByRole("tab", { name: "Recursos", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Recursos", exact: true })).toBeVisible();
@@ -370,7 +346,7 @@ test.describe("Assets", () => {
   });
 
   test("eliminar un asset en uso queda bloqueado con aviso", async ({ page }) => {
-    await resetIndexedDb(page);
+    await resetStudioIndexedDb(page, studioUrl);
     const card = page
       .locator(".dashboard-store-card")
       .filter({ has: page.getByText("Predeterminado", { exact: true }) });
@@ -425,7 +401,7 @@ test.describe("Export", () => {
   });
 
   test("la producción queda bloqueada cuando hay errores críticos", async ({ page }) => {
-    await resetIndexedDb(page);
+    await resetStudioIndexedDb(page, studioUrl);
     await createCleanStore(page, "Tienda export crítica");
     await page.getByRole("tab", { name: "Exportar", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Exportar" })).toBeVisible();
@@ -447,7 +423,7 @@ test.describe("Dashboard", () => {
   test("crear, duplicar, archivar/restaurar y el toggle de vista actúan de verdad", async ({
     page,
   }) => {
-    await resetIndexedDb(page);
+    await resetStudioIndexedDb(page, studioUrl);
     await expect(page.locator(".dashboard-cosmic-count")).toHaveText("1 visibles");
 
     // Crear una tienda: entra al editor con el nombre nuevo.
@@ -528,7 +504,7 @@ test.describe("Dashboard", () => {
 
 test.describe("SEO y Tema", () => {
   test("preset, hex inválido y persistencia SEO cambian o validan el estado", async ({ page }) => {
-    await resetIndexedDb(page);
+    await resetStudioIndexedDb(page, studioUrl);
     await createCleanStore(page, "Tienda tema matriz");
     const previewBackground = () =>
       page

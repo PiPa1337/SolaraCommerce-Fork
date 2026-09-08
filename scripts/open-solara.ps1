@@ -7,13 +7,26 @@ param(
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
+# Windows puede entregar PATH y Path como claves distintas al proceso que
+# invoca el launcher. Node/pnpm no acepta ese bloque de entorno duplicado.
+$processPath = [Environment]::GetEnvironmentVariable("Path", "Process")
+if ([string]::IsNullOrWhiteSpace($processPath)) {
+  $processPath = [Environment]::GetEnvironmentVariable("PATH", "Process")
+}
+[Environment]::SetEnvironmentVariable("Path", $null, "Process")
+if (-not [string]::IsNullOrWhiteSpace($processPath)) {
+  [Environment]::SetEnvironmentVariable("Path", $processPath, "Process")
+}
+
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $studioDist = Join-Path $projectRoot "apps\studio\dist"
 $studioIndex = Join-Path $studioDist "index.html"
 $serverScript = Join-Path $projectRoot "packages\exporter\scripts\serve.mjs"
 $runtimeDirectory = Join-Path $projectRoot ".solara-runtime"
 $instancesDirectory = Join-Path $runtimeDirectory "instances"
+$logsDirectory = Join-Path $runtimeDirectory "logs"
 $legacyRuntimeFile = Join-Path $runtimeDirectory "server.json"
+$launcherErrorLog = Join-Path $logsDirectory "launcher-errors.log"
 
 function Write-LauncherStatus {
   param([string]$Message)
@@ -58,6 +71,24 @@ function Remove-StaleSessionRecord {
   Remove-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
 }
 
+function Get-CommandDetail {
+  param([object[]]$Lines)
+  $detail = (($Lines | ForEach-Object { [string]$_ }) -join [Environment]::NewLine).Trim()
+  if ($detail.Length -gt 2000) {
+    return $detail.Substring($detail.Length - 2000)
+  }
+  return $detail
+}
+
+function Write-LauncherFailure {
+  param([object]$Failure)
+  try {
+    New-Item -ItemType Directory -Path $logsDirectory -Force | Out-Null
+    Add-Content -LiteralPath $launcherErrorLog -Value ((Get-Date).ToString("s") + " " + [string]$Failure)
+  } catch {
+  }
+}
+
 function Get-LiveSessions {
   New-Item -ItemType Directory -Path $instancesDirectory -Force | Out-Null
   $live = @()
@@ -78,7 +109,9 @@ function Get-LiveSessions {
       }
       if (Test-SolaraManagedSession -Port ([int]$record.port) -SessionId ([string]$record.sessionId)) {
         $live += $record
-      } else {
+      } elseif (Test-PortAvailable -Port ([int]$record.port)) {
+        # Sólo es seguro retirar el registro cuando ya no hay ningún listener
+        # en ese puerto; un timeout puede ser un servidor ocupado o saturado.
         Remove-StaleSessionRecord -Path $file.FullName
       }
     } catch {
@@ -167,12 +200,18 @@ try {
   if (-not (Test-Path -LiteralPath (Join-Path $projectRoot "node_modules\.modules.yaml"))) {
     Write-LauncherStatus "Preparando dependencias por primera vez..."
     if ($Json) {
-      & corepack pnpm install --frozen-lockfile *> $null
+      $installOutput = @(& corepack pnpm install --frozen-lockfile 2>&1)
+      $installExitCode = $LASTEXITCODE
+      if ($installExitCode -ne 0) {
+        $detail = Get-CommandDetail -Lines $installOutput
+        if ([string]::IsNullOrWhiteSpace($detail)) { $detail = "sin detalles adicionales" }
+        throw "La instalación de dependencias no pudo completarse: $detail"
+      }
     } else {
       & corepack pnpm install --frozen-lockfile
-    }
-    if ($LASTEXITCODE -ne 0) {
-      throw "La instalación de dependencias no pudo completarse."
+      if ($LASTEXITCODE -ne 0) {
+        throw "La instalación de dependencias no pudo completarse."
+      }
     }
   }
 
@@ -195,12 +234,18 @@ try {
   if ($needsBuild) {
     Write-LauncherStatus "Actualizando SolaraCommerce..."
     if ($Json) {
-      & corepack pnpm --filter "@solara/studio" build *> $null
+      $buildOutput = @(& corepack pnpm --filter "@solara/studio" build 2>&1)
+      $buildExitCode = $LASTEXITCODE
+      if ($buildExitCode -ne 0) {
+        $detail = Get-CommandDetail -Lines $buildOutput
+        if ([string]::IsNullOrWhiteSpace($detail)) { $detail = "sin detalles adicionales" }
+        throw "No se pudo construir la aplicación: $detail"
+      }
     } else {
       & corepack pnpm --filter "@solara/studio" build
-    }
-    if ($LASTEXITCODE -ne 0) {
-      throw "No se pudo construir la aplicación."
+      if ($LASTEXITCODE -ne 0) {
+        throw "No se pudo construir la aplicación."
+      }
     }
   }
 
@@ -245,18 +290,29 @@ try {
     "`"$projectRoot`"",
     "`"$sessionId`""
   )
-  $serverProcess = Start-Process `
-    -FilePath $nodePath `
-    -ArgumentList $serverArguments `
-    -WorkingDirectory $projectRoot `
-    -WindowStyle Hidden `
-    -PassThru
+  New-Item -ItemType Directory -Path $logsDirectory -Force | Out-Null
+  $stdoutLog = Join-Path $logsDirectory "$sessionId.stdout.log"
+  $stderrLog = Join-Path $logsDirectory "$sessionId.stderr.log"
+  # Start-Process vuelve a enumerar el entorno y falla en Windows cuando
+  # existen simultáneamente las claves Path y PATH. cmd.exe hereda el entorno
+  # sin reconstruir ese diccionario y deja el Node persistente desacoplado.
+  $serverStart = New-Object System.Diagnostics.ProcessStartInfo
+  $serverStart.FileName = $env:ComSpec
+  if ([string]::IsNullOrWhiteSpace($serverStart.FileName)) {
+    $serverStart.FileName = Join-Path $env:SystemRoot "System32\cmd.exe"
+  }
+  $serverStart.Arguments = '/d /s /c start "" /b "' + $nodePath + '" ' +
+    ($serverArguments -join ' ') + ' 1> "' + $stdoutLog + '" 2> "' + $stderrLog + '"'
+  $serverStart.WorkingDirectory = $projectRoot
+  $serverStart.UseShellExecute = $false
+  $serverStart.CreateNoWindow = $true
+  $serverProcess = [System.Diagnostics.Process]::Start($serverStart)
 
   $ready = $false
   for ($attempt = 0; $attempt -lt 40; $attempt++) {
     Start-Sleep -Milliseconds 250
     $serverProcess.Refresh()
-    if ($serverProcess.HasExited) {
+    if ($serverProcess.HasExited -and $attempt -ge 20) {
       break
     }
     if (Test-SolaraManagedSession -Port $port -SessionId $sessionId) {
@@ -270,13 +326,22 @@ try {
       Stop-Process -Id $serverProcess.Id -Force -ErrorAction SilentlyContinue
     }
     Remove-StaleSessionRecord -Path (Join-Path $instancesDirectory "$sessionId.json")
-    throw "El servidor local no respondió a tiempo."
+    $serverDetail = @()
+    foreach ($logPath in @($stdoutLog, $stderrLog)) {
+      if (Test-Path -LiteralPath $logPath) {
+        $serverDetail += Get-Content -LiteralPath $logPath -Raw -ErrorAction SilentlyContinue
+      }
+    }
+    $detail = Get-CommandDetail -Lines $serverDetail
+    if ([string]::IsNullOrWhiteSpace($detail)) { $detail = "sin detalles adicionales" }
+    throw "El servidor local no respondió a tiempo: $detail"
   }
 
   $url = "http://127.0.0.1:$port"
   Write-LaunchResult -SessionId $sessionId -Port $port -Url $url
   exit 0
 } catch {
+  Write-LauncherFailure -Failure $_.Exception.ToString()
   if ($Json) {
     [Console]::Error.WriteLine($_.Exception.Message)
   } else {

@@ -1,11 +1,10 @@
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { createServer, type Server } from "node:http";
+import { mkdirSync } from "node:fs";
+import { createServer } from "node:http";
 import { resolve } from "node:path";
 import { test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { applyPreset, THEME_PRESETS } from "@solara/project-schema";
 import { referenceStore } from "@solara/project-schema/fixture";
-import { FIXTURE_PRODUCT_FILES } from "./fixture-server";
 
 const resultsDir = resolve("test-results/theme-preset-visual");
 
@@ -19,6 +18,10 @@ const routes = ["/", "/categorias/remeras/", "/productos/remera-esencial-de-algo
 // Barrido visual por preset. Correr con SOLARA_QA_VISUAL=1.
 for (const preset of THEME_PRESETS) {
   test(`theme-preset-visual: ${preset.id}`, async ({ page }) => {
+    if (process.env.SOLARA_QA_VISUAL !== "1") {
+      test.skip(true, "El barrido visual requiere SOLARA_QA_VISUAL=1.");
+      return;
+    }
     const themed = applyPreset(referenceStore, preset.id);
     const exported = exportProject(themed, { mode: "production" });
 
@@ -39,17 +42,19 @@ for (const preset of THEME_PRESETS) {
     const addr = server.address();
     const baseUrl = `http://127.0.0.1:${typeof addr === "object" && addr ? addr.port : 3000}`;
 
-    for (const vp of viewports) {
-      for (const route of routes) {
-        await page.setViewportSize({ width: vp.width, height: vp.height });
-        await page.goto(`${baseUrl}${route}`);
-        const dir = resolve(resultsDir, preset.id, vp.name);
-        mkdirSync(dir, { recursive: true });
-        const fileName = route.replace(/\//g, "_") || "home";
-        await page.screenshot({ path: resolve(dir, `${fileName}.png`), fullPage: false });
+    try {
+      for (const vp of viewports) {
+        for (const route of routes) {
+          await page.setViewportSize({ width: vp.width, height: vp.height });
+          await page.goto(`${baseUrl}${route}`);
+          const dir = resolve(resultsDir, preset.id, vp.name);
+          mkdirSync(dir, { recursive: true });
+          const fileName = route.replace(/\//g, "_") || "home";
+          await page.screenshot({ path: resolve(dir, `${fileName}.png`), fullPage: false });
+        }
       }
+    } finally {
+      await new Promise<void>((resolveClose) => server.close(() => resolveClose()));
     }
-
-    server.close();
   });
 }

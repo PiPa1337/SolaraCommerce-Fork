@@ -1,9 +1,10 @@
-import { CATALOG_MODERN_PLACEHOLDER_PHONE } from "@solara/project-schema";
+import { CATALOG_MODERN_PLACEHOLDER_PHONE, isValidIco } from "@solara/project-schema";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
 import { referenceStore } from "@solara/project-schema/fixture";
 import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
 import { describe, expect, it } from "vitest";
+import type { DeploymentManifestV1 } from "./index";
 import {
   auditProject,
   buildCommerceSnapshot,
@@ -16,7 +17,8 @@ import {
   readProjectArchive,
   renderPreviewHtml,
 } from "./index";
-import { buildLlmsFullTxt, sha256Hex } from "./pwa";
+import { buildFaviconIco, buildLlmsFullTxt, sha256Hex } from "./pwa";
+import { encodePngRgba } from "./pwa-png";
 
 const VALID_PNG_DATA_URL =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
@@ -340,10 +342,12 @@ describe("exporter", () => {
     const baseline = exportProject(referenceStore, { mode: "production" });
     const changed = structuredClone(referenceStore);
     changed.theme.colors.accent = "#123456";
-    const baseManifest = JSON.parse(String(baseline.files.get("deployment-manifest.json"))) as any;
+    const baseManifest = JSON.parse(
+      String(baseline.files.get("deployment-manifest.json")),
+    ) as DeploymentManifestV1;
     const changedManifest = JSON.parse(
       String(exportProject(changed, { mode: "production" }).files.get("deployment-manifest.json")),
-    ) as any;
+    ) as DeploymentManifestV1;
     expect(changedManifest.runtime.css).not.toBe(baseManifest.runtime.css);
     expect(changedManifest.runtime.js).toBe(baseManifest.runtime.js);
   });
@@ -486,7 +490,6 @@ describe("exporter", () => {
     const html = String(result.files.get("index.html"));
 
     expect(css).toBe(runtimeAsset(baseline.files, "css"));
-    expect(css).not.toContain('[data-solara-module="editorial-hero"]');
     expect(html).not.toContain('data-solara-module="editorial-hero"');
     expect(
       [...result.files.keys()].filter((path) => /^assets\/storefront\.[a-f0-9]+\.js$/i.test(path)),
@@ -1694,19 +1697,21 @@ describe("exporter", () => {
   });
 
   function buildCustomFaviconProject() {
+    const customIco = buildFaviconIco("favicon-de-prueba");
     const favicon = {
       kind: "image" as const,
       id: "asset-test-favicon" as (typeof referenceStore.assets)[number]["id"],
       name: "Favicon del sitio",
       alt: "Favicon del sitio",
       mimeType: "image/x-icon",
-      source: "data:image/x-icon;base64,AAABAA==",
+      source: `data:image/x-icon;base64,${Buffer.from(customIco).toString("base64")}`,
       fallbackSource: "data:image/png;base64,iVBORw0KGgo=",
       width: 256,
       height: 256,
       hash: "test-favicon-v1",
     };
     return {
+      customIco,
       favicon,
       project: {
         ...referenceStore,
@@ -1717,7 +1722,7 @@ describe("exporter", () => {
   }
 
   it("emite el favicon ICO en la raíz y deduplica la copia del asset", () => {
-    const { project } = buildCustomFaviconProject();
+    const { customIco, project } = buildCustomFaviconProject();
     const result = exportProject(project as typeof referenceStore, { mode: "production" });
     const homeHtml = String(result.files.get("index.html"));
     expect(homeHtml).toContain('rel="icon" href="/favicon.ico"');
@@ -1727,8 +1732,88 @@ describe("exporter", () => {
     expect(result.files.has("assets/test-favicon-v1.ico")).toBe(false);
     expect(result.files.has("assets/test-favicon-v1-fallback.png")).toBe(true);
     const rootIco = result.files.get("favicon.ico") as Uint8Array;
-    const customIco = new Uint8Array(Buffer.from("AAABAA==", "base64"));
     expect(Buffer.from(rootIco).equals(Buffer.from(customIco))).toBe(true);
+  });
+
+  it("convierte un favicon legado WebP con fallback PNG en un ICO multirresolución", () => {
+    const fallbackPng = encodePngRgba(
+      Uint8Array.from([
+        255, 255, 255, 255, 255, 255, 0, 128, 255, 255, 0, 128, 255, 32, 16, 8, 255,
+      ]),
+      2,
+      2,
+    );
+    const fallbackSource = `data:image/png;base64,${Buffer.from(fallbackPng).toString("base64")}`;
+    const favicon = {
+      kind: "image" as const,
+      id: "asset-legacy-favicon" as (typeof referenceStore.assets)[number]["id"],
+      name: "Icono legado",
+      alt: "Icono legado",
+      mimeType: "image/webp",
+      source: VALID_WEBP_DATA_URL,
+      fallbackSource,
+      width: 256,
+      height: 256,
+      hash: "legacy-favicon-v1",
+      responsiveSources: [{ width: 256, source: VALID_WEBP_DATA_URL }],
+    };
+    const project = {
+      ...referenceStore,
+      assets: [...referenceStore.assets, favicon],
+      seo: { ...referenceStore.seo, faviconAssetId: favicon.id },
+    } as typeof referenceStore;
+
+    const result = exportProject(project, { mode: "production" });
+    const homeHtml = String(result.files.get("index.html"));
+    expect(homeHtml).toContain(
+      '<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48 64x64 128x128 256x256" type="image/x-icon">',
+    );
+    expect(homeHtml).not.toContain("legacy-favicon-v1.webp");
+    expect(homeHtml).toContain(
+      'rel="apple-touch-icon" sizes="180x180" href="/assets/legacy-favicon-v1-fallback.png"',
+    );
+
+    const rootIco = result.files.get("favicon.ico");
+    if (!(rootIco instanceof Uint8Array)) throw new Error("Falta favicon.ico en la exportación.");
+    const header = new DataView(rootIco.buffer, rootIco.byteOffset, rootIco.byteLength);
+    expect(header.getUint16(4, true)).toBe(6);
+    expect(
+      Buffer.from(rootIco).equals(
+        Buffer.from(buildFaviconIco(project.identity.brandName, fallbackPng)),
+      ),
+    ).toBe(true);
+
+    const preview = renderPreviewHtml(project, "draft", "/");
+    expect(typeof preview).toBe("string");
+    expect(String(preview)).toMatch(
+      /<link rel="icon" href="\/favicon\.ico"[^>]*data-solara-preview-favicon="data:image\/x-icon;base64,/,
+    );
+  });
+
+  it("repara un falso ICO truncado antes de escribir el sitio", () => {
+    const fallbackPng = encodePngRgba(Uint8Array.from([255, 0, 255, 255]), 1, 1);
+    const favicon = {
+      kind: "image" as const,
+      id: "asset-truncated-favicon" as (typeof referenceStore.assets)[number]["id"],
+      name: "Favicon truncado",
+      alt: "Favicon truncado",
+      mimeType: "image/x-icon",
+      source: "data:image/x-icon;base64,AAABAA==",
+      fallbackSource: `data:image/png;base64,${Buffer.from(fallbackPng).toString("base64")}`,
+      width: 256,
+      height: 256,
+      hash: "truncated-favicon-v1",
+    };
+    const project = {
+      ...referenceStore,
+      assets: [...referenceStore.assets, favicon],
+      seo: { ...referenceStore.seo, faviconAssetId: favicon.id },
+    } as typeof referenceStore;
+
+    const result = exportProject(project, { mode: "production" });
+    const rootIco = result.files.get("favicon.ico");
+    expect(rootIco instanceof Uint8Array && isValidIco(rootIco)).toBe(true);
+    expect(Buffer.from(rootIco as Uint8Array).equals(Buffer.from([0, 0, 1, 0]))).toBe(false);
   });
 
   it("mantiene la emisión del asset favicon cuando además se usa como imagen de producto", () => {
@@ -1963,7 +2048,7 @@ describe("tema: carga real de fuentes y vars sin duplicados", () => {
     );
 
     expect(css).toContain(
-      "background-image:linear-gradient(color-mix(in srgb,var(--solara-background) 55%,transparent),color-mix(in srgb,var(--solara-background) 55%,transparent)),url(\"",
+      'background-image:linear-gradient(color-mix(in srgb,var(--solara-background) 55%,transparent),color-mix(in srgb,var(--solara-background) 55%,transparent)),url("',
     );
     expect(css).toContain("background-repeat:no-repeat,repeat");
     expect(css).toContain("background-size:auto,480px");

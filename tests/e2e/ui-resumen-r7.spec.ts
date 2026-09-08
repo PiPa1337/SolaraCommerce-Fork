@@ -1,6 +1,6 @@
 import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
-import { createCleanStore } from "./project-helpers";
+import { createCleanStore, resetStudioIndexedDb } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 /**
@@ -39,17 +39,7 @@ test.afterAll(async () => {
 });
 
 async function setupCleanStore(page: Page, name: string): Promise<void> {
-  await page.goto(studioUrl);
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolve, reject) => {
-        const request = indexedDB.deleteDatabase("solara-commerce-studio");
-        request.addEventListener("success", () => resolve());
-        request.addEventListener("error", () => reject(request.error));
-        request.addEventListener("blocked", () => reject(new Error("La base quedó bloqueada.")));
-      }),
-  );
-  await page.reload();
+  await resetStudioIndexedDb(page, studioUrl);
   await createCleanStore(page, name);
 }
 
@@ -115,87 +105,95 @@ async function openStoreFromDashboard(page: Page, name: string): Promise<void> {
 type SeedKind = "ready-except-phone" | "invalid-email";
 
 async function seedProjectRecord(page: Page, storeName: string, kind: SeedKind): Promise<void> {
-  await page.waitForTimeout(900);
-  const updated = await page.evaluate(
-    ([name, seedKind]) =>
-      new Promise<boolean>((resolve, reject) => {
-        const request = indexedDB.open("solara-commerce-studio");
-        request.addEventListener("error", () => reject(request.error));
-        request.addEventListener("success", () => {
-          const db = request.result;
-          const transaction = db.transaction("projects", "readwrite");
-          const store = transaction.objectStore("projects");
-          const all = store.getAll();
-          all.addEventListener("success", () => {
-            const records = all.result as Array<{
-              name: string;
-              project: {
-                identity: { description: string; email: string };
-                whatsapp: { phone: string };
-                seo: { description: string };
-                pages: Array<{ kind: string; title: string }>;
-                sections: Array<{ id: string; settings: Record<string, string> }>;
-                assets: Array<{ name: string; alt: string }>;
-              };
-            }>;
-            const record = records.find((item) => item.name === name);
-            if (!record) {
-              resolve(false);
-              return;
-            }
-            const project = record.project;
-            if (seedKind === "invalid-email") {
-              project.identity.email = "correo-sin-arroba";
-            } else {
-              project.identity.description = "Marca textil artesanal con lanzamientos mensuales.";
-              project.identity.email = "hola@ejemplo.com";
-              project.seo.description = "Catálogo textil artesanal con lanzamientos mensuales.";
-              project.whatsapp.phone = "5491100000000";
-              project.pages = project.pages.map((item) => ({
-                ...item,
-                title:
-                  item.kind === "about"
-                    ? "Nuestra historia textil."
-                    : item.kind === "contact"
-                      ? "Escribinos por WhatsApp."
-                      : item.title,
-              }));
-              const hero = project.sections.find((section) => section.id === "modo-section-hero");
-              if (hero) {
-                hero.settings.eyebrow = "Lanzamiento mensual";
-                hero.settings.title = "Textiles artesanales de estación.";
-                hero.settings.body = "Prendas tejidas a mano con tintes naturales.";
-                hero.settings.actionLabel = "Ver catálogo";
-              }
-              project.assets = project.assets.map((asset) => ({
-                ...asset,
-                name: "tejido-estacion.png",
-                alt: "Tejido textil en tonos tierra",
-              }));
-              // El seed placeholder trae 5 productos y 2 categorías con
-              // títulos sentinel ("Producto N", "Categoria N"): el intento
-              // "todo listo salvo el teléfono" también los reemplaza, porque
-              // el checklist los marca como pendientes.
-              project.products = project.products.map((product, index) => ({
-                ...product,
-                title: `Producto textil ${index + 1}`,
-                description: `Producto textil artesanal número ${index + 1}, tejido a mano.`,
-              }));
-              project.categories = project.categories.map((category, index) => ({
-                ...category,
-                title: `Colección textil ${index + 1}`,
-              }));
-            }
-            store.put({ ...record, project });
-          });
-          all.addEventListener("error", () => reject(all.error));
-          transaction.addEventListener("complete", () => resolve(true));
-          transaction.addEventListener("error", () => reject(transaction.error));
-        });
-      }),
-    [storeName, kind],
-  );
-  expect(updated).toBe(true);
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          ([name, seedKind]) =>
+            new Promise<boolean>((resolve, reject) => {
+              const request = indexedDB.open("solara-commerce-studio");
+              request.addEventListener("error", () => reject(request.error));
+              request.addEventListener("success", () => {
+                const db = request.result;
+                const transaction = db.transaction("projects", "readwrite");
+                const store = transaction.objectStore("projects");
+                const all = store.getAll();
+                all.addEventListener("success", () => {
+                  const records = all.result as Array<{
+                    name: string;
+                    project: {
+                      identity: { description: string; email: string };
+                      whatsapp: { phone: string };
+                      seo: { description: string };
+                      pages: Array<{ kind: string; title: string }>;
+                      sections: Array<{ id: string; settings: Record<string, string> }>;
+                      assets: Array<{ name: string; alt: string }>;
+                    };
+                  }>;
+                  const record = records.find((item) => item.name === name);
+                  if (!record) {
+                    resolve(false);
+                    return;
+                  }
+                  const project = record.project;
+                  if (seedKind === "invalid-email") {
+                    project.identity.email = "correo-sin-arroba";
+                  } else {
+                    project.identity.description =
+                      "Marca textil artesanal con lanzamientos mensuales.";
+                    project.identity.email = "hola@ejemplo.com";
+                    project.seo.description =
+                      "Catálogo textil artesanal con lanzamientos mensuales.";
+                    project.whatsapp.phone = "5491100000000";
+                    project.pages = project.pages.map((item) => ({
+                      ...item,
+                      title:
+                        item.kind === "about"
+                          ? "Nuestra historia textil."
+                          : item.kind === "contact"
+                            ? "Escribinos por WhatsApp."
+                            : item.title,
+                    }));
+                    const hero = project.sections.find(
+                      (section) => section.id === "modo-section-hero",
+                    );
+                    if (hero) {
+                      hero.settings.eyebrow = "Lanzamiento mensual";
+                      hero.settings.title = "Textiles artesanales de estación.";
+                      hero.settings.body = "Prendas tejidas a mano con tintes naturales.";
+                      hero.settings.actionLabel = "Ver catálogo";
+                    }
+                    project.assets = project.assets.map((asset) => ({
+                      ...asset,
+                      name: "tejido-estacion.png",
+                      alt: "Tejido textil en tonos tierra",
+                    }));
+                    // El seed placeholder trae 5 productos y 2 categorías con
+                    // títulos sentinel ("Producto N", "Categoria N"): el intento
+                    // "todo listo salvo el teléfono" también los reemplaza, porque
+                    // el checklist los marca como pendientes.
+                    project.products = project.products.map((product, index) => ({
+                      ...product,
+                      title: `Producto textil ${index + 1}`,
+                      description: `Producto textil artesanal número ${index + 1}, tejido a mano.`,
+                    }));
+                    project.categories = project.categories.map((category, index) => ({
+                      ...category,
+                      title: `Colección textil ${index + 1}`,
+                    }));
+                  }
+                  store.put({ ...record, project });
+                });
+                all.addEventListener("error", () => reject(all.error));
+                transaction.addEventListener("complete", () => resolve(true));
+                transaction.addEventListener("error", () => reject(transaction.error));
+              });
+            }),
+          [storeName, kind],
+        ),
+      { timeout: 15_000, message: `No se encontró la tienda ${storeName} para sembrar el estado.` },
+    )
+    .toBe(true);
 }
 
 test("completar un campo marca el requisito listo, el progreso avanza y Siguiente aterriza con pane abierto (R7-1)", async ({

@@ -10,7 +10,7 @@ import type {
   Variant,
   VideoAsset,
 } from "@solara/project-schema";
-import { isCatalogModernPlaceholderAsset } from "@solara/project-schema";
+import { isCatalogModernPlaceholderAsset, isValidIco } from "@solara/project-schema";
 
 export function assetExtension(asset: ImageAsset | VideoAsset): string {
   const mimeType =
@@ -195,8 +195,9 @@ export function imageMimeTypeFromBytes(bytes: Uint8Array | undefined): string | 
     bytes.length >= 4 &&
     bytes[0] === 0x00 &&
     bytes[1] === 0x00 &&
-    (bytes[2] === 0x01 || bytes[2] === 0x02) &&
-    bytes[3] === 0x00
+    bytes[2] === 0x01 &&
+    bytes[3] === 0x00 &&
+    isValidIco(bytes)
   ) {
     return "image/x-icon";
   }
@@ -449,7 +450,7 @@ function imageSourceForAsset(
       candidate.source,
       candidate.kind === "primary" ? asset.mimeType : undefined,
     );
-    if (resolved.format !== "unknown" && resolved.mimeType) {
+    if (resolved.format !== "unknown" && resolved.mimeType && resolved.mimeType !== "image/x-icon") {
       return { ...candidate, mimeType: resolved.mimeType };
     }
   }

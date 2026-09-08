@@ -19,6 +19,7 @@ import type { ImageAsset, StoreProjectV1 } from "@solara/project-schema";
 import {
   ARGENTINA_LEGAL_PROFILE,
   catalogModernPhoneValue,
+  isValidIcoDataUrl,
   SlugSchema,
 } from "@solara/project-schema";
 import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
@@ -529,6 +530,9 @@ export function Overview({
    */
   const latestProjectRef = useRef(project);
   latestProjectRef.current = project;
+  const faviconAssets = project.assets.filter(
+    (asset) => asset.mimeType === "image/x-icon" && isValidIcoDataUrl(asset.source),
+  );
   /** Último campo que SÍ commiteó (no el último editado): sólo su borrador se
    *  limpia cuando el proyecto cambia. Un borrador inválido sin commitear no
    *  debe ser destruido por un commit de otro campo. */
@@ -648,6 +652,8 @@ export function Overview({
       return;
     }
     if (target === "favicon") {
+      const asset = currentProject.assets.find((candidate) => candidate.id === selectedAssetId);
+      if (asset && (asset.mimeType !== "image/x-icon" || !isValidIcoDataUrl(asset.source))) return;
       commit({
         seo: {
           ...currentProject.seo,
@@ -664,6 +670,11 @@ export function Overview({
     });
   };
   const uploadIdentityImage = (target: "logo" | "cover" | "favicon", asset: ImageAsset) => {
+    if (
+      target === "favicon" &&
+      (asset.mimeType !== "image/x-icon" || !isValidIcoDataUrl(asset.source))
+    )
+      return;
     const currentProject = latestProjectRef.current;
     const assets = currentProject.assets.some((current) => current.id === asset.id)
       ? currentProject.assets
@@ -906,7 +917,7 @@ export function Overview({
               <div className="identity-media-control">
                 <ImageAssetPicker
                   value={project.seo.faviconAssetId ?? ""}
-                  assets={project.assets}
+                  assets={faviconAssets}
                   ariaLabel="Favicon del sitio"
                   onChange={(next) => setIdentityImage("favicon", next)}
                   onUpload={(asset) => uploadIdentityImage("favicon", asset)}

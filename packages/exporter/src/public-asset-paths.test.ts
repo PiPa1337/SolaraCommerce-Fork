@@ -5,6 +5,7 @@ import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixtur
 import { referenceStore } from "@solara/project-schema/fixture";
 import { describe, expect, it } from "vitest";
 import { dataUrlBytes, exportProject, publicAssetPaths, publicMediaUsage } from "./index.js";
+import { buildFaviconIco } from "./pwa.js";
 
 function sameBytes(left: Uint8Array, right: Uint8Array): boolean {
   if (left.length !== right.length) return false;
@@ -56,8 +57,7 @@ describe("publicAssetPaths", () => {
   it("mapea el favicon x-icon a favicon.ico con bytes exactos", () => {
     const project = structuredClone(referenceStore) as StoreProjectV1;
     const icoId = "asset-favicon-ico" as StoreProjectV1["assets"][number]["id"];
-    // Magia ICO mínima: 00 00 01 00 → image/x-icon según imageMimeTypeFromBytes.
-    const icoBytes = new Uint8Array([0, 0, 1, 0, 1, 0, 16, 16, 0, 0, 1, 0, 24, 0]);
+    const icoBytes = buildFaviconIco("favicon-map-test");
     let binary = "";
     for (const byte of icoBytes) binary += String.fromCharCode(byte);
     project.assets.push({
@@ -67,8 +67,8 @@ describe("publicAssetPaths", () => {
       alt: "",
       mimeType: "image/x-icon",
       source: `data:image/x-icon;base64,${btoa(binary)}`,
-      width: 16,
-      height: 16,
+      width: 256,
+      height: 256,
       hash: "test-favicon-ico",
     });
     project.seo.faviconAssetId = icoId;

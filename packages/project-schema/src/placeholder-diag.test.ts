@@ -19,9 +19,9 @@ describe("diagnostico placeholder", () => {
       assetSources: p.assets.map((a) => a.source.slice(0, 50)),
       sectionTexts: p.sections.flatMap((s) => {
         const texts: string[] = [];
-        JSON.stringify(s.settings, (k, v) => {
-          if (typeof v === "string" && v.length > 3) texts.push(v);
-          return v;
+        JSON.stringify(s.settings, (_key, value) => {
+          if (typeof value === "string" && value.length > 3) texts.push(value);
+          return value;
         });
         return texts;
       }),

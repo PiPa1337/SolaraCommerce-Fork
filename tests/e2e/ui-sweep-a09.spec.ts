@@ -21,7 +21,7 @@
  */
 import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
-import { createCleanStore } from "./project-helpers";
+import { createCleanStore, resetStudioIndexedDb } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 90_000 : 45_000);
@@ -40,17 +40,7 @@ test.afterAll(async () => {
 });
 
 async function setupCleanStore(page: Page, name: string): Promise<void> {
-  await page.goto(studioUrl);
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolve, reject) => {
-        const request = indexedDB.deleteDatabase("solara-commerce-studio");
-        request.addEventListener("success", () => resolve());
-        request.addEventListener("error", () => reject(request.error));
-        request.addEventListener("blocked", () => reject(new Error("La base quedó bloqueada.")));
-      }),
-  );
-  await page.reload();
+  await resetStudioIndexedDb(page, studioUrl);
   await createCleanStore(page, name);
 }
 
@@ -108,42 +98,47 @@ function expectStoredProject(page: Page, storeName: string, fragment: Partial<St
 }
 
 async function seedTemplateVersion(page: Page, name: string, version: number): Promise<void> {
-  const updated = await page.evaluate(
-    ([storeName, nextVersion]) =>
-      new Promise<boolean>((resolve, reject) => {
-        const request = indexedDB.open("solara-commerce-studio");
-        request.addEventListener("error", () => reject(request.error));
-        request.addEventListener("success", () => {
-          const db = request.result;
-          const transaction = db.transaction("projects", "readwrite");
-          const store = transaction.objectStore("projects");
-          const all = store.getAll();
-          all.addEventListener("success", () => {
-            const records = all.result as Array<{
-              name: string;
-              project: { origin?: { templateVersion?: number } };
-            }>;
-            const record = records.find((item) => item.name === storeName);
-            if (!record) {
-              resolve(false);
-              return;
-            }
-            store.put({
-              ...record,
-              project: {
-                ...record.project,
-                origin: { ...(record.project.origin ?? {}), templateVersion: nextVersion },
-              },
-            });
-          });
-          all.addEventListener("error", () => reject(all.error));
-          transaction.addEventListener("complete", () => resolve(true));
-          transaction.addEventListener("error", () => reject(transaction.error));
-        });
-      }),
-    [name, version],
-  );
-  expect(updated).toBe(true);
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          ([storeName, nextVersion]) =>
+            new Promise<boolean>((resolve, reject) => {
+              const request = indexedDB.open("solara-commerce-studio");
+              request.addEventListener("error", () => reject(request.error));
+              request.addEventListener("success", () => {
+                const db = request.result;
+                const transaction = db.transaction("projects", "readwrite");
+                const store = transaction.objectStore("projects");
+                const all = store.getAll();
+                all.addEventListener("success", () => {
+                  const records = all.result as Array<{
+                    name: string;
+                    project: { origin?: { templateVersion?: number } };
+                  }>;
+                  const record = records.find((item) => item.name === storeName);
+                  if (!record) {
+                    resolve(false);
+                    return;
+                  }
+                  store.put({
+                    ...record,
+                    project: {
+                      ...record.project,
+                      origin: { ...(record.project.origin ?? {}), templateVersion: nextVersion },
+                    },
+                  });
+                });
+                all.addEventListener("error", () => reject(all.error));
+                transaction.addEventListener("complete", () => resolve(true));
+                transaction.addEventListener("error", () => reject(transaction.error));
+              });
+            }),
+          [name, version],
+        ),
+      { timeout: 15_000, message: `No se encontró la tienda ${name} para sembrar la versión.` },
+    )
+    .toBe(true);
 }
 
 async function readTemplateVersion(page: Page, name: string): Promise<number | undefined> {
@@ -210,7 +205,6 @@ test("Respaldar y adoptar cambios: respalda en descarga, actualiza y persiste te
   await expect(page.getByText("Actualización disponible")).toHaveCount(0);
 
   // Sembrar una versión vieja de plantilla para que el plan tenga cambios.
-  await page.waitForTimeout(900);
   await seedTemplateVersion(page, storeName, 1);
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
@@ -248,7 +242,6 @@ test("Cerrar aviso de actualización lo descarta sin mutar la plantilla", async 
   await setupCleanStore(page, storeName);
 
   await openStudioTab(page, "Preparar");
-  await page.waitForTimeout(900);
   await seedTemplateVersion(page, storeName, 1);
   await page.reload();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();

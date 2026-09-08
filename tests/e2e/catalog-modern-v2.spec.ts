@@ -9,6 +9,13 @@ import { waitForStorefrontReady } from "./storefront-helpers";
 
 const exported = exportProject(catalogModernV2Store, { mode: "production" });
 const exportedV1 = exportProject(catalogModernStore, { mode: "production" });
+const noEmailProject = structuredClone(catalogModernV2Store);
+const noEmailContact = noEmailProject.sections.find(
+  (section) => section.moduleId === "contact-form",
+);
+if (!noEmailContact) throw new Error("La fixture V2 no tiene formulario para la prueba sin email.");
+noEmailContact.settings = { ...noEmailContact.settings, showEmailButton: false };
+const exportedNoEmail = exportProject(noEmailProject, { mode: "production" });
 const mobileLogoProject = structuredClone(catalogModernV2Store);
 mobileLogoProject.identity.logoAssetId = "asset-hero";
 const mobileLogoHeader = mobileLogoProject.sections.find(
@@ -135,23 +142,25 @@ test.beforeAll(async () => {
         : requested.endsWith("/")
           ? `${requested}index.html`
           : requested;
-    const source = url.searchParams.has("mobileLogo")
-      ? exportedMobileLogo
-      : url.searchParams.has("autoplayHero")
-      ? exportedAutoplayHero
-      : url.searchParams.has("responsiveGallery")
-        ? exportedResponsiveGallery
-        : url.searchParams.has("longCategory")
-          ? exportedLongCategory
-          : url.searchParams.has("longCategoryV1")
-            ? exportedLongCategoryV1
-            : url.searchParams.has("longProduct")
-              ? exportedLongProduct
-              : url.searchParams.has("longTitle")
-                ? exportedLongTitle
-                : url.searchParams.has("autoHeight")
-                  ? exportedAutoHeight
-                  : exported;
+    const source = url.searchParams.has("noEmail")
+      ? exportedNoEmail
+      : url.searchParams.has("mobileLogo")
+        ? exportedMobileLogo
+        : url.searchParams.has("autoplayHero")
+          ? exportedAutoplayHero
+          : url.searchParams.has("responsiveGallery")
+            ? exportedResponsiveGallery
+            : url.searchParams.has("longCategory")
+              ? exportedLongCategory
+              : url.searchParams.has("longCategoryV1")
+                ? exportedLongCategoryV1
+                : url.searchParams.has("longProduct")
+                  ? exportedLongProduct
+                  : url.searchParams.has("longTitle")
+                    ? exportedLongTitle
+                    : url.searchParams.has("autoHeight")
+                      ? exportedAutoHeight
+                      : exported;
     const content =
       source.files.get(path) ??
       (path.startsWith("assets/")
@@ -163,6 +172,7 @@ test.beforeAll(async () => {
           exportedResponsiveGallery.files.get(path) ??
           exportedAutoplayHero.files.get(path) ??
           exportedMobileLogo.files.get(path) ??
+          exportedNoEmail.files.get(path) ??
           exported.files.get(path))
         : undefined) ??
       fixtureFiles.get(path);
@@ -1570,9 +1580,26 @@ test("V2 mantiene un ritmo responsive en la banda de beneficios", async ({ page 
         rowGap: Number.parseFloat(style.rowGap),
         marginTop: Number.parseFloat(style.marginTop),
         marginBottom: Number.parseFloat(style.marginBottom),
+        backgroundColor: style.backgroundColor,
+        borderTopWidth: style.borderTopWidth,
+        borderBottomWidth: style.borderBottomWidth,
         left: element.getBoundingClientRect().left,
         right: Math.max(...rects.map((rect) => rect.right)),
         borderLeftWidths: items.map((item) => getComputedStyle(item).borderLeftWidth),
+        itemBorderTopWidths: items.map((item) => getComputedStyle(item).borderTopWidth),
+        itemGridColumns: items[0] ? getComputedStyle(items[0]).gridTemplateColumns : "",
+        iconWidth: items[0]
+          ? getComputedStyle(
+              items[0].querySelector<HTMLElement>(".catalog-hero-benefit-icon") as HTMLElement,
+            ).width
+          : "",
+        iconBorderRadius: items[0]
+          ? getComputedStyle(
+              items[0].querySelector<HTMLElement>(".catalog-hero-benefit-icon") as HTMLElement,
+            ).borderRadius
+          : "",
+        iconRadiusVariable: style.getPropertyValue("--catalog-hero-benefit-icon-radius").trim(),
+        hasButton: Boolean(element.querySelector("button")),
       };
     });
 
@@ -1585,6 +1612,15 @@ test("V2 mantiene un ritmo responsive en la banda de beneficios", async ({ page 
     expect(metrics.right).toBeLessThanOrEqual(viewport.width);
     if (viewport.width < 768) {
       expect(metrics.borderLeftWidths).toEqual(["0px", "0px", "0px"]);
+      expect(metrics.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+      expect(metrics.borderTopWidth).toBe("0px");
+      expect(metrics.borderBottomWidth).toBe("0px");
+      expect(metrics.itemBorderTopWidths).toEqual(["0px", "0px", "0px"]);
+      expect(metrics.itemGridColumns.startsWith("36px ")).toBe(true);
+      expect(metrics.iconWidth).toBe("36px");
+      expect(metrics.iconBorderRadius).toBe("8px");
+      expect(metrics.iconRadiusVariable).toBe("8px");
+      expect(metrics.hasButton).toBe(false);
     }
 
     await band.screenshot({ path: testInfo.outputPath(`hero-benefits-${viewport.width}.png`) });
@@ -1696,6 +1732,48 @@ test("V2 Home muestra Contacto como módulos responsive y replica el CTA del her
   expect(mobileMetrics?.formWidth).toBe(mobileMetrics?.channelsWidth);
   expect(mobileMetrics?.buttonWidths).toEqual([mobileMetrics?.formWidth, mobileMetrics?.formWidth]);
   expect(mobileMetrics?.noOverflow).toBe(true);
+});
+
+test("V2 Formulario mobile elimina el espacio de estado cuando no hay email", async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${serverUrl}?noEmail`);
+
+  const form = page.locator('[data-solara-module="contact-form"]');
+  await expect(form).toBeVisible();
+  const metrics = await form.evaluate((root) => {
+    const actions = root.querySelector<HTMLElement>(".contact-form-actions");
+    const emailButton = root.querySelector('[data-contact-channel="email"]');
+    const whatsappButton = root.querySelector<HTMLElement>('[data-contact-channel="whatsapp"]');
+    const status = root.querySelector<HTMLElement>(".contact-form-status");
+    if (!actions || !whatsappButton || !status) return null;
+    const actionsStyle = getComputedStyle(actions);
+    const statusStyle = getComputedStyle(status);
+    return {
+      emailCount: emailButton ? 1 : 0,
+      buttonCount: actions.querySelectorAll(".catalog-primary-action").length,
+      display: actionsStyle.display,
+      flexDirection: actionsStyle.flexDirection,
+      actionHeight: actions.getBoundingClientRect().height,
+      buttonHeight: whatsappButton.getBoundingClientRect().height,
+      statusDisplay: statusStyle.display,
+      statusHeight: status.getBoundingClientRect().height,
+      noOverflow: document.documentElement.scrollWidth <= window.innerWidth,
+    };
+  });
+
+  expect(metrics).not.toBeNull();
+  expect(metrics?.emailCount).toBe(0);
+  expect(metrics?.buttonCount).toBe(1);
+  expect(metrics?.display).toBe("flex");
+  expect(metrics?.flexDirection).toBe("column");
+  expect(metrics?.actionHeight).toBe(metrics?.buttonHeight);
+  expect(metrics?.statusDisplay).toBe("none");
+  expect(metrics?.statusHeight).toBe(0);
+  expect(metrics?.noOverflow).toBe(true);
+
+  await form.screenshot({ path: testInfo.outputPath("contact-no-email-mobile.png") });
 });
 
 test("V2 Canales de contacto no usa separadores y respira en mobile", async ({

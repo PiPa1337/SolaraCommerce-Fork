@@ -68,7 +68,12 @@ export function SettingsInspector({
   sectionId?: string;
   moduleId?: string;
 }) {
-  const [draft, setDraft] = useState(values);
+  const normalizedValues = useMemo<Record<string, unknown>>(() => {
+    if (!schema) return values;
+    const result = schema.safeParse(values);
+    return result.success ? (result.data as Record<string, unknown>) : values;
+  }, [schema, values]);
+  const [draft, setDraft] = useState(normalizedValues);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [nestedErrors, setNestedErrors] = useState<Record<string, string>>({});
   const [rawArrays, setRawArrays] = useState<Record<string, string>>({});
@@ -79,11 +84,11 @@ export function SettingsInspector({
   const errorIdPrefix = useId();
 
   useEffect(() => {
-    setDraft(values);
+    setDraft(normalizedValues);
     setErrors({});
     setNestedErrors({});
     setRawArrays({});
-  }, [values]);
+  }, [normalizedValues]);
 
   /**
    * Errores de esquema del borrador actual: sólo cuando el usuario desvió el
@@ -92,10 +97,10 @@ export function SettingsInspector({
    * confirmado y el panel sigue disponible para corregirlo.
    */
   const draftError = useMemo(() => {
-    if (!schema || draft === values) return "";
+    if (!schema || draft === normalizedValues) return "";
     const result = schema.safeParse(draft);
     return result.success ? "" : formatIssuePaths(result.error.issues);
-  }, [draft, schema, values]);
+  }, [draft, normalizedValues, schema]);
 
   const visibleFields =
     moduleId === "catalog-hero" && project.commerceTemplates.designFamily === "catalog-modern-v2"

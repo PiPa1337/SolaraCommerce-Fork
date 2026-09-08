@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import type { Theme } from "./index";
-import { StoreProjectV2Schema } from "./index";
 import { applyPreset, THEME_PRESETS } from "./theme-presets";
 
 const baseTheme: Theme = {

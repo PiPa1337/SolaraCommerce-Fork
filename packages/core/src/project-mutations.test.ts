@@ -1,10 +1,34 @@
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
 import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
+import { referenceStore } from "@solara/project-schema/fixture";
 import { describe, expect, it } from "vitest";
 import { commitCanvasField } from "../../../apps/studio/src/features/canvas/canvasMutations";
 import { applyMutation, createMutationRegistry } from "./project-mutations.js";
 
 describe("ProjectMutationRegistry", () => {
+  it("no permite guardar un favicon que sólo imita la firma ICO", () => {
+    const project = structuredClone(referenceStore);
+    const favicon = {
+      kind: "image" as const,
+      id: "asset-invalid-favicon" as (typeof project.assets)[number]["id"],
+      name: "Favicon inválido",
+      alt: "",
+      mimeType: "image/x-icon",
+      source: "data:image/x-icon;base64,AAABAA==",
+      width: 16,
+      height: 16,
+      hash: "invalid-favicon",
+    };
+    project.assets.push(favicon);
+
+    expect(() =>
+      applyMutation(project, createMutationRegistry(), {
+        type: "seo.update",
+        changes: { faviconAssetId: favicon.id },
+      }),
+    ).toThrow("ICO válido");
+  });
+
   it("whatsapp.update hace merge parcial y valida el schema", () => {
     const applied = applyMutation(catalogModernStore, createMutationRegistry(), {
       type: "whatsapp.update",

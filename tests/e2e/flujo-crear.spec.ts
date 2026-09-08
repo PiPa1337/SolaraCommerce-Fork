@@ -59,10 +59,9 @@ test("P4-C2: crear una tienda desde el dashboard en pasos con validacion", async
   await dialog.waitFor({ state: "hidden", timeout: 20000 });
   const elapsed = Date.now() - start;
 
-  await page.waitForTimeout(2000);
+  await expect(page.locator(".studio-shell")).toBeVisible({ timeout: 30_000 });
   const bodyText = await page.locator("body").innerText();
   console.log("P4-C2 tienda en el body:", bodyText.includes("Tienda del plan"));
-  await page.waitForTimeout(1500);
   const editorOpened = await page.locator(".studio-shell").count();
   const nameInEditor = (await page.locator("body").innerText()).includes("Tienda del plan");
   console.log(
@@ -92,7 +91,6 @@ test("F2-B5: la tienda nueva concentra Contacto al final de Home V2", async ({ p
   await page.getByRole("navigation", { name: "Áreas de la tienda" }).waitFor({ timeout: 30_000 });
 
   await page.getByRole("tab", { name: "Constructor", exact: true }).click();
-  await page.waitForTimeout(1500);
   const pageSelect = page.locator(".editor-pane select").nth(0);
   await expect(pageSelect).toHaveValue("home");
   await expect(pageSelect.locator("option")).toHaveCount(1);
@@ -106,7 +104,6 @@ test("P4-B4: archivar una tienda desde el panel de detalle y restaurarla", async
   await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
 
   await selectMutableStore(page, "Tienda archivable");
-  await page.waitForTimeout(600);
   const archiveButton = page.locator(".dashboard-store-detail").getByRole("button", {
     name: "Archivar",
   });
@@ -136,7 +133,6 @@ test("P4-B6: restaurar una tienda archivada desde el filtro Archivadas", async (
   await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
 
   await selectMutableStore(page, "Tienda restaurable");
-  await page.waitForTimeout(500);
   await page.locator(".dashboard-store-detail").getByRole("button", { name: "Archivar" }).click();
   await page
     .getByRole("dialog", { name: "Archivar tienda" })
@@ -148,11 +144,9 @@ test("P4-B6: restaurar una tienda archivada desde el filtro Archivadas", async (
 
   const filter = page.getByRole("combobox", { name: "Estado" });
   await filter.selectOption("archived");
-  await page.waitForTimeout(700);
   const archivedCard = page.locator(".dashboard-store-card", { hasText: "Archivada" }).first();
   await expect(archivedCard).toBeVisible();
   await archivedCard.click();
-  await page.waitForTimeout(500);
   await page.locator(".dashboard-store-detail").getByRole("button", { name: "Restaurar" }).click();
   const restoredToast = page.locator("[data-testid='ui-toast']", { hasText: "restaurada" });
   await expect(restoredToast).toBeVisible({ timeout: 30_000 });
@@ -166,14 +160,15 @@ test("R3-P2-B5: duplicar una tienda desde el panel de detalle", async ({ page })
   await page.getByRole("heading", { name: "Tus tiendas" }).waitFor({ timeout: 30000 });
 
   await page.locator(".dashboard-store-card").first().click();
-  await page.waitForTimeout(500);
   await page.locator(".dashboard-store-detail").getByRole("button", { name: "Duplicar" }).click();
   const dialog = page.getByRole("dialog", { name: "Duplicar tienda" });
   await expect(dialog).toBeVisible();
   await dialog.getByLabel("Nuevo nombre").fill("Copia de prueba");
   await dialog.getByRole("button", { name: "Duplicar" }).click();
   await expect(dialog).toBeHidden();
-  await page.waitForTimeout(1200);
+  await expect(
+    page.locator(".dashboard-store-card strong", { hasText: "Copia de prueba" }),
+  ).toBeVisible();
 
   const names = await page.locator(".dashboard-store-card strong").allInnerTexts();
   console.log("R3-P2-B5 tiendas tras duplicar:", JSON.stringify(names));
@@ -191,7 +186,6 @@ test("R4-P4-B5: cancelar la creación de tienda no crea nada", async ({ page }) 
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "Cerrar creación" }).click();
   await expect(dialog).toBeHidden();
-  await page.waitForTimeout(500);
   const cardsAfter = await page.locator(".dashboard-store-card").count();
   console.log("R4-P4-B5 cards antes/después:", cardsBefore, cardsAfter);
   expect(cardsAfter).toBe(cardsBefore);

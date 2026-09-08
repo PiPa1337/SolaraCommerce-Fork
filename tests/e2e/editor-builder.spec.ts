@@ -200,6 +200,21 @@ test("un valor fuera de rango muestra el error de esquema y no se aplica", async
   await expect(page.getByRole("spinbutton", { name: "Intervalo" })).toHaveValue("6000");
 });
 
+test("el radio de los iconos mobile del hero se configura desde el inspector", async ({ page }) => {
+  await openBuilder(page);
+  await selectHero(page);
+
+  const radius = page.getByRole("spinbutton", { name: "Radio de íconos mobile (px)" });
+  await expect(radius).toHaveValue("8");
+  await radius.fill("18");
+  await expect(
+    page
+      .frameLocator("iframe")
+      .locator(".catalog-hero-benefits--band .catalog-hero-benefit-icon")
+      .first(),
+  ).toHaveCSS("border-radius", "18px", { timeout: 15_000 });
+});
+
 test("un preset de tema aplica los colores y el preview los refleja", async ({ page }) => {
   await openBuilder(page);
   await page.getByRole("tab", { name: "Tema de la tienda" }).click();

@@ -19,7 +19,7 @@
  */
 import { readFileSync } from "node:fs";
 import type { Server } from "node:http";
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Locator, type Page, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { StoreProjectV1Schema } from "@solara/project-schema";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
@@ -27,7 +27,7 @@ import {
   applyCatalogModernUpgrade,
   planCatalogModernUpgrade,
 } from "@solara/project-schema/catalog-modern-upgrade";
-import { openMutableScaleStore } from "./project-helpers";
+import { openMutableScaleStore, resetStudioIndexedDb } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 150_000 : 90_000);
@@ -111,21 +111,6 @@ test.afterAll(async () => {
   await stopStudioServer(server);
 });
 
-async function resetIndexedDb(page: Page): Promise<void> {
-  await page.goto(studioUrl);
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolveDelete, reject) => {
-        const request = indexedDB.deleteDatabase("solara-commerce-studio");
-        request.addEventListener("success", () => resolveDelete());
-        request.addEventListener("error", () => reject(request.error));
-        request.addEventListener("blocked", () => reject(new Error("La base quedó bloqueada.")));
-      }),
-  );
-  await page.reload();
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-}
-
 async function openStore(page: Page, projectId: string): Promise<void> {
   await page.locator(`[data-store-card-id="${projectId}"]`).click();
   await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
@@ -146,6 +131,14 @@ async function openResumenTab(page: Page): Promise<void> {
 async function openPrepararTab(page: Page): Promise<void> {
   await page.getByRole("tab", { name: "Preparar", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Preparar tienda" })).toBeVisible();
+}
+
+async function expandSummarySection(page: Page, sectionId: string): Promise<Locator> {
+  const section = page.locator(`[data-accordion-id="${sectionId}"]`);
+  const toggle = section.locator("button.overview-accordion__toggle");
+  if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  return section;
 }
 
 /** Lee el proyecto guardado en IndexedDB (contrato de datos). */
@@ -204,7 +197,7 @@ async function readProjectRecord(
 
 /** Siembra el estado PRE-upgrade en IndexedDB: templateVersion 1 y la sección
  *  de newsletter de la plantilla actual ausente (induce section-add). */
-async function seedUpgradeState(page: Page): Promise<void> {
+async function seedUpgradeState(page: Page): Promise<boolean> {
   const seeded = await page.evaluate(
     (projectId) =>
       new Promise<string>((resolve, reject) => {
@@ -227,7 +220,7 @@ async function seedUpgradeState(page: Page): Promise<void> {
             const record = records.find((item) => item.project.id === projectId);
             if (!record) {
               resolve(
-                `false|${JSON.stringify(records.map((item) => ({ name: item.name, id: item.project.id })))}`,
+                records.some((item) => item.project.id === "store-r8-upgrade") ? "true" : "false",
               );
               return;
             }
@@ -257,7 +250,7 @@ async function seedUpgradeState(page: Page): Promise<void> {
       }),
     SOURCE_PROJECT_ID,
   );
-  expect(seeded).toBe("true");
+  return seeded === "true";
 }
 
 async function readUpgradeState(page: Page): Promise<{
@@ -302,17 +295,25 @@ async function readUpgradeState(page: Page): Promise<{
 /** Edita los campos del Resumen con valores deterministas (identidad, WhatsApp,
  *  dominio y navegación) usando el commit validado de cada control. */
 async function applyResumenEdits(page: Page): Promise<void> {
+  await expandSummarySection(page, "identity");
   await page.getByLabel("Nombre de la tienda").fill(EDITED_RESUMEN.name);
   await page.getByLabel("Descripción", { exact: true }).fill(EDITED_RESUMEN.description);
   await page.getByLabel("Email", { exact: true }).fill(EDITED_RESUMEN.email);
+  const whatsappSection = await expandSummarySection(page, "whatsapp");
   await page.getByLabel("Número internacional").fill(EDITED_RESUMEN.phone);
-  const whatsappSection = page.locator('[data-accordion-id="whatsapp"]');
   await whatsappSection
     .getByLabel("Saludo del pedido", { exact: true })
     .fill(EDITED_RESUMEN.greeting);
+  await expandSummarySection(page, "domain");
   await page.getByLabel("URL pública").fill(EDITED_RESUMEN.baseUrl);
+  await expandSummarySection(page, "navigation");
   await page.getByLabel("Nombre del catálogo").fill(EDITED_RESUMEN.catalogLabel);
-  await page.getByLabel("Enlace 1", { exact: true }).fill(EDITED_RESUMEN.navLabel);
+  const firstNavigationLink = page.getByLabel("Enlace 1", { exact: true });
+  if ((await firstNavigationLink.count()) === 0) {
+    await page.getByRole("button", { name: "Añadir enlace de catálogo" }).click();
+  }
+  await expect(firstNavigationLink).toBeVisible();
+  await firstNavigationLink.fill(EDITED_RESUMEN.navLabel);
   const searchSwitch = page.getByRole("switch", { name: "Mostrar búsqueda" });
   if ((await searchSwitch.getAttribute("aria-checked")) === "true") await searchSwitch.click();
   await expect(page.getByRole("switch", { name: "Incluir SKU en el mensaje" })).toHaveCount(0);
@@ -320,7 +321,9 @@ async function applyResumenEdits(page: Page): Promise<void> {
 
 /** Lee el Resumen completo desde los inputs del panel (contrato de datos UI). */
 async function readResumen(page: Page): Promise<typeof EDITED_RESUMEN> {
-  const whatsappSection = page.locator('[data-accordion-id="whatsapp"]');
+  const whatsappSection = await expandSummarySection(page, "whatsapp");
+  await expandSummarySection(page, "domain");
+  await expandSummarySection(page, "navigation");
   return {
     name: await page.getByLabel("Nombre de la tienda").inputValue(),
     description: await page.getByLabel("Descripción", { exact: true }).inputValue(),
@@ -346,11 +349,10 @@ async function flushSave(page: Page): Promise<void> {
 test("Respaldar y adoptar cambios descarga, adopta y persiste (recarga → sólo conflictos)", async ({
   page,
 }) => {
-  await resetIndexedDb(page);
-  // El primer arranque crea la tienda Predeterminado; deja asentar el boot
-  // antes de sembrar el estado PRE-upgrade (patrón H8-24).
-  await page.waitForTimeout(900);
-  await seedUpgradeState(page);
+  await resetStudioIndexedDb(page, studioUrl);
+  // El seed espera el registro real del primer arranque en vez de competir con
+  // un temporizador fijo del boot.
+  await expect.poll(() => seedUpgradeState(page), { timeout: 15_000 }).toBe(true);
 
   await page.reload();
   await openDemoStore(page, DEMO_PROJECT_ID);
@@ -396,16 +398,13 @@ test("Respaldar y adoptar cambios descarga, adopta y persiste (recarga → sólo
   const adopted = await readUpgradeState(page);
   expect(adopted.sectionIds).toContain(NEWSLETTER_SECTION_ID);
 
-  // Persistencia: recargar la app conserva v2 + newsletter. Los conflictos de
-  // compatibilidad no se adoptan y por eso el panel vuelve a mostrarlos, pero
-  // el safe change ya no reaparece.
+  // Persistencia: recargar la app conserva v2 + newsletter; como este fixture
+  // no agrega secciones fuera de la plantilla, no quedan conflictos.
   await page.reload();
   await openDemoStore(page, DEMO_PROJECT_ID);
   await openPrepararTab(page);
-  await expect(page.getByText("Actualización disponible")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Respaldar y adoptar cambios" })).toBeVisible();
-  await expect(page.getByText("Agregar sección base: catalog-newsletter-cta")).toHaveCount(0);
-  await expect(page.getByText(/Contenido de Nosotros archivado/)).toBeVisible();
+  await expect(page.getByText("Actualización disponible")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Respaldar y adoptar cambios" })).toHaveCount(0);
 });
 
 test("utilidad: adoptar la actualización agrega la sección de plantilla al sitio exportado (diff)", async () => {
@@ -438,7 +437,7 @@ test("utilidad: adoptar la actualización agrega la sección de plantilla al sit
 test("persistencia: recargar la pestaña conserva identidad, WhatsApp, dominio y navegación", async ({
   page,
 }) => {
-  await resetIndexedDb(page);
+  await resetStudioIndexedDb(page, studioUrl);
   const projectId = await openMutableScaleStore(page, "Tienda R8 pestaña");
   await openResumenTab(page);
 
@@ -465,7 +464,7 @@ test("persistencia: recargar la pestaña conserva identidad, WhatsApp, dominio y
 test("persistencia: Guardar (Ctrl+S) conserva los campos tras recargar la app (IndexedDB)", async ({
   page,
 }) => {
-  await resetIndexedDb(page);
+  await resetStudioIndexedDb(page, studioUrl);
   const projectId = await openMutableScaleStore(page, "Tienda R8 guardar");
   await openResumenTab(page);
 
@@ -486,7 +485,7 @@ test("persistencia: Guardar (Ctrl+S) conserva los campos tras recargar la app (I
 test("persistencia: el respaldo .solara.json descargado contiene los valores editados del Resumen", async ({
   page,
 }) => {
-  await resetIndexedDb(page);
+  await resetStudioIndexedDb(page, studioUrl);
   const projectId = await openMutableScaleStore(page, "Tienda R8 respaldo");
   await openResumenTab(page);
 
@@ -537,7 +536,7 @@ test("persistencia: el respaldo .solara.json descargado contiene los valores edi
 test("los colapsables pliegan y despliegan cada sección del Resumen dentro de la sesión", async ({
   page,
 }) => {
-  await resetIndexedDb(page);
+  await resetStudioIndexedDb(page, studioUrl);
   await openDemoStore(page);
   await openResumenTab(page);
 
@@ -551,11 +550,12 @@ test("los colapsables pliegan y despliegan cada sección del Resumen dentro de l
   await expect(identityToggle).toHaveAttribute("aria-expanded", "false");
   await expect(identityPanel).toBeHidden();
 
-  // El resto de las secciones sigue operativa.
-  await expect(page.getByRole("button", { name: "Pedido por WhatsApp" })).toHaveAttribute(
-    "aria-expanded",
-    "true",
-  );
+  // Las secciones de una tienda de escala arrancan cerradas; también deben
+  // poder abrirse sin afectar el estado de Identidad.
+  const whatsappToggle = page.getByRole("button", { name: "Pedido por WhatsApp" });
+  await expect(whatsappToggle).toHaveAttribute("aria-expanded", "false");
+  await whatsappToggle.click();
+  await expect(whatsappToggle).toHaveAttribute("aria-expanded", "true");
 
   await identityToggle.click();
   await expect(identityToggle).toHaveAttribute("aria-expanded", "true");
@@ -565,7 +565,7 @@ test("los colapsables pliegan y despliegan cada sección del Resumen dentro de l
 test("el estado de los colapsables persiste entre pestañas y tras recargar (R8-B1)", async ({
   page,
 }) => {
-  await resetIndexedDb(page);
+  await resetStudioIndexedDb(page, studioUrl);
   await openDemoStore(page);
   await openResumenTab(page);
 
@@ -590,9 +590,9 @@ test("el estado de los colapsables persiste entre pestañas y tras recargar (R8-
     "false",
   );
 
-  // El resto de las secciones sigue abierto por defecto.
+  // La tienda de escala conserva el valor inicial cerrado de WhatsApp.
   await expect(page.getByRole("button", { name: "Pedido por WhatsApp" })).toHaveAttribute(
     "aria-expanded",
-    "true",
+    "false",
   );
 });

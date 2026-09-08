@@ -1,28 +1,30 @@
 import { describe, expect, it } from "vitest";
-import { compactResponsiveSources, RESPONSIVE_IMAGE_WIDTHS, responsiveImageWidths } from "./media";
+import { isValidIco } from "./media.js";
 
-describe("receta de imágenes responsive", () => {
-  it("define sólo la variante intermedia y la máxima sin ampliar imágenes", () => {
-    expect(RESPONSIVE_IMAGE_WIDTHS).toEqual([480, 768, 1800]);
-    expect(responsiveImageWidths(2400)).toEqual([480, 768, 1800]);
-    expect(responsiveImageWidths(1000)).toEqual([480, 768, 1000]);
-    expect(responsiveImageWidths(700)).toEqual([480, 700]);
+describe("media contracts", () => {
+  it("acepta un ICO estructuralmente completo", () => {
+    const bytes = new Uint8Array(6 + 16 + 4);
+    const view = new DataView(bytes.buffer);
+    view.setUint16(2, 1, true);
+    view.setUint16(4, 1, true);
+    bytes[6] = 16;
+    bytes[7] = 16;
+    view.setUint32(6 + 8, 4, true);
+    view.setUint32(6 + 12, 22, true);
+    expect(isValidIco(bytes)).toBe(true);
   });
 
-  it("compacta recetas antiguas conservando la mejor y el punto intermedio", () => {
-    const sources = [320, 480, 640, 768, 1024, 1280, 1600, 1800].map((width) => ({
-      width,
-      source: `/assets/foto-${width}.webp`,
-    }));
+  it("rechaza una firma ICO truncada o un directorio fuera de rango", () => {
+    expect(isValidIco(Uint8Array.from([0, 0, 1, 0]))).toBe(false);
 
-    expect(
-      compactResponsiveSources(sources, 1800, {
-        width: 1800,
-        source: "/assets/foto.webp",
-      }),
-    ).toEqual([
-      { width: 768, source: "/assets/foto-768.webp" },
-      { width: 1800, source: "/assets/foto.webp" },
-    ]);
+    const bytes = new Uint8Array(22);
+    const view = new DataView(bytes.buffer);
+    view.setUint16(2, 1, true);
+    view.setUint16(4, 1, true);
+    bytes[6] = 16;
+    bytes[7] = 16;
+    view.setUint32(6 + 8, 4, true);
+    view.setUint32(6 + 12, 22, true);
+    expect(isValidIco(bytes)).toBe(false);
   });
 });

@@ -322,7 +322,7 @@ export const AGENT_MCP_TOOL_DEFINITIONS = [
       properties: {
         name: { type: "string" },
         alt: { type: "string" },
-        mimeType: { enum: ["image/png", "image/jpeg", "image/webp", "image/gif"] },
+        mimeType: { enum: ["image/png", "image/jpeg", "image/webp", "image/gif", "image/x-icon"] },
         source: { type: "object" },
       },
     },
@@ -356,7 +356,7 @@ export const AGENT_MCP_TOOL_DEFINITIONS = [
       properties: {
         name: { type: "string" },
         alt: { type: "string" },
-        mimeType: { enum: ["image/png", "image/jpeg", "image/webp", "image/gif"] },
+        mimeType: { enum: ["image/png", "image/jpeg", "image/webp", "image/gif", "image/x-icon"] },
         expectedBytes: { type: "integer", minimum: 1, maximum: 20000000 },
       },
     },

@@ -174,6 +174,36 @@ documentar contrato, secretos, fallback y coste en `docs/INTEGRATIONS.md`, luego
 aislar la integración en un paquete o servicio pequeño y agregar pruebas con
 fixtures deterministas.
 
+## Impeccable y flujo visual
+
+Impeccable es obligatorio para tareas del agente de código que modifiquen UI:
+Studio, storefront, Preview, módulos visuales, CSS, renderer HTML o comportamiento
+responsive. No se usa para schema, persistencia, operaciones de tiendas, el agente
+nativo, tests puros, scripts ni backend.
+
+- En una UI nueva, usar `$impeccable shape` antes de editar.
+- En una UI existente, usar `$impeccable critique` o `$impeccable audit` según el
+  problema; el hook del proyecto hace además la detección automática después de
+  cada edición y en el cierre de la sesión.
+- El refinamiento adaptativo puede elegir `layout`, `typeset`, `adapt`, `harden`,
+  `optimize`, `clarify`, `distill` y `polish` según evidencia del objetivo y del
+  código existente. Ejecutar `polish` una sola vez al final de un cambio visual
+  significativo.
+- Usar `extract` sólo para una tarea explícita de sistema de diseño y `live` sólo
+  cuando se solicite iteración visual en navegador.
+- `bolder`, `quieter`, `overdrive`, `colorize`, `animate` y `delight` requieren una
+  petición explícita o una directriz clara del brief; no son una cadena automática.
+- `init` se ejecuta una vez para `PRODUCT.md`; `document` registra el sistema
+  visual existente en `DESIGN.md`. `craft` es un alias obsoleto de trabajo nuevo;
+  no existe un comando `start`.
+
+Las reglas de SolaraCommerce tienen prioridad sobre las sugerencias visuales:
+`StoreProjectV2`, el renderer compartido entre Preview y exportación, la familia V2
+por defecto, la compatibilidad V1, HTML útil sin JavaScript, accesibilidad,
+reduced motion, responsive y los presupuestos públicos no se cambian para
+resolver un hallazgo estético. El canal nativo de tiendas sigue usando sus planes
+tipados y no se mezcla con este skill.
+
 ## Comandos oficiales
 
 Desde la raíz:

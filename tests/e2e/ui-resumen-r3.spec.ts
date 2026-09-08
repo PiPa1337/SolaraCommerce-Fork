@@ -19,7 +19,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import { SlugSchema, type StoreProjectV1, StoreProjectV1Schema } from "@solara/project-schema";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
-import { openMutableScaleStore } from "./project-helpers";
+import { openMutableScaleStore, resetStudioIndexedDb } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 150_000 : 90_000);
@@ -40,21 +40,6 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   await stopStudioServer(server);
 });
-
-async function resetIndexedDb(page: Page): Promise<void> {
-  await page.goto(studioUrl);
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolveDelete, reject) => {
-        const request = indexedDB.deleteDatabase("solara-commerce-studio");
-        request.addEventListener("success", () => resolveDelete());
-        request.addEventListener("error", () => reject(request.error));
-        request.addEventListener("blocked", () => reject(new Error("La base quedó bloqueada.")));
-      }),
-  );
-  await page.reload();
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-}
 
 async function openStore(page: Page, projectId: string): Promise<void> {
   await page.locator(`[data-store-card-id="${projectId}"]`).click();
@@ -143,7 +128,7 @@ const otherSlugText = asText(otherSlugExport.files);
 test("URL pública: edición válida commitea, vacío e inválido muestran error inline (post-fix A8)", async ({
   page,
 }) => {
-  await resetIndexedDb(page);
+  await resetStudioIndexedDb(page, studioUrl);
   const projectId = await openMutableScaleStore(page, "Tienda R3 URL");
   await openResumenTab(page);
 
@@ -185,7 +170,7 @@ test("URL pública: edición válida commitea, vacío e inválido muestran error
 test("Slug interno: se puede editar, valida el schema y persiste en la tienda", async ({
   page,
 }) => {
-  await resetIndexedDb(page);
+  await resetStudioIndexedDb(page, studioUrl);
   const projectId = await openMutableScaleStore(page, "Tienda R3 slug");
   await openResumenTab(page);
 
@@ -225,7 +210,7 @@ test("Slug interno: se puede editar, valida el schema y persiste en la tienda", 
 test("Auditoría: subcarpeta en la URL pública advierte domain.baseurl-path y http advierte domain.https", async ({
   page,
 }) => {
-  await resetIndexedDb(page);
+  await resetStudioIndexedDb(page, studioUrl);
   const projectId = await openMutableScaleStore(page, "Tienda R3 auditoría");
   await openResumenTab(page);
 

@@ -15,6 +15,58 @@ export const RESPONSIVE_IMAGE_MAX_WIDTH = 1800;
 /** Marca estable para distinguir la receta materializada de las variantes. */
 export const IMAGE_ASSET_RECIPE = "responsive-export-v1";
 
+/**
+ * Valida la estructura binaria de un ICO, no sólo sus cuatro bytes iniciales.
+ * El exportador puede recibir assets legacy, pero nunca debe preservar como
+ * favicon un archivo truncado que sólo imita la firma del formato.
+ */
+export function isValidIco(bytes: Uint8Array | undefined): boolean {
+  if (!bytes || bytes.byteLength < 6) return false;
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  if (view.getUint16(0, true) !== 0 || view.getUint16(2, true) !== 1) return false;
+  const count = view.getUint16(4, true);
+  const directorySize = 6 + count * 16;
+  if (count === 0 || bytes.byteLength < directorySize) return false;
+
+  for (let index = 0; index < count; index += 1) {
+    const entryOffset = 6 + index * 16;
+    const width = view.getUint8(entryOffset) || 256;
+    const height = view.getUint8(entryOffset + 1) || 256;
+    const size = view.getUint32(entryOffset + 8, true);
+    const offset = view.getUint32(entryOffset + 12, true);
+    if (
+      width < 1 ||
+      width > 256 ||
+      height < 1 ||
+      height > 256 ||
+      size === 0 ||
+      offset < directorySize ||
+      offset > bytes.byteLength - size
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/** Comprueba un ICO persistido en la forma de asset que usa SolaraCommerce. */
+export function isValidIcoDataUrl(source: string | undefined): boolean {
+  if (!source) return false;
+  const match = /^data:[^;,]+;base64,(.*)$/is.exec(source);
+  if (!match) return false;
+  const payload = (match[1] ?? "").replace(/\s/g, "");
+  if (!payload || !/^[A-Za-z0-9+/]*={0,2}$/.test(payload) || payload.length % 4 === 1) {
+    return false;
+  }
+  try {
+    const binary = atob(payload);
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    return isValidIco(bytes);
+  } catch {
+    return false;
+  }
+}
+
 export interface ResponsiveImageSource {
   width: number;
   source: string;

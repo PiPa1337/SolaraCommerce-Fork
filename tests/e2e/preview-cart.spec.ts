@@ -265,15 +265,23 @@ test("P7-B5: los tamaños de vista y el zoom cambian el stage del preview", asyn
     });
     await card.getByRole("button", { name: "Abrir esta tienda" }).click();
     await page.locator(".studio-shell").waitFor({ timeout: 30_000 });
-    await page.waitForTimeout(1500);
 
     const frame = page.locator('.preview-stage iframe[title^="Vista previa"]');
+    await expect(frame).toBeVisible();
     const desktopWidth = (await frame.boundingBox())?.width ?? 0;
-    await page.getByRole("button", { name: "Vista de tablet" }).click();
-    await page.waitForTimeout(500);
+    const tabletButton = page.getByRole("button", { name: "Vista de tablet" });
+    await tabletButton.click();
+    await expect(tabletButton).toHaveAttribute("aria-pressed", "true");
+    await expect
+      .poll(async () => (await frame.boundingBox())?.width ?? 0, { timeout: 5_000 })
+      .toBeLessThan(desktopWidth);
     const tabletWidth = (await frame.boundingBox())?.width ?? 0;
-    await page.getByRole("button", { name: "Vista móvil" }).click();
-    await page.waitForTimeout(500);
+    const mobileButton = page.getByRole("button", { name: "Vista móvil" });
+    await mobileButton.click();
+    await expect(mobileButton).toHaveAttribute("aria-pressed", "true");
+    await expect
+      .poll(async () => (await frame.boundingBox())?.width ?? 0, { timeout: 5_000 })
+      .toBeLessThan(tabletWidth);
     const mobileWidth = (await frame.boundingBox())?.width ?? 0;
     console.log(
       "P7-B5 anchos: desktop",
@@ -286,8 +294,9 @@ test("P7-B5: los tamaños de vista y el zoom cambian el stage del preview", asyn
     expect(tabletWidth).toBeLessThan(desktopWidth);
     expect(mobileWidth).toBeLessThan(tabletWidth);
 
-    await page.getByRole("button", { name: "75%" }).click();
-    await page.waitForTimeout(400);
+    const zoom75 = page.getByRole("button", { name: "75%" });
+    await zoom75.click();
+    await expect(zoom75).toHaveAttribute("aria-pressed", "true");
     const iframeZoom = await frame.evaluate((el) => getComputedStyle(el).zoom);
     console.log("P7-B5 zoom CSS tras 75%:", iframeZoom);
     expect(parseFloat(iframeZoom)).toBeLessThan(1);
@@ -309,10 +318,10 @@ test("P7-B6: el zoom del preview se conserva al recargar la sesión", async ({ p
     });
     await card.getByRole("button", { name: "Abrir esta tienda" }).click();
     await page.locator(".studio-shell").waitFor({ timeout: 30_000 });
-    await page.waitForTimeout(1500);
 
-    await page.getByRole("button", { name: "50%" }).click();
-    await page.waitForTimeout(400);
+    const zoom50 = page.getByRole("button", { name: "50%" });
+    await zoom50.click();
+    await expect(zoom50).toHaveAttribute("aria-pressed", "true");
     await page.reload();
     await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
       timeout: 30_000,
@@ -322,9 +331,9 @@ test("P7-B6: el zoom del preview se conserva al recargar la sesión", async ({ p
     });
     await cardAfter.getByRole("button", { name: "Abrir esta tienda" }).click();
     await page.locator(".studio-shell").waitFor({ timeout: 30_000 });
-    await page.waitForTimeout(1500);
 
     const frame = page.locator('.preview-stage iframe[title^="Vista previa"]');
+    await expect(frame).toBeVisible();
     const persistedZoom = await frame.evaluate((el) => getComputedStyle(el).zoom);
     console.log("P7-B6 zoom tras recargar:", persistedZoom);
     expect(parseFloat(persistedZoom)).toBeLessThan(1);

@@ -19,6 +19,7 @@ import {
   type StoreProjectV1,
   StoreProjectV2Schema,
   type Theme,
+  isValidIcoDataUrl,
 } from "@solara/project-schema";
 
 export type TypedIdentityChanges = Partial<
@@ -81,6 +82,16 @@ export type TypedSeoChanges = Partial<
     | "socialImageId"
   >
 >;
+
+function assertValidFaviconChange(project: StoreProjectV1, changes: TypedSeoChanges): void {
+  if (!Object.prototype.hasOwnProperty.call(changes, "faviconAssetId")) return;
+  const assetId = changes.faviconAssetId;
+  if (assetId === undefined) return;
+  const asset = project.assets.find((candidate) => candidate.id === assetId);
+  if (!asset || asset.mimeType !== "image/x-icon" || !isValidIcoDataUrl(asset.source)) {
+    throw new Error("El favicon debe ser un asset ICO válido antes de guardarlo.");
+  }
+}
 
 export type TypedWhatsappChanges = Partial<
   Pick<StoreProjectV1["whatsapp"], "phone" | "greeting" | "includeSku">
@@ -556,12 +567,15 @@ export function createMutationRegistry(): Record<string, MutationHandler> {
       const m = mutation as TypedPublicCopyChange;
       return updatePublicCopy(project, m.group, m.field, m.value, at);
     },
-    "seo.update": (project, mutation, at) =>
-      StoreProjectV2Schema.parse({
+    "seo.update": (project, mutation, at) => {
+      const changes = (mutation as { changes: TypedSeoChanges }).changes;
+      assertValidFaviconChange(project, changes);
+      return StoreProjectV2Schema.parse({
         ...project,
-        seo: { ...project.seo, ...(mutation as { changes: TypedSeoChanges }).changes },
+        seo: { ...project.seo, ...changes },
         updatedAt: at,
-      }),
+      });
+    },
     "whatsapp.update": (project, mutation, at) =>
       StoreProjectV2Schema.parse({
         ...project,

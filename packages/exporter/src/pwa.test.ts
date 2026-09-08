@@ -1,5 +1,4 @@
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
-import { referenceStore } from "@solara/project-schema/fixture";
 import { unzlibSync, zlibSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import { exportProject } from "./index";
