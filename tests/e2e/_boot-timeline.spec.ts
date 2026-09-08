@@ -41,10 +41,40 @@ test("capture boot timeline", async ({ page }) => {
               fillMode: getComputedStyle(canvas).animationFillMode,
             }
           : null,
+        canvasAnimations: canvas
+          ? canvas.getAnimations().map((animation) => ({
+              currentTime: animation.currentTime,
+              playState: animation.playState,
+              timing: animation.effect?.getComputedTiming(),
+            }))
+          : [],
+        matchedCanvasRules: canvas
+          ? [...document.styleSheets].flatMap((sheet) => {
+              try {
+                return [...sheet.cssRules].flatMap((rule) => {
+                  if (!(rule instanceof CSSStyleRule)) return [];
+                  if (!canvas.matches(rule.selectorText)) return [];
+                  return rule.style.opacity || rule.style.animation
+                    ? [
+                        {
+                          selector: rule.selectorText,
+                          opacity: rule.style.opacity,
+                          animation: rule.style.animation,
+                        },
+                      ]
+                    : [];
+                });
+              } catch {
+                return [];
+              }
+            })
+          : [],
         reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
         dashboardVisible: Boolean(dashboard && getComputedStyle(dashboard).display !== "none"),
         headingVisible: Boolean(
-          [...document.querySelectorAll("h1")].some((element) => getComputedStyle(element).opacity !== "0"),
+          [...document.querySelectorAll("h1")].some(
+            (element) => getComputedStyle(element).opacity !== "0",
+          ),
         ),
       };
     });
