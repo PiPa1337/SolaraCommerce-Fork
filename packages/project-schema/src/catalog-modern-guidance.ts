@@ -84,7 +84,11 @@ export function isCatalogModernSentinelValue(value: string): boolean {
   return (
     /^producto \d+$/.test(normalized) ||
     /^descripcion del producto \d+\.$/.test(normalized) ||
-    /^categoria \d+$/.test(normalized)
+    /^categoria \d+$/.test(normalized) ||
+    /^producto de .+ pensado para ofrecer calidad, practicidad y una excelente experiencia de compra\.$/i.test(value.trim()) ||
+    /^.+: una propuesta pensada para mostrar calidad, practicidad y una experiencia simple de compra\. adaptá este texto con la información real de tu negocio\.$/i.test(value.trim()) ||
+    /^(hogar|cocina|decoracion|textiles|organizacion|limpieza|exterior|oficina|regalos|novedades) \d+$/.test(normalized) ||
+    /^(hogar|cocina|decoracion|textiles|organizacion|limpieza|exterior|oficina|regalos|novedades)$/.test(normalized)
   );
 }
 

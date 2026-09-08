@@ -4,26 +4,32 @@ import { buildCatalogModernProject, catalogModernCleanStore } from "./catalog-mo
 const placeholder = buildCatalogModernProject({ seed: "placeholder" });
 
 describe("seed placeholder", () => {
-  it("crea 5 productos genericos con placeholders numerados", () => {
-    expect(placeholder.products).toHaveLength(5);
-    expect(placeholder.products.map((p) => p.title)).toEqual([
-      "Producto 1",
-      "Producto 2",
-      "Producto 3",
-      "Producto 4",
-      "Producto 5",
-    ]);
+  it("crea 200 productos base con copy comercial", () => {
+    expect(placeholder.products).toHaveLength(200);
+    expect(placeholder.products[0]?.title).toBe("Hogar 1");
+    expect(placeholder.products[0]?.description).toContain("calidad");
     for (const product of placeholder.products) {
       expect(product.variants[0]?.price).toBeGreaterThan(0);
       expect(product.variants.length).toBeGreaterThanOrEqual(1);
     }
   });
 
-  it("crea 2 categorias y 1 coleccion placeholder", () => {
-    expect(placeholder.categories.map((c) => c.title)).toEqual(["Categoria 1", "Categoria 2"]);
+  it("crea 10 categorias y 1 coleccion base", () => {
+    expect(placeholder.categories.map((c) => c.title)).toEqual([
+      "Hogar",
+      "Cocina",
+      "Decoración",
+      "Textiles",
+      "Organización",
+      "Limpieza",
+      "Exterior",
+      "Oficina",
+      "Regalos",
+      "Novedades",
+    ]);
     expect(placeholder.collections).toHaveLength(1);
-    expect(placeholder.collections[0]?.title).toBe("Coleccion 1");
-    expect(placeholder.collections[0]?.productIds).toHaveLength(5);
+    expect(placeholder.collections[0]?.title).toBe("Catálogo completo");
+    expect(placeholder.collections[0]?.productIds).toHaveLength(200);
   });
 
   it("hero y announcement usan textos instructivos", () => {

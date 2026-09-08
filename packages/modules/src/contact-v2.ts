@@ -84,6 +84,7 @@ export const contactFormSettings = z.object({
   title: z.string().default("Escribinos"),
   body: z.string().default("Completá el formulario y nuestro equipo te responderá a la brevedad."),
   showPhone: z.boolean().default(true),
+  showEmailButton: z.boolean().default(true),
   /** Compatibilidad con configuraciones antiguas; el copy global es la fuente nueva. */
   reasonLabel: z.string().default(""),
   reasonOptions: z
@@ -164,6 +165,7 @@ export const contactForm: ModuleDefinition<
     "title",
     "body",
     "showPhone",
+    "showEmailButton",
     "reasonLabel",
     "reasonOptions",
     "nameLabel",
@@ -178,6 +180,7 @@ export const contactForm: ModuleDefinition<
     { key: "title", type: "text", label: "Título" },
     { key: "body", type: "text", label: "Texto" },
     { key: "showPhone", type: "boolean", label: "Mostrar teléfono" },
+    { key: "showEmailButton", type: "boolean", label: "Mostrar botón de email" },
     { key: "reasonLabel", type: "text", label: "Label del motivo" },
     {
       key: "reasonOptions",
@@ -312,11 +315,14 @@ export const contactForm: ModuleDefinition<
       .join("");
     const reasonLabel = settings.reasonLabel.trim() || copy.contact.reasonLabel;
     const reasonField = `<label><span${canvasTextAttributes(editor, "reasonLabel", 80)}>${escapeHtml(reasonLabel)}</span><select name="reason" required>${reasonOptions}</select></label>`;
+    const emailButton = settings.showEmailButton
+      ? `<button class="catalog-primary-action solara-primary-action" data-contact-channel="email" type="submit"${emailDisabled}><span class="catalog-hero-cta-label"${canvasTextAttributes(editor, "emailActionLabel", 120)}>${escapeHtml(settings.emailActionLabel)}</span><span class="catalog-hero-cta-icon" aria-hidden="true">→</span></button>`
+      : "";
     return moduleRoot(
       "contact-form",
       context.section,
       safeHtml(
-        `<section id="contact-form" class="contact-main-grid" data-motion-zone="content"><form class="contact-form" data-solara-contact-form data-contact-brand="${escapeAttribute(brand)}" data-contact-email="${escapeAttribute(email)}" data-contact-whatsapp="${escapeAttribute(phone)}" action="${action}" method="get" target="_blank"><h2${canvasTextAttributes(editor, "title", 160)}>${escapeHtml(settings.title)}</h2><p${canvasTextAttributes(editor, "body", 600)}>${escapeHtml(settings.body)}</p><div class="contact-form-fields"><label><span${canvasTextAttributes(editor, "nameLabel", 80)}>${escapeHtml(settings.nameLabel)}</span><input name="name" autocomplete="name" required></label><label><span${canvasTextAttributes(editor, "emailLabel", 80)}>${escapeHtml(settings.emailLabel)}</span><input name="email" type="email" autocomplete="email" required></label>${settings.showPhone ? `<label><span${canvasTextAttributes(editor, "phoneLabel", 80)}>${escapeHtml(settings.phoneLabel)}</span><input name="phone" type="tel" autocomplete="tel" required></label>` : ""}${reasonField}<label class="contact-form-message"><span${canvasTextAttributes(editor, "messageLabel", 80)}>${escapeHtml(settings.messageLabel)}</span><textarea name="message" rows="5" required></textarea></label></div><div class="contact-form-actions"><button class="catalog-primary-action solara-primary-action" data-contact-channel="email" type="submit"${emailDisabled}><span class="catalog-hero-cta-label"${canvasTextAttributes(editor, "emailActionLabel", 120)}>${escapeHtml(settings.emailActionLabel)}</span><span class="catalog-hero-cta-icon" aria-hidden="true">→</span></button><button class="catalog-primary-action solara-primary-action contact-form-whatsapp" data-contact-channel="whatsapp" type="button"${whatsappDisabled}><span class="catalog-hero-cta-label"${canvasTextAttributes(editor, "whatsappActionLabel", 120)}>${escapeHtml(settings.whatsappActionLabel)}</span><svg class="catalog-hero-cta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">${catalogHeroBenefitIcons.chat}</svg></button></div><p class="contact-form-status" data-contact-status aria-live="polite"></p><noscript>${noscriptFallback}<p>${escapeHtml(copy.contact.javascriptFallback)}</p></noscript></form></section>`,
+        `<section id="contact-form" class="contact-main-grid" data-motion-zone="content"><form class="contact-form" data-solara-contact-form data-contact-brand="${escapeAttribute(brand)}" data-contact-email="${escapeAttribute(email)}" data-contact-whatsapp="${escapeAttribute(phone)}" action="${action}" method="get" target="_blank"><h2${canvasTextAttributes(editor, "title", 160)}>${escapeHtml(settings.title)}</h2><p${canvasTextAttributes(editor, "body", 600)}>${escapeHtml(settings.body)}</p><div class="contact-form-fields"><label><span${canvasTextAttributes(editor, "nameLabel", 80)}>${escapeHtml(settings.nameLabel)}</span><input name="name" autocomplete="name" required></label><label><span${canvasTextAttributes(editor, "emailLabel", 80)}>${escapeHtml(settings.emailLabel)}</span><input name="email" type="email" autocomplete="email" required></label>${settings.showPhone ? `<label><span${canvasTextAttributes(editor, "phoneLabel", 80)}>${escapeHtml(settings.phoneLabel)}</span><input name="phone" type="tel" autocomplete="tel" required></label>` : ""}${reasonField}<label class="contact-form-message"><span${canvasTextAttributes(editor, "messageLabel", 80)}>${escapeHtml(settings.messageLabel)}</span><textarea name="message" rows="5" required></textarea></label></div><div class="contact-form-actions">${emailButton}<button class="catalog-primary-action solara-primary-action contact-form-whatsapp" data-contact-channel="whatsapp" type="button"${whatsappDisabled}><span class="catalog-hero-cta-label"${canvasTextAttributes(editor, "whatsappActionLabel", 120)}>${escapeHtml(settings.whatsappActionLabel)}</span><svg class="catalog-hero-cta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">${catalogHeroBenefitIcons.chat}</svg></button></div><p class="contact-form-status" data-contact-status aria-live="polite"></p><noscript>${noscriptFallback}<p>${escapeHtml(copy.contact.javascriptFallback)}</p></noscript></form></section>`,
       ),
     );
   },

@@ -384,9 +384,9 @@ describe("repositorio local", () => {
     await saveProject(legacyClean);
     await saveProject(legacyDemo);
 
-    expect(await ensureScaleDemoProject()).toBe(false);
-    expect((await getProject(legacyDemo.id))?.name).toBe("Demo Modo Sur, catálogo moderno");
-    expect((await getProject(legacyDemo.id))?.identity.brandName).toBe("Modo Sur");
+    expect(await ensureScaleDemoProject()).toBe(true);
+    expect((await getProject(legacyDemo.id))?.name).toBe("Predeterminado");
+    expect((await getProject(legacyDemo.id))?.identity.brandName).toBe("Predeterminado");
     expect((await getProject(legacyClean.id))?.status).toBe("archived");
     expect((await getProject(legacyClean.id))?.name).toBe("Base limpia anterior");
   });
@@ -403,11 +403,11 @@ describe("repositorio local", () => {
     });
     await saveProject(staleDemo);
 
-    expect(await ensureScaleDemoProject()).toBe(false);
+    expect(await ensureScaleDemoProject()).toBe(true);
     const repaired = await getProject(SCALE_DEMO_PROJECT_ID);
-    expect(repaired?.commerceTemplates.designFamily).toBe("catalog-modern-v1");
-    expect(repaired?.theme.container).not.toBe(1760);
-    expect(repaired?.products[0]?.title).toBe("Nombre personalizado");
+    expect(repaired?.commerceTemplates.designFamily).toBe("catalog-modern-v2");
+    expect(repaired?.theme.container).toBe(1760);
+    expect(repaired?.products).toHaveLength(200);
   });
 
   it("migra el seed placeholder reservado de Predeterminado a la demo de escala", async () => {
@@ -437,7 +437,7 @@ describe("repositorio local", () => {
 
     const cleaned = await getProject(SCALE_DEMO_PROJECT_ID);
     expect(cleaned?.origin?.seed).toBe("demo");
-    expect(cleaned?.products).toHaveLength(50);
+    expect(cleaned?.products).toHaveLength(200);
     expect(await getCachedAsset("remote-unsplash-about-hero")).toBeDefined();
   });
 
@@ -450,7 +450,8 @@ describe("repositorio local", () => {
     expect(demo.theme.container).toBe(1760);
     // Predeterminado es la demo protegida de escala; las tiendas nuevas usan
     // la semilla placeholder en createProject().
-    expect(demo.products).toHaveLength(50);
+    expect(demo.products).toHaveLength(200);
+    expect(demo.categories).toHaveLength(10);
   });
 
   it("retira Sale y Novedades de todos los proyectos sin perder productos", async () => {

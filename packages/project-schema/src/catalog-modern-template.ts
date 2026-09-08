@@ -97,6 +97,7 @@ export interface BuildCatalogModernProjectOptions {
   slug?: string;
   baseUrl?: string;
   brandName?: string;
+  placeholderProductCount?: number;
 }
 
 function cleanProject(options: BuildCatalogModernProjectOptions): StoreProjectV2 {
@@ -286,16 +287,32 @@ export function buildCatalogModernProject(
     };
     const assets = [placeholderAsset];
 
-    const products = Array.from({ length: 5 }, (_, index) => ({
+    const categoryBlueprints = [
+      ["Hogar", "Productos pensados para hacer más cómodos tus espacios.", "hogar"],
+      ["Cocina", "Elementos prácticos para preparar y disfrutar cada comida.", "cocina"],
+      ["Decoración", "Detalles que transforman ambientes con personalidad.", "decoracion"],
+      ["Textiles", "Materiales suaves y funcionales para todos los días.", "textiles"],
+      ["Organización", "Soluciones simples para mantener cada espacio ordenado.", "organizacion"],
+      ["Limpieza", "Accesorios útiles para una rutina más eficiente.", "limpieza"],
+      ["Exterior", "Opciones para disfrutar patios, jardines y balcones.", "exterior"],
+      ["Oficina", "Productos para trabajar y estudiar con comodidad.", "oficina"],
+      ["Regalos", "Selecciones ideales para sorprender a alguien especial.", "regalos"],
+      ["Novedades", "Ingresos recientes elegidos para renovar tu catálogo.", "novedades"],
+    ] as const;
+
+    const products = Array.from({ length: options.placeholderProductCount ?? 5 }, (_, index) => {
+      const categoryIndex = index % categoryBlueprints.length;
+      const [categoryTitle] = categoryBlueprints[categoryIndex];
+      return {
       id: `product-placeholder-${index + 1}`,
       slug: `producto-${index + 1}`,
-      title: `Producto ${index + 1}`,
-      description: `Descripcion del producto ${index + 1}.`,
+      title: `${categoryTitle} ${index + 1}`,
+      description: `Producto de ${categoryTitle.toLowerCase()} pensado para ofrecer calidad, practicidad y una excelente experiencia de compra.`,
       status: "active" as const,
       brand: brandName,
-      categoryIds: [`category-placeholder-${(index % 2) + 1}`],
+      categoryIds: [`category-placeholder-${categoryIndex + 1}`],
       collectionIds: ["collection-placeholder-1"],
-      tags: [],
+      tags: [categoryTitle.toLowerCase(), "catalogo-base"],
       imageIds: [placeholderAsset.id],
       variants: [
         {
@@ -310,12 +327,13 @@ export function buildCatalogModernProject(
       ],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-    }));
-    const categories = Array.from({ length: 2 }, (_, index) => ({
+      };
+    });
+    const categories = categoryBlueprints.map(([title, description, slug], index) => ({
       id: `category-placeholder-${index + 1}`,
-      slug: `categoria-${index + 1}`,
-      title: `Categoria ${index + 1}`,
-      description: `Descripcion de la categoria ${index + 1}.`,
+      slug,
+      title,
+      description,
       parentId: undefined,
       productIds: products
         .filter((p) => p.categoryIds.includes(`category-placeholder-${index + 1}`))
@@ -326,8 +344,8 @@ export function buildCatalogModernProject(
       {
         id: "collection-placeholder-1",
         slug: "coleccion-1",
-        title: "Coleccion 1",
-        description: "Descripcion de la coleccion 1.",
+        title: "Catálogo completo",
+        description: "Selección completa de productos lista para adaptar a una nueva tienda.",
         productIds: products.map((p) => p.id),
         imageId: placeholderAsset.id,
       },

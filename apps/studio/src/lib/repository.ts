@@ -171,13 +171,69 @@ export function buildScaleDemoProject(): StoreProjectV1 {
     slug: "demo-catalogo-jerarquico",
     baseUrl: "https://demo-catalogo-jerarquico.example",
   });
+
+  const templateCategories = [
+    ["Hogar", "Productos para equipar y renovar espacios.", "hogar"],
+    ["Cocina", "Accesorios prácticos para cada preparación.", "cocina"],
+    ["Decoración", "Detalles que aportan estilo al ambiente.", "decoracion"],
+    ["Textiles", "Texturas cómodas para el uso diario.", "textiles"],
+    ["Organización", "Soluciones para mantener todo en orden.", "organizacion"],
+    ["Limpieza", "Elementos útiles para una rutina eficiente.", "limpieza"],
+    ["Exterior", "Productos para patios y espacios abiertos.", "exterior"],
+    ["Oficina", "Artículos para trabajar con comodidad.", "oficina"],
+    ["Regalos", "Opciones listas para sorprender.", "regalos"],
+    ["Novedades", "Nuevos ingresos del catálogo.", "novedades"],
+  ] as const;
+  const imageId = demo.assets[0]?.id;
+  const categories = templateCategories.map(([title, description, slug], index) => ({
+    id: `predeterminado-category-${index + 1}`,
+    title,
+    slug,
+    description,
+    productIds: [],
+    imageId,
+  }));
+  const products = Array.from({ length: 200 }, (_, index) => {
+    const category = categories[index % categories.length];
+    const collectionIds = demo.collections.map((collection) => collection.id);
+    return {
+      ...structuredClone(demo.products[0]),
+      id: `predeterminado-product-${index + 1}`,
+      variants: structuredClone(demo.products[0].variants).map((variant, variantIndex) => ({
+        ...variant,
+        id: `predeterminado-product-${index + 1}-variant-${variantIndex + 1}`,
+      })),
+      slug: `producto-${index + 1}`,
+      title: `${category.title} producto ${index + 1}`,
+      description: `${category.title}: una propuesta pensada para mostrar calidad, practicidad y una experiencia simple de compra. Adaptá este texto con la información real de tu negocio.`,
+      categoryIds: [category.id],
+      collectionIds,
+      imageIds: imageId ? [imageId] : [],
+      tags: [category.slug, "catalogo-base", "editable"],
+    };
+  });
+  const categoriesWithProducts = categories.map((category) => ({
+    ...category,
+    productIds: products.filter((product) => product.categoryIds.includes(category.id)).map((product) => product.id),
+  }));
+
   return ensureCatalogModernV2Sections(
     StoreProjectV1Schema.parse({
       ...demo,
+      products,
+      categories: categoriesWithProducts,
+      collections: demo.collections.map((collection) => ({
+        ...collection,
+        productIds: products.map((product) => product.id),
+      })),
       identity: {
         ...demo.identity,
         legalName: SCALE_DEMO_PROJECT_NAME,
         brandName: SCALE_DEMO_PROJECT_NAME,
+      },
+      navigation: {
+        ...demo.navigation,
+        items: [],
       },
       theme: structuredClone(catalogModernV2Store.theme),
       commerceTemplates: {
@@ -488,6 +544,38 @@ function normalizeScaleDemoProject(project: StoreProjectV1): StoreProjectV1 {
       ? { ...project, name: SCALE_DEMO_PROJECT_NAME }
       : project;
   return repairScaleDemoBrand(repairScaleDemoPresentation(renamed));
+}
+
+/**
+ * Actualiza la demo protegida con cambios de la fixture sin reemplazar todo el
+ * proyecto persistido. Esto permite que nuevas versiones de Predeterminado
+ * incorporen productos/categorías agregados manteniendo cambios seguros de la
+ * sesión actual.
+ */
+function syncScaleDemoFixtureChanges(project: StoreProjectV1): StoreProjectV1 {
+  if (project.id !== SCALE_DEMO_PROJECT_ID || project.origin?.seed !== "demo") return project;
+
+  const desired = buildScaleDemoProject();
+  const productIds = new Set(project.products.map((product) => product.id));
+  const categoryIds = new Set(project.categories.map((category) => category.id));
+  const collectionIds = new Set(project.collections.map((collection) => collection.id));
+  const products = [...project.products, ...desired.products.filter((product) => !productIds.has(product.id))];
+  const categories = [...project.categories, ...desired.categories.filter((category) => !categoryIds.has(category.id))];
+  const collections = [...project.collections, ...desired.collections.filter((collection) => !collectionIds.has(collection.id))];
+
+  const changed =
+    products.length !== project.products.length ||
+    categories.length !== project.categories.length ||
+    collections.length !== project.collections.length;
+  if (!changed) return project;
+
+  return StoreProjectV1Schema.parse({
+    ...project,
+    products,
+    categories,
+    collections,
+    updatedAt: new Date().toISOString(),
+  });
 }
 
 async function sourceAsDataUrl(source: string): Promise<string> {
@@ -1253,9 +1341,30 @@ export async function ensureScaleDemoProject(): Promise<boolean> {
         });
         return true;
       }
+      // Predeterminado is protected by id, so the regular demo migration below
+      // is intentionally unreachable for old protected records. Refresh the
+      // reserved template when its catalog is still the previous small seed.
+      if (
+        parsed.origin?.seed === "demo" &&
+        (parsed.products.length < 200 || parsed.categories.length < 10)
+      ) {
+        await saveProject(await embedFixtureAssets(buildScaleDemoProject()), {
+          allowProtectedWrite: true,
+        });
+        return true;
+      }
       return false;
     }
-    const repaired = repairModernGreeting(normalizeScaleDemoProject(parsed));
+    if (
+      parsed.origin?.seed === "demo" &&
+      (parsed.products.length < 200 || parsed.categories.length < 10)
+    ) {
+      await saveProject(await embedFixtureAssets(buildScaleDemoProject()), {
+        allowProtectedWrite: true,
+      });
+      return true;
+    }
+    const repaired = syncScaleDemoFixtureChanges(repairModernGreeting(normalizeScaleDemoProject(parsed)));
     const migrated = await migrateCatalogModernDemo(repaired);
     const project = expandCatalogModernDemoTestimonials(migrated);
     if (JSON.stringify(project) !== JSON.stringify(parsed)) {

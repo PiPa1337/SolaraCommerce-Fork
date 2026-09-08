@@ -142,7 +142,10 @@ internal sealed class TrayServices
             return false;
         }
 
-        for (int attempt = 0; attempt < 30; attempt++)
+        // El shutdown HTTP es asíncrono: el proceso primero cierra almacenamiento
+        // y conexiones antes de borrar el registro. Esperar sólo 3 segundos deja
+        // al reinicio en una carrera cuando hubo una exportación o cambio grande.
+        for (int attempt = 0; attempt < 100; attempt++)
         {
             Thread.Sleep(100);
             if (!IsLiveSession(session))
@@ -233,7 +236,7 @@ internal sealed class TrayServices
                 process.WaitForExit();
                 if (process.ExitCode != 0)
                 {
-                    error = string.IsNullOrWhiteSpace(stderr) ? "No se pudo abrir una nueva sesión." : stderr.Trim();
+                    error = string.IsNullOrWhiteSpace(stderr) ? "No se pudo abrir una nueva sesión." : StripAnsi(stderr.Trim());
                     return null;
                 }
 
@@ -248,9 +251,52 @@ internal sealed class TrayServices
         }
         catch (Exception exception)
         {
-            error = exception.Message;
+            error = StripAnsi(exception.Message);
             return null;
         }
+    }
+
+    private static string StripAnsi(string value)
+    {
+        if (string.IsNullOrEmpty(value)) return value;
+
+        StringBuilder clean = new StringBuilder(value.Length);
+        bool escape = false;
+        bool controlSequence = false;
+        foreach (char character in value)
+        {
+            if (escape)
+            {
+                if (controlSequence)
+                {
+                    if (character >= '@' && character <= '~')
+                    {
+                        escape = false;
+                        controlSequence = false;
+                    }
+                    continue;
+                }
+
+                if (character == '[')
+                {
+                    controlSequence = true;
+                    continue;
+                }
+
+                escape = false;
+                continue;
+            }
+
+            if (character == '\u001b')
+            {
+                escape = true;
+                continue;
+            }
+
+            clean.Append(character);
+        }
+
+        return clean.ToString().Trim();
     }
 
     public static void OpenUrl(string url)
@@ -358,6 +404,32 @@ internal sealed class TrayApplicationContext : ApplicationContext
         refreshTimer.Tick += delegate { RefreshSessions(); };
         refreshTimer.Start();
 
+        RefreshMenu();
+
+        if (sessions.Count == 0)
+        {
+            OpenInitialSession();
+        }
+    }
+
+    private void OpenInitialSession()
+    {
+        string error;
+        LauncherResult result = services.StartNewSession(out error);
+        if (result == null)
+        {
+            MessageBox.Show("No se pudo abrir SolaraCommerce: " + error, "SolaraCommerce", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        try
+        {
+            TrayServices.OpenUrl(result.url);
+        }
+        catch (Exception exception)
+        {
+            MessageBox.Show("La sesión inició, pero no se pudo abrir el navegador: " + exception.Message, "SolaraCommerce", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
         RefreshMenu();
     }
 

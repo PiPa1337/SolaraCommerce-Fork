@@ -1908,6 +1908,9 @@ export const catalogNewsletterCta: ModuleDefinition<
 const modernFooterSettings = z.object({
   note: z.string().default(""),
   showPolicies: z.boolean().default(true),
+  instagramUrl: z.string().default(""),
+  facebookUrl: z.string().default(""),
+  googleUrl: z.string().default(""),
 });
 
 export const catalogFooter: ModuleDefinition<
@@ -1919,12 +1922,15 @@ export const catalogFooter: ModuleDefinition<
     name: "Footer de catálogo",
     description: "Footer comercial con marca, enlaces y contacto.",
     slots: ["footer"],
-    compatibleSettings: ["note", "showPolicies"],
+    compatibleSettings: ["note", "showPolicies", "instagramUrl", "facebookUrl", "googleUrl"],
   }),
   settingsSchema: modernFooterSettings,
   settingsFields: [
     { key: "note", type: "text", label: "Descripción" },
     { key: "showPolicies", type: "boolean", label: "Mostrar políticas" },
+    { key: "instagramUrl", type: "text", label: "Instagram" },
+    { key: "facebookUrl", type: "text", label: "Facebook" },
+    { key: "googleUrl", type: "text", label: "Google" },
   ],
   motionZones: modernRevealZone,
   canvasBindings: [
@@ -1955,6 +1961,19 @@ export const catalogFooter: ModuleDefinition<
         : `<a href="/envios/">${escapeHtml(copy.footer.shipping)}</a><a href="/devoluciones/">${escapeHtml(copy.footer.returns)}</a><a href="/privacidad/">${escapeHtml(copy.footer.privacy)}</a><a href="/terminos/">${escapeHtml(copy.footer.terms)}</a>`
       : "";
     const note = context.settings.note || context.project.identity.description;
+    const socialLinks = [
+      context.settings.instagramUrl
+        ? `<a href="${escapeAttribute(context.settings.instagramUrl)}" target="_blank" rel="noopener noreferrer">Instagram</a>`
+        : "",
+      context.settings.facebookUrl
+        ? `<a href="${escapeAttribute(context.settings.facebookUrl)}" target="_blank" rel="noopener noreferrer">Facebook</a>`
+        : "",
+      context.settings.googleUrl
+        ? `<a href="${escapeAttribute(context.settings.googleUrl)}" target="_blank" rel="noopener noreferrer">Google</a>`
+        : "",
+    ]
+      .filter(Boolean)
+      .join("");
     const rawWhatsapp = (context.project.whatsapp.phone ?? "").replace(/\D/g, "");
     const placeholderDigits = CATALOG_MODERN_PLACEHOLDER_PHONE.replace(/\D/g, "");
     const hasWhatsapp = rawWhatsapp.length >= 8 && rawWhatsapp !== placeholderDigits;
@@ -2006,7 +2025,7 @@ export const catalogFooter: ModuleDefinition<
       "catalog-footer",
       context.section,
       safeHtml(
-        `<div class="catalog-footer-inner" data-motion-zone="content"><div class="catalog-footer-brand"><a class="catalog-brand" href="/">${renderBrand(context.project, canvasContext(context))}</a><p${canvasTextAttributes(canvasContext(context), "note", 300)}>${escapeHtml(note)}</p>${whatsappAction}</div><nav class="catalog-footer-nav catalog-footer-nav--explore" aria-label="${escapeAttribute(copy.footer.explore)}"><strong>${escapeHtml(copy.footer.explore)}</strong><a href="/">${escapeHtml(copy.navigation.home)}</a>${searchLink}${openCartLink}</nav>${categoriesNav}<nav class="catalog-footer-nav catalog-footer-nav--help" aria-label="${escapeAttribute(copy.footer.help)}"><strong>${escapeHtml(copy.footer.help)}</strong>${helpPageLinks}${policyLinks}</nav><address class="catalog-footer-contact"><strong>${escapeHtml(copy.footer.contact)}</strong>${contact}</address><div class="catalog-footer-meta"><small>© ${new Date(context.project.updatedAt).getUTCFullYear()} ${escapeHtml(context.project.identity.brandName)}. ${escapeHtml(copy.footer.copyright)}</small><p class="catalog-footer-made"><a href="https://solara.com.ar" target="_blank" rel="noopener noreferrer">${escapeHtml(copy.footer.madeWith)}</a></p></div></div>`,
+        `<div class="catalog-footer-inner" data-motion-zone="content"><div class="catalog-footer-brand"><a class="catalog-brand" href="/">${renderBrand(context.project, canvasContext(context))}</a><p${canvasTextAttributes(canvasContext(context), "note", 300)}>${escapeHtml(note)}</p>${whatsappAction}</div><nav class="catalog-footer-nav catalog-footer-nav--explore" aria-label="${escapeAttribute(copy.footer.explore)}"><strong>${escapeHtml(copy.footer.explore)}</strong><a href="/">${escapeHtml(copy.navigation.home)}</a>${searchLink}${openCartLink}</nav>${categoriesNav}<nav class="catalog-footer-nav catalog-footer-nav--help" aria-label="${escapeAttribute(copy.footer.help)}"><strong>${escapeHtml(copy.footer.help)}</strong>${helpPageLinks}${policyLinks}</nav><address class="catalog-footer-contact"><strong>${escapeHtml(copy.footer.contact)}</strong>${contact}${socialLinks}</address><div class="catalog-footer-meta"><small>© ${new Date(context.project.updatedAt).getUTCFullYear()} ${escapeHtml(context.project.identity.brandName)}. ${escapeHtml(copy.footer.copyright)}</small><p class="catalog-footer-made"><a href="https://solara.com.ar" target="_blank" rel="noopener noreferrer">${escapeHtml(copy.footer.madeWith)}</a></p></div></div>`,
       ),
       { tag: "footer" },
     );
