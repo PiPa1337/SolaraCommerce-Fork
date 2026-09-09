@@ -253,6 +253,9 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
   );
 });
 
+const GARGANTUA_LAUNCH_DURATION_MS = 1460;
+const GARGANTUA_LAUNCH_HANDOFF = 0.84;
+
 export function Dashboard({
   projects,
   onCreate,
@@ -303,6 +306,7 @@ export function Dashboard({
   const [deletingId, setDeletingId] = useState<string>();
   const [backingUp, setBackingUp] = useState<string>();
   const [openingStoreId, setOpeningStoreId] = useState<string>();
+  const [launchProgress, setLaunchProgress] = useState(0);
   const shutdownDialogRef = useRef<HTMLDialogElement>(null);
   const shutdownTerminalRef = useRef(shutdownTerminal === true);
   const selectedPanelRef = useRef<HTMLElement>(null);
@@ -315,6 +319,9 @@ export function Dashboard({
   const selectionInitializedRef = useRef(false);
   const focusCardOnSelectRef = useRef(false);
   const actionNoticeTimerRef = useRef<number | undefined>(undefined);
+  const launchFrameRef = useRef<number | undefined>(undefined);
+  const launchTokenRef = useRef<string | undefined>(undefined);
+  const launchHandoffRef = useRef(false);
   const libraryTitleId = useId();
   const shutdownTitleId = useId();
   const pinnedGroupTitleId = useId();
@@ -547,14 +554,53 @@ export function Dashboard({
       if (openingStoreId) return;
       const record = projects.find((item) => item.id === id);
       if (!record) return;
-      // La navegación debe empezar con el clic; la transición anterior ocultaba
-      // el editor durante más de un segundo y podía parecer un bloqueo.
+
+      if (launchFrameRef.current !== undefined) {
+        window.cancelAnimationFrame(launchFrameRef.current);
+      }
+      const token = `${id}:${performance.now()}`;
+      const startedAt = performance.now();
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const duration = reducedMotion ? 240 : GARGANTUA_LAUNCH_DURATION_MS;
+      const handoffAt = reducedMotion ? 0.46 : GARGANTUA_LAUNCH_HANDOFF;
+      launchTokenRef.current = token;
+      launchHandoffRef.current = false;
       setOpeningStoreId(id);
-      void Promise.resolve()
-        .then(() => onOpen(id))
-        .catch(() => setOpeningStoreId(undefined));
+      setLaunchProgress(0);
+
+      const animateLaunch = (now: number) => {
+        if (launchTokenRef.current !== token) return;
+        const progress = Math.min(1, (now - startedAt) / duration);
+        setLaunchProgress(progress);
+        if (progress >= handoffAt && !launchHandoffRef.current) {
+          launchHandoffRef.current = true;
+          void Promise.resolve(onOpen(id)).catch(() => {
+            if (launchTokenRef.current !== token) return;
+            launchTokenRef.current = undefined;
+            launchHandoffRef.current = false;
+            setOpeningStoreId(undefined);
+            setLaunchProgress(0);
+          });
+        }
+        if (progress < 1) {
+          launchFrameRef.current = window.requestAnimationFrame(animateLaunch);
+        } else {
+          launchFrameRef.current = undefined;
+        }
+      };
+
+      launchFrameRef.current = window.requestAnimationFrame(animateLaunch);
     },
     [onOpen, openingStoreId, projects],
+  );
+
+  useEffect(
+    () => () => {
+      if (launchFrameRef.current !== undefined) {
+        window.cancelAnimationFrame(launchFrameRef.current);
+      }
+    },
+    [],
   );
 
   const togglePin = useCallback((id: string) => {
@@ -914,11 +960,17 @@ export function Dashboard({
     }
   };
 
+  const openingStore = openingStoreId
+    ? projects.find((record) => record.id === openingStoreId)
+    : undefined;
+
   return (
     <main
       id={"tiendas"}
       tabIndex={-1}
-      className="dashboard-page dashboard-cosmic dashboard-gargantua"
+      className={`dashboard-page dashboard-cosmic dashboard-gargantua${
+        openingStoreId ? " is-store-launching" : ""
+      }`}
       aria-busy={openingStoreId ? "true" : undefined}
     >
       <GravityField
@@ -928,7 +980,17 @@ export function Dashboard({
         )}
         storeCount={pageVisible.length}
         templateSelected={Boolean(selected && isBaseTemplate(selected.project))}
+        launchProgress={launchProgress}
       />
+      {openingStoreId ? (
+        <output
+          className="dashboard-gargantua-transition"
+          data-testid="gargantua-launch"
+          aria-live="polite"
+        >
+          <span className="visually-hidden">Abriendo {openingStore?.name ?? "la tienda"}.</span>
+        </output>
+      ) : null}
       <div className="dashboard-wrap dashboard-cosmic__content">
         {isShutdownTerminal ? (
           <output className="shutdown-status shutdown-status--cosmic">
@@ -940,22 +1002,107 @@ export function Dashboard({
         ) : null}
 
         <section className="dashboard-cosmic-library" aria-labelledby={libraryTitleId}>
-          <header className="dashboard-cosmic-library-head">
-            <div className="dashboard-cosmic-library-heading">
-              <h1 id={libraryTitleId}>Tus tiendas</h1>
-              <span className="dashboard-cosmic-library-summary" aria-hidden="true">
-                {mainVisible.length}{" "}
-                {mainVisible.length === 1 ? "tienda visible" : "tiendas visibles"}
+          <div className="dashboard-cosmic-command-bar">
+            <header className="dashboard-cosmic-library-head">
+              <div className="dashboard-cosmic-library-heading">
+                <h1 id={libraryTitleId}>Tus tiendas</h1>
+                <span className="dashboard-cosmic-library-summary" aria-hidden="true">
+                  {mainVisible.length}{" "}
+                  {mainVisible.length === 1 ? "tienda visible" : "tiendas visibles"}
+                </span>
+                <span className="dashboard-cosmic-library-stat">
+                  <strong>{dashboardStats.activeProducts.toLocaleString("es-AR")}</strong>
+                  <span>Productos activos</span>
+                </span>
+              </div>
+              <Button ref={createButtonRef} variant="primary" icon={Plus} onClick={openCreate}>
+                Nueva tienda
+              </Button>
+            </header>
+            <DashboardToolbar
+              query={query}
+              statusFilter={statusFilter}
+              sort={sort}
+              view={view}
+              searchRef={searchInputRef}
+              onQueryChange={changeQuery}
+              onStatusFilterChange={changeStatusFilter}
+              onSortChange={changeSort}
+              onViewChange={changeView}
+            />
+
+            <div className="dashboard-cosmic-actions">
+              <Button icon={GitDiff} aria-pressed={compareMode} onClick={toggleCompare}>
+                Comparar tiendas
+              </Button>
+              <Button
+                icon={CloudArrowDown}
+                disabled={!managed || backingUp !== undefined}
+                loading={backingUp !== undefined}
+                aria-describedby={
+                  !managed && shutdownState === "unavailable" ? backupHintId : undefined
+                }
+                title={
+                  managed
+                    ? undefined
+                    : "En modo navegador los respaldos se descargan por tienda. Usá el botón de cada tienda."
+                }
+                onClick={() => void backupAll()}
+              >
+                {backingUp !== undefined ? `Respaldando ${backingUp}` : "Respaldar todo"}
+              </Button>
+              {!managed && shutdownState === "unavailable" ? (
+                <span id={backupHintId} className="dashboard-cosmic-actions__hint">
+                  En modo navegador, descargá el respaldo desde cada tienda.
+                </span>
+              ) : null}
+              {!compareMode ? (
+                <span className="dashboard-cosmic-actions__legend">
+                  <strong>Seleccionar</strong>
+                  <span>revisar</span>
+                  <span aria-hidden="true">·</span>
+                  <strong>Abrir</strong>
+                  <span>editar</span>
+                </span>
+              ) : null}
+              <span className="dashboard-cosmic-shortcuts">
+                <span>Atajos</span>
+                <kbd>/</kbd>
+                <span>buscar</span>
+                <span aria-hidden="true">·</span>
+                <kbd>N</kbd>
+                <span>nueva</span>
+                <span aria-hidden="true">·</span>
+                <kbd>Enter</kbd>
+                <span>revisar</span>
+                <span aria-hidden="true">·</span>
+                <kbd>doble clic</kbd>
+                <span>abrir</span>
               </span>
-              <span className="dashboard-cosmic-library-stat">
-                <strong>{dashboardStats.activeProducts.toLocaleString("es-AR")}</strong>
-                <span>Productos activos</span>
-              </span>
+              {compareMode ? (
+                <div className="dashboard-cosmic-comparebar">
+                  <span className="dashboard-cosmic-comparebar__count" aria-live="polite">
+                    {compareIds.length === 2
+                      ? "2 tiendas seleccionadas"
+                      : compareIds.length === 1
+                        ? "1 tienda seleccionada"
+                        : "Elegí 2 tiendas para comparar"}
+                  </span>
+                  <Button
+                    variant="primary"
+                    icon={GitDiff}
+                    disabled={compareIds.length !== 2}
+                    onClick={() => setCompareOpen(true)}
+                  >
+                    Comparar
+                  </Button>
+                  <Button variant="quiet" onClick={toggleCompare}>
+                    Cancelar
+                  </Button>
+                </div>
+              ) : null}
             </div>
-            <Button ref={createButtonRef} variant="primary" icon={Plus} onClick={openCreate}>
-              Nueva tienda
-            </Button>
-          </header>
+          </div>
           <span
             className="dashboard-cosmic-count visually-hidden"
             aria-live="polite"
@@ -963,90 +1110,6 @@ export function Dashboard({
           >
             {mainVisible.length} visibles
           </span>
-
-          <DashboardToolbar
-            query={query}
-            statusFilter={statusFilter}
-            sort={sort}
-            view={view}
-            searchRef={searchInputRef}
-            onQueryChange={changeQuery}
-            onStatusFilterChange={changeStatusFilter}
-            onSortChange={changeSort}
-            onViewChange={changeView}
-          />
-
-          <div className="dashboard-cosmic-actions">
-            <Button icon={GitDiff} aria-pressed={compareMode} onClick={toggleCompare}>
-              Comparar tiendas
-            </Button>
-            <Button
-              icon={CloudArrowDown}
-              disabled={!managed || backingUp !== undefined}
-              loading={backingUp !== undefined}
-              aria-describedby={
-                !managed && shutdownState === "unavailable" ? backupHintId : undefined
-              }
-              title={
-                managed
-                  ? undefined
-                  : "En modo navegador los respaldos se descargan por tienda. Usá el botón de cada tienda."
-              }
-              onClick={() => void backupAll()}
-            >
-              {backingUp !== undefined ? `Respaldando ${backingUp}` : "Respaldar todo"}
-            </Button>
-            {!managed && shutdownState === "unavailable" ? (
-              <span id={backupHintId} className="dashboard-cosmic-actions__hint">
-                En modo navegador, descargá el respaldo desde cada tienda.
-              </span>
-            ) : null}
-            {!compareMode ? (
-              <span className="dashboard-cosmic-actions__legend">
-                <strong>Seleccionar</strong>
-                <span>revisar</span>
-                <span aria-hidden="true">·</span>
-                <strong>Abrir</strong>
-                <span>editar</span>
-              </span>
-            ) : null}
-            <span className="dashboard-cosmic-shortcuts">
-              <span>Atajos</span>
-              <kbd>/</kbd>
-              <span>buscar</span>
-              <span aria-hidden="true">·</span>
-              <kbd>N</kbd>
-              <span>nueva</span>
-              <span aria-hidden="true">·</span>
-              <kbd>Enter</kbd>
-              <span>revisar</span>
-              <span aria-hidden="true">·</span>
-              <kbd>Espacio</kbd>
-              <span>abrir</span>
-            </span>
-            {compareMode ? (
-              <div className="dashboard-cosmic-comparebar">
-                <span className="dashboard-cosmic-comparebar__count" aria-live="polite">
-                  {compareIds.length === 2
-                    ? "2 tiendas seleccionadas"
-                    : compareIds.length === 1
-                      ? "1 tienda seleccionada"
-                      : "Elegí 2 tiendas para comparar"}
-                </span>
-                <Button
-                  variant="primary"
-                  icon={GitDiff}
-                  disabled={compareIds.length !== 2}
-                  onClick={() => setCompareOpen(true)}
-                >
-                  Comparar
-                </Button>
-                <Button variant="quiet" onClick={toggleCompare}>
-                  Cancelar
-                </Button>
-              </div>
-            ) : null}
-          </div>
 
           <div
             className={`dashboard-cosmic-results dashboard-cosmic-results--${view}${

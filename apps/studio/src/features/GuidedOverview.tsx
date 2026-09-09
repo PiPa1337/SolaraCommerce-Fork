@@ -366,7 +366,7 @@ export function GuidedOverview({
         </>
       )}
 
-      <div className="guided-actions">
+      <div className="guided-actions workbench-guided-actions">
         <button type="button" onClick={() => onNavigate("overview")}>
           <strong>Marca y textos</strong>
           <span>Identidad, contacto, páginas y navegación</span>

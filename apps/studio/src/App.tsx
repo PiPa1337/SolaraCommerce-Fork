@@ -148,6 +148,19 @@ function StudioBootSequence({ ready }: { ready: boolean }) {
   );
 }
 
+type StoreLaunchCurtainPhase = "idle" | "covering" | "releasing";
+
+function StoreLaunchCurtain({ phase }: { phase: StoreLaunchCurtainPhase }) {
+  if (phase === "idle") return null;
+  return (
+    <div
+      className={`store-launch-curtain is-${phase}`}
+      data-testid="store-route-curtain"
+      aria-hidden="true"
+    />
+  );
+}
+
 export function App() {
   return (
     <AppErrorBoundary>
@@ -249,6 +262,7 @@ function StudioShellWithBoot() {
 function StudioShell({ onInitialLoadComplete }: { onInitialLoadComplete: () => void }) {
   const [projects, setProjects] = useState<StoredProject[]>([]);
   const [active, setActive] = useState<StoreProjectV1>();
+  const [storeLaunchCurtain, setStoreLaunchCurtain] = useState<StoreLaunchCurtainPhase>("idle");
   const [recovery, setRecovery] = useState<ProjectRecoveryIssue[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -507,6 +521,20 @@ function StudioShell({ onInitialLoadComplete }: { onInitialLoadComplete: () => v
     }
   };
 
+  useEffect(() => {
+    if (!active || storeLaunchCurtain !== "covering") return;
+    const frame = window.requestAnimationFrame(() => setStoreLaunchCurtain("releasing"));
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [active, storeLaunchCurtain]);
+
+  useEffect(() => {
+    if (storeLaunchCurtain !== "releasing") return;
+    const timer = window.setTimeout(() => setStoreLaunchCurtain("idle"), 560);
+    return () => window.clearTimeout(timer);
+  }, [storeLaunchCurtain]);
+
   const openSite = useCallback(async (id: string) => {
     const popup = window.open("about:blank", "_blank");
     try {
@@ -644,6 +672,7 @@ function StudioShell({ onInitialLoadComplete }: { onInitialLoadComplete: () => v
             onDiskSaved={(receipt) => setActiveDiskVersion(receipt.version)}
             onBack={() => {
               setActive(undefined);
+              setStoreLaunchCurtain("idle");
               setActiveDiskVersion(null);
               setActiveDiskBaseProject(undefined);
               void refresh();
@@ -709,6 +738,7 @@ function StudioShell({ onInitialLoadComplete }: { onInitialLoadComplete: () => v
             }}
           />
         </Suspense>
+        <StoreLaunchCurtain phase={storeLaunchCurtain} />
       </ToastProvider>
     );
   }
@@ -891,7 +921,9 @@ function StudioShell({ onInitialLoadComplete }: { onInitialLoadComplete: () => v
             }
           }}
           onOpen={async (id) => {
-            await guard(async () => {
+            setStoreLaunchCurtain("covering");
+            try {
+              await guard(async () => {
                 let project: StoreProjectV1 | undefined;
                 if (storageModeRef.current) {
                   // El listing es metadata barata; el respaldo completo sólo se
@@ -947,7 +979,11 @@ function StudioShell({ onInitialLoadComplete }: { onInitialLoadComplete: () => v
                 }
                 if (!project) throw new Error("No se encontró la tienda.");
                 setActive(project);
-            });
+              });
+            } catch (reason) {
+              setStoreLaunchCurtain("idle");
+              throw reason;
+            }
           }}
           onDuplicate={(id, name) =>
             guard(async () => {

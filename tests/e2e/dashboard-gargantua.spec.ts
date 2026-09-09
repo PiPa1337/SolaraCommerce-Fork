@@ -156,7 +156,7 @@ for (const [width, height] of [
         root.scrollHeight > root.clientHeight + 1 || root.scrollWidth > root.clientWidth + 1;
       const panels = [
         ...document.querySelectorAll<HTMLElement>(
-          ".dashboard-cosmic-results, .dashboard-cosmic-store-groups, .dashboard-store-detail.is-open",
+          ".dashboard-cosmic-command-bar, .dashboard-cosmic-results, .dashboard-cosmic-store-groups, .dashboard-store-detail.is-open",
         ),
       ];
       return {
@@ -493,7 +493,7 @@ test("el teclado separa revisar estado de abrir la tienda", async ({ page }) => 
   await expect(page.getByRole("tab", { name: "Preparar", exact: true })).toBeVisible();
 });
 
-test("abrir una tienda monta Studio sin una escena intermedia", async ({ page }) => {
+test("abrir una tienda atraviesa Gargantua antes de montar Studio", async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.goto(url);
   await expect(page.getByRole("heading", { name: "Tus tiendas", exact: true })).toBeVisible();
@@ -504,12 +504,13 @@ test("abrir una tienda monta Studio sin una escena intermedia", async ({ page })
     .getByRole("region", { name: /Tienda seleccionada:/ })
     .getByRole("button", { name: "Abrir tienda", exact: true })
     .click();
-  await expect(page.getByTestId("gargantua-launch")).toHaveCount(0);
-  await expect(page.getByTestId("store-route-curtain")).toHaveCount(0);
-  await expect(page.getByText("ENTRANDO EN EL POZO", { exact: true })).toHaveCount(0);
+  await expect(page.getByTestId("gargantua-launch")).toBeVisible({ timeout: 2_000 });
+  await expect(page.locator(".dashboard-gargantua-transition__readout")).toHaveCount(0);
   await expect(page.getByRole("tab", { name: "Preparar", exact: true })).toBeVisible({
     timeout: 10000,
   });
+  await expect(page.getByTestId("gargantua-launch")).toHaveCount(0);
+  await expect(page.getByTestId("store-route-curtain")).toHaveCount(0, { timeout: 2_000 });
 });
 
 test("el slider de opacidad de Gargantua vive en el navbar", async ({

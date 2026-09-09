@@ -1,8 +1,20 @@
 ### Dashboard paginado sin scroll (2026-09-08)
 
+- Gargantua aumenta un 300 % la velocidad del gas (×4), añade estrellas con movimiento en profundidad y centelleo suave, polvo precalculado, capas con absorción ordenada, transición de lente variable, remolinos locales y filtrado estable. El reloj se conserva al ocultar la pestaña y el lanzamiento deja de multiplicar el tiempo acumulado.
+- Se recupera el contraste de los filamentos de Gargantua mezclando su energía después del perfil luminoso, se reduce el suavizado entre capas y se aumenta el flujo local conservando la envolvente estable.
+- Gargantua incorpora flujo orbital lento con entrada radial y renovación continua del gas, espesor irregular, absorción según densidad, distinta proyección del arco inferior, filtrado de filamentos y halo ligado a la emisión. Se verifican los empalmes temporales y una hora simulada sin saltos.
+- Las uniones de Gargantua curvan el arco hacia el disco; el gas frontal absorbe la luz del anillo trasero incluso en sus filamentos oscuros y concentra el brillo en un borde más fino.
+- Gargantua reconstruye el fondo con un disco 3D de espesor volumétrico, turbulencia orbital y arco gravitacional procedural: la materia frontal cruza la sombra, el gas gira a distintas velocidades y los filamentos irregulares recuperan cobre y blanco crema. El render adapta su resolución bajo carga, conserva movimiento reducido y recupera el contexto WebGL si se pierde.
+- La cabecera de la biblioteca se compacta en una única barra glassmorphism, con filtros y acciones jerarquizados; el atajo de apertura ahora indica doble clic y la composición refluye sin recortes en anchos intermedios.
+- La paginación de tiendas queda anclada al borde inferior de su contenedor aunque la página tenga espacio libre.
+- La paginación adopta una bandeja glassmorphism compacta, con el mismo vidrio frío y controles agrupados del Dashboard.
+- El detalle de la tienda seleccionada comparte ese borde inferior y distribuye sus grupos de acciones en el espacio vertical disponible.
+- Los botones del detalle se refactorizan en cuatro bandas flexibles, con alturas controladas y ritmo vertical para aprovechar el alto ganado sin inflar los controles.
+- Las acciones del detalle adoptan un ritmo fijo de spacing y un hover glass inspirado en las cards, sin desplazar los botones verticalmente; `Abrir tienda` y `Eliminar tienda` conservan su tratamiento propio.
+- El contenedor estructural de la biblioteca queda transparente y sin borde ni sombra, conservando la contención de layout y todos sus hijos.
 - El panel de información de tienda conserva el spacing entre acciones, pero elimina las barras y etiquetas visuales de "Gestionar y respaldar" y "Zona de riesgo".
 - El slider efímero de opacidad de Gargantua se integra como una cápsula glass compacta junto a "Cerrar app" en el navbar.
-- `Abrir tienda` monta el editor inmediatamente, sin zoom, cortina negra, nombre de tienda ni mensaje de entrada.
+- `Abrir tienda` vuelve a atravesar Gargantua con zoom hacia el agujero negro y cortina negra, sin textos centrales, antes de montar el editor.
 
 - El splash de inicio se reemplaza por un arranque cinematográfico: Gargantua entra desde negro y el dashboard libera cabecera, biblioteca, filtros, acciones y resultados en bloques escalonados, con ruta reducida para `prefers-reduced-motion`.
 - El handoff del boot congela el campo del dashboard en el cuadro final para evitar que Gargantua reaparezca en su encuadre inicial y repita el zoom debajo del overlay.
@@ -26,7 +38,7 @@
 - El rail desktop del dashboard recupera una escala mínima legible, hace visibles sus grupos de gestión y riesgo, y mantiene estable el espacio del feedback posterior a las acciones.
 - `Respaldar ahora`, `Restaurar tienda` y los estados de calculadora/plantilla protegida expresan mejor su consecuencia sin cambiar los contratos de operación.
 - La card seleccionada reduce capas decorativas redundantes y conserva un único nivel de elevación, manteniendo la identidad Gargantua sin competir con la acción primaria.
-- La apertura de una tienda conserva el catálogo visible y entrega el foco al editor sin una escena intermedia; la cobertura E2E comprueba que no haya cortina ni textos de lanzamiento.
+- La apertura de una tienda conserva el catálogo visible hasta que Gargantua completa el zoom y entrega el foco al editor; la cobertura E2E comprueba el overlay sin textos centrales y el montaje final de Studio.
 - El layout desktop aprovecha mejor los viewports anchos y ajusta la grilla a la cantidad real de tiendas, evitando columnas vacías en bibliotecas pequeñas.
 - El panel de tienda mejora su ritmo interno y distribuye sus acciones en dos columnas cuando hay altura suficiente; la card de la plantilla protegida mantiene una preview visible y legible también en laptops.
 - El campo Gargantua suma partículas térmicas deterministas con estelas cortas en el disco de acreción, manteniendo el detalle 3D dentro del canvas y respetando `prefers-reduced-motion`.

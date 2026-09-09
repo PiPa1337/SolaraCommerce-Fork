@@ -1,3 +1,4 @@
+import { WorkspaceGroups } from "./workbench/WorkspaceNav";
 /** Editor de identidad, contacto, navegación y copy que completa la plantilla base. */
 
 import type { Icon } from "@phosphor-icons/react";
@@ -827,7 +828,8 @@ export function Overview({
         description="Datos comerciales compartidos por la tienda, el pedido y la exportación."
         actions={saveIndicator("", "ui-save-indicator")}
       />
-      <div className="form-clusters">
+<WorkspaceGroups label="Datos de la tienda" groups={[
+{ id: "identity", label: "Identidad", content: <>
         <AccordionSection
           sectionKey="identity"
           label="Identidad"
@@ -1047,7 +1049,8 @@ export function Overview({
             </Field>
           </div>
         </AccordionSection>
-
+</> },
+{ id: "sales", label: "Venta y pedidos", content: <>
         <AccordionSection
           sectionKey="whatsapp"
           label="Pedido por WhatsApp"
@@ -1101,174 +1104,7 @@ export function Overview({
               />
             </Field>
           </div>
-        </AccordionSection>
-
-        <AccordionSection
-          sectionKey="domain"
-          label="Dominio"
-          icon={Globe}
-          collapsed={collapsedSections.has("domain")}
-          onToggle={() => toggleSection("domain")}
-        >
-          <div className="form-grid">
-            <Field
-              label="URL pública"
-              hint="La exportación de producción usa esta URL para canonical y feeds."
-              {...(urlError ? { error: urlError } : {})}
-            >
-              <input
-                type="url"
-                aria-label="URL pública"
-                value={urlDisplay}
-                onChange={(event) =>
-                  updateField(
-                    "baseUrl",
-                    event.target.value,
-                    (next) => next.trim() !== "" && isValidUrl(next),
-                    (next) => commit({ baseUrl: next }),
-                  )
-                }
-              />
-            </Field>
-            <Field
-              label="Slug interno"
-              hint="Minúsculas, números y guiones. Cambia las rutas futuras del sitio."
-              {...(slugError ? { error: slugError } : {})}
-            >
-              <input
-                aria-label="Slug interno"
-                maxLength={120}
-                autoCapitalize="none"
-                autoComplete="off"
-                spellCheck={false}
-                value={slugDisplay}
-                onChange={(event) =>
-                  updateField(
-                    "slug",
-                    event.target.value,
-                    (next) => SlugSchema.safeParse(next.trim()).success,
-                    (next) => {
-                      const result = SlugSchema.safeParse(next.trim());
-                      if (result.success) commit({ slug: result.data });
-                    },
-                  )
-                }
-              />
-            </Field>
-          </div>
-        </AccordionSection>
-
-        <AccordionSection
-          sectionKey="legal-profile"
-          label="Perfil legal"
-          icon={Article}
-          collapsed={collapsedSections.has("legal-profile")}
-          onToggle={() => toggleSection("legal-profile")}
-        >
-          <p className="form-help">
-            El perfil determina la jurisdicción y las referencias legales del sitio. Los datos
-            fiscales y comerciales deben ser los de tu tienda.
-          </p>
-          <div className="form-grid">
-            <Field
-              label="País legal"
-              hint={`Perfil disponible actualmente para ${ARGENTINA_LEGAL_PROFILE.countryName}.`}
-            >
-              <input
-                aria-label="País legal"
-                value={`${ARGENTINA_LEGAL_PROFILE.countryName} (${project.legalProfile.countryCode})`}
-                readOnly
-              />
-            </Field>
-            <Field
-              label="Última revisión"
-              hint={`Fecha registrada: ${project.legalProfile.revisionAt?.slice(0, 10) ?? project.createdAt.slice(0, 10)}`}
-            >
-              <Button
-                variant="secondary"
-                data-testid="ui-legal-profile-review"
-                onClick={() => updateLegalProfile({ revisionAt: new Date().toISOString() })}
-              >
-                Registrar revisión de políticas
-              </Button>
-            </Field>
-            <Field label="CUIT / identificación fiscal">
-              <input
-                aria-label="CUIT identificación fiscal"
-                value={project.legalProfile.taxId}
-                onChange={(event) => updateLegalProfile({ taxId: event.target.value })}
-              />
-            </Field>
-            <Field label="Jurisdicción declarada">
-              <input
-                aria-label="Jurisdicción declarada"
-                value={project.legalProfile.jurisdiction}
-                onChange={(event) => updateLegalProfile({ jurisdiction: event.target.value })}
-              />
-            </Field>
-            <Field
-              label="Medios de pago"
-              hint="Separalos con comas; se muestran como información declarada por la tienda."
-            >
-              <input
-                aria-label="Medios de pago"
-                value={project.legalProfile.paymentMethods.join(", ")}
-                onChange={(event) =>
-                  updateLegalProfile({
-                    paymentMethods: event.target.value
-                      .split(",")
-                      .map((value) => value.trim())
-                      .filter(Boolean),
-                  })
-                }
-              />
-            </Field>
-            <Field
-              label="Canales de venta"
-              hint="Separalos con comas; no agregues canales que la tienda no use."
-            >
-              <input
-                aria-label="Canales de venta"
-                value={project.legalProfile.salesChannels.join(", ")}
-                onChange={(event) =>
-                  updateLegalProfile({
-                    salesChannels: event.target.value
-                      .split(",")
-                      .map((value) => value.trim())
-                      .filter(Boolean),
-                  })
-                }
-              />
-            </Field>
-            <Toggle
-              checked={project.legalProfile.consumerRights.enabled}
-              onChange={(checked) => updateLegalProfile({ consumerRights: { enabled: checked } })}
-              label="Habilitar botón de arrepentimiento"
-            />
-            <p className="form-help">
-              Se deriva del perfil protegido: {ARGENTINA_LEGAL_PROFILE.withdrawal.label} de{" "}
-              {ARGENTINA_LEGAL_PROFILE.withdrawal.defaultDays} días y su autoridad oficial.
-            </p>
-            <Field label="Texto legal avanzado de privacidad" className="field--wide">
-              <textarea
-                aria-label="Texto legal avanzado de privacidad"
-                rows={4}
-                value={project.legalProfile.privacyOverride}
-                onChange={(event) => updateLegalProfile({ privacyOverride: event.target.value })}
-              />
-            </Field>
-            <Field label="Texto legal avanzado de términos" className="field--wide">
-              <textarea
-                aria-label="Texto legal avanzado de términos"
-                rows={4}
-                value={project.legalProfile.termsOverride}
-                onChange={(event) => updateLegalProfile({ termsOverride: event.target.value })}
-              />
-            </Field>
-          </div>
-        </AccordionSection>
-
-        <AccordionSection
+        </AccordionSection>        <AccordionSection
           sectionKey="price-format"
           label="Formato de precios"
           icon={CurrencyDollar}
@@ -1287,7 +1123,8 @@ export function Overview({
             </p>
           </div>
         </AccordionSection>
-
+</> },
+{ id: "content", label: "Navegación y textos", content: <>
         <AccordionSection
           sectionKey="navigation"
           label="Navegación pública"
@@ -1596,9 +1433,7 @@ export function Overview({
               ) : null}
             </div>
           </div>
-        </AccordionSection>
-
-        <AccordionSection
+        </AccordionSection>        <AccordionSection
           sectionKey="pages"
           label="Páginas editoriales"
           icon={Article}
@@ -1686,9 +1521,7 @@ export function Overview({
               );
             })}
           </div>
-        </AccordionSection>
-
-        <AccordionSection
+        </AccordionSection>        <AccordionSection
           sectionKey="public-copy"
           label="Contenido global"
           icon={Article}
@@ -1740,7 +1573,172 @@ export function Overview({
             })}
           </div>
         </AccordionSection>
-      </div>
+</> },
+{ id: "publication", label: "Dominio y legales", content: <>
+        <AccordionSection
+          sectionKey="domain"
+          label="Dominio"
+          icon={Globe}
+          collapsed={collapsedSections.has("domain")}
+          onToggle={() => toggleSection("domain")}
+        >
+          <div className="form-grid">
+            <Field
+              label="URL pública"
+              hint="La exportación de producción usa esta URL para canonical y feeds."
+              {...(urlError ? { error: urlError } : {})}
+            >
+              <input
+                type="url"
+                aria-label="URL pública"
+                value={urlDisplay}
+                onChange={(event) =>
+                  updateField(
+                    "baseUrl",
+                    event.target.value,
+                    (next) => next.trim() !== "" && isValidUrl(next),
+                    (next) => commit({ baseUrl: next }),
+                  )
+                }
+              />
+            </Field>
+            <Field
+              label="Slug interno"
+              hint="Minúsculas, números y guiones. Cambia las rutas futuras del sitio."
+              {...(slugError ? { error: slugError } : {})}
+            >
+              <input
+                aria-label="Slug interno"
+                maxLength={120}
+                autoCapitalize="none"
+                autoComplete="off"
+                spellCheck={false}
+                value={slugDisplay}
+                onChange={(event) =>
+                  updateField(
+                    "slug",
+                    event.target.value,
+                    (next) => SlugSchema.safeParse(next.trim()).success,
+                    (next) => {
+                      const result = SlugSchema.safeParse(next.trim());
+                      if (result.success) commit({ slug: result.data });
+                    },
+                  )
+                }
+              />
+            </Field>
+          </div>
+        </AccordionSection>        <AccordionSection
+          sectionKey="legal-profile"
+          label="Perfil legal"
+          icon={Article}
+          collapsed={collapsedSections.has("legal-profile")}
+          onToggle={() => toggleSection("legal-profile")}
+        >
+          <p className="form-help">
+            El perfil determina la jurisdicción y las referencias legales del sitio. Los datos
+            fiscales y comerciales deben ser los de tu tienda.
+          </p>
+          <div className="form-grid">
+            <Field
+              label="País legal"
+              hint={`Perfil disponible actualmente para ${ARGENTINA_LEGAL_PROFILE.countryName}.`}
+            >
+              <input
+                aria-label="País legal"
+                value={`${ARGENTINA_LEGAL_PROFILE.countryName} (${project.legalProfile.countryCode})`}
+                readOnly
+              />
+            </Field>
+            <Field
+              label="Última revisión"
+              hint={`Fecha registrada: ${project.legalProfile.revisionAt?.slice(0, 10) ?? project.createdAt.slice(0, 10)}`}
+            >
+              <Button
+                variant="secondary"
+                data-testid="ui-legal-profile-review"
+                onClick={() => updateLegalProfile({ revisionAt: new Date().toISOString() })}
+              >
+                Registrar revisión de políticas
+              </Button>
+            </Field>
+            <Field label="CUIT / identificación fiscal">
+              <input
+                aria-label="CUIT identificación fiscal"
+                value={project.legalProfile.taxId}
+                onChange={(event) => updateLegalProfile({ taxId: event.target.value })}
+              />
+            </Field>
+            <Field label="Jurisdicción declarada">
+              <input
+                aria-label="Jurisdicción declarada"
+                value={project.legalProfile.jurisdiction}
+                onChange={(event) => updateLegalProfile({ jurisdiction: event.target.value })}
+              />
+            </Field>
+            <Field
+              label="Medios de pago"
+              hint="Separalos con comas; se muestran como información declarada por la tienda."
+            >
+              <input
+                aria-label="Medios de pago"
+                value={project.legalProfile.paymentMethods.join(", ")}
+                onChange={(event) =>
+                  updateLegalProfile({
+                    paymentMethods: event.target.value
+                      .split(",")
+                      .map((value) => value.trim())
+                      .filter(Boolean),
+                  })
+                }
+              />
+            </Field>
+            <Field
+              label="Canales de venta"
+              hint="Separalos con comas; no agregues canales que la tienda no use."
+            >
+              <input
+                aria-label="Canales de venta"
+                value={project.legalProfile.salesChannels.join(", ")}
+                onChange={(event) =>
+                  updateLegalProfile({
+                    salesChannels: event.target.value
+                      .split(",")
+                      .map((value) => value.trim())
+                      .filter(Boolean),
+                  })
+                }
+              />
+            </Field>
+            <Toggle
+              checked={project.legalProfile.consumerRights.enabled}
+              onChange={(checked) => updateLegalProfile({ consumerRights: { enabled: checked } })}
+              label="Habilitar botón de arrepentimiento"
+            />
+            <p className="form-help">
+              Se deriva del perfil protegido: {ARGENTINA_LEGAL_PROFILE.withdrawal.label} de{" "}
+              {ARGENTINA_LEGAL_PROFILE.withdrawal.defaultDays} días y su autoridad oficial.
+            </p>
+            <Field label="Texto legal avanzado de privacidad" className="field--wide">
+              <textarea
+                aria-label="Texto legal avanzado de privacidad"
+                rows={4}
+                value={project.legalProfile.privacyOverride}
+                onChange={(event) => updateLegalProfile({ privacyOverride: event.target.value })}
+              />
+            </Field>
+            <Field label="Texto legal avanzado de términos" className="field--wide">
+              <textarea
+                aria-label="Texto legal avanzado de términos"
+                rows={4}
+                value={project.legalProfile.termsOverride}
+                onChange={(event) => updateLegalProfile({ termsOverride: event.target.value })}
+              />
+            </Field>
+          </div>
+        </AccordionSection>
+</> }
+]} />
       <div className="overview-savebar" data-testid="ui-overview-savebar">
         {saveIndicator()}
         <span className="overview-savebar__note">

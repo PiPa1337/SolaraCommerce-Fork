@@ -1,3 +1,4 @@
+import { DockedInspector } from "./workbench/InspectorDock";
 /**
  * Constructor por secciones. Usa metadata declarada por ModuleDefinition para
  * generar el inspector y conserva compatibilidad entre módulos al reemplazar
@@ -271,6 +272,11 @@ export function Builder({
   const allModules = useMemo(availableModules, []);
   const [pageKind, setPageKind] = useState<EditablePageKind>("home");
   const [selectedId, setSelectedId] = useState(project.sections[0]?.id ?? "");
+  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const inspectSection = (id: string) => {
+    setSelectedId(id);
+    setInspectorOpen(true);
+  };
   const [slotToAdd, setSlotToAdd] = useState<StoreSection["slot"]>("content");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerQuery, setPickerQuery] = useState("");
@@ -386,7 +392,7 @@ export function Builder({
       moduleId: module.manifest.id,
     });
     replaceSections([...pageSections, section]);
-    setSelectedId(section.id);
+    inspectSection(section.id);
     closePicker();
   };
 
@@ -553,7 +559,7 @@ export function Builder({
                   data-section-select={section.id}
                   aria-pressed={section.id === selectedId}
                   aria-keyshortcuts="ArrowUp ArrowDown"
-                  onClick={() => setSelectedId(section.id)}
+                  onClick={() => inspectSection(section.id)}
                   onKeyDown={(event) => handleSectionHeaderKeyDown(event, index)}
                 >
                   <span>{slotLabels[section.slot]}</span>
@@ -601,7 +607,7 @@ export function Builder({
                       const sections = [...pageSections];
                       sections.splice(index + 1, 0, duplicate);
                       replaceSections(sections);
-                      setSelectedId(duplicate.id);
+                      inspectSection(duplicate.id);
                     }}
                   />
                   <IconButton
@@ -622,7 +628,10 @@ export function Builder({
           })}
         </ul>
 
-        <aside className="inspector" aria-label="Inspector de sección">
+        {inspectorOpen ? <DockedInspector><aside className="inspector" aria-label="Inspector de sección">
+          <div className="workbench-inspector-heading"><h2>Editar sección</h2>
+            <Button variant="quiet" onClick={() => setInspectorOpen(false)}>Cerrar inspector</Button>
+          </div>
           {!selected ? (
             <EmptyState
               icon={Swap}
@@ -815,7 +824,7 @@ export function Builder({
               </fieldset>
             </>
           )}
-        </aside>
+        </aside></DockedInspector> : null}
       </div>
       {pendingDelete ? (
         <ConfirmDialog

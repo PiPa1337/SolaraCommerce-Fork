@@ -948,6 +948,7 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
                 event.target.value = "";
               }}
             />
+            <details className="workbench-transfer"><summary>Importar / exportar</summary><div>
             <Button
               icon={UploadSimple}
               onClick={() => document.getElementById(packageInputId)?.click()}
@@ -973,6 +974,7 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
             >
               {busy === "export" ? "Generando" : "CSV comercial"}
             </Button>
+            </div></details>
             <Button
               variant="primary"
               icon={Plus}

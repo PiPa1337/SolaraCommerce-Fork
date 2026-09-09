@@ -1,3 +1,4 @@
+import { WorkspaceGroups } from "./workbench/WorkspaceNav";
 /** Panel de exportación que distingue draft/production y muestra bloqueos accionables. */
 import {
   ArrowRight,
@@ -554,6 +555,8 @@ export function ExportPanel({
           </ul>
         </section>
       ) : null}
+<WorkspaceGroups label="Entrega de la tienda" groups={[
+{ id: "generate", label: "Generar archivos", content: <>
       <label className="export-ai-context">
         <input
           type="checkbox"
@@ -581,131 +584,7 @@ export function ExportPanel({
           ) : null}
         </aside>
       ) : null}
-      <section
-        className="audit-panel export-cloudflare-verifier"
-        data-testid="ui-cloudflare-verifier"
-      >
-        <header>
-          <div>
-            <h3>Verificar publicación en Cloudflare Pages</h3>
-            <p>La comprobación usa CORS y nunca marca verde si el hosting no expone sus headers.</p>
-          </div>
-        </header>
-        <div className="export-actions">
-          <input
-            aria-label="URL pública para verificar"
-            value={publishedSiteUrl}
-            onChange={(event) => setPublishedSiteUrl(event.target.value)}
-            placeholder={project.baseUrl}
-          />
-          <Button
-            size="sm"
-            variant="quiet"
-            onClick={() => void verifyCloudflare()}
-            disabled={cloudflareBusy}
-          >
-            {cloudflareBusy ? "Verificando…" : "Verificar URL"}
-          </Button>
-        </div>
-        {cloudflareVerification ? (
-          <div data-testid="ui-cloudflare-result" data-status={cloudflareVerification.status}>
-            <p>
-              Resultado:{" "}
-              {cloudflareVerification.status === "pass"
-                ? "verificado"
-                : cloudflareVerification.status === "fail"
-                  ? "falló"
-                  : "no verificado"}
-              {cloudflareVerification.revision
-                ? ` · revisión ${cloudflareVerification.revision}`
-                : ""}
-            </p>
-            <ul>
-              {cloudflareVerification.checks.map((entry) => (
-                <li key={entry.id} data-status={entry.status}>
-                  {entry.label}: {entry.status} — {entry.detail}
-                </li>
-              ))}
-            </ul>
-            {cloudflareVerification.status === "unverified" ? (
-              <pre>{cloudflareVerification.curlCommands.join("\n")}</pre>
-            ) : null}
-          </div>
-        ) : null}
-        <ul aria-label="Checklist manual Cloudflare">
-          {(
-            [
-              ["upload", "Subí únicamente la carpeta hija dedicada"],
-              ["functions", "No hay Pages Functions"],
-              ["previews", "Previews desactivados o protegidos con Access"],
-              ["https", "Dominio HTTPS activo"],
-              ["verified", "Verificación posterior completada"],
-            ] as const
-          ).map(([id, label]) => (
-            <li key={id}>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={cloudflareChecklist.has(id)}
-                  onChange={() => toggleCloudflareCheck(id)}
-                />
-                {label}
-              </label>
-            </li>
-          ))}
-        </ul>
-        <small>
-          Los previews de Cloudflare son públicos por defecto; protegé o eliminá las versiones
-          antiguas manualmente.
-        </small>
-      </section>
-      <section className="audit-panel export-recovery" data-testid="ui-export-recovery">
-        <header>
-          <div>
-            <h3>Recuperar desde un sitio publicado</h3>
-            <p>
-              Pegá la URL completa de `solara-recovery/.../manifest.json`. Se descargará solo el
-              contenido publicado y se verificarán sus hashes.
-            </p>
-          </div>
-        </header>
-        <div className="export-actions">
-          <input
-            aria-label="URL del manifest de recuperación"
-            value={recoveryUrl}
-            onChange={(event) => setRecoveryUrl(event.target.value)}
-            placeholder="https://tu-dominio.com/solara-recovery/.../manifest.json"
-          />
-          <Button
-            size="sm"
-            variant="quiet"
-            onClick={() => void recoverFromUrl()}
-            disabled={Boolean(busy)}
-          >
-            {busy === "recovery" ? "Recuperando…" : "Recuperar proyecto"}
-          </Button>
-          <input
-            ref={recoveryFolderRef}
-            className="visually-hidden"
-            type="file"
-            aria-label="Seleccionar carpeta del sitio publicado"
-            webkitdirectory="true"
-            onChange={(event) => {
-              const files = Array.from(event.target.files ?? []);
-              event.target.value = "";
-              if (files.length > 0) void recoverFromFolder(files);
-            }}
-          />
-          <Button
-            size="sm"
-            variant="quiet"
-            onClick={() => recoveryFolderRef.current?.click()}
-            disabled={Boolean(busy)}
-          >
-            Recuperar carpeta
-          </Button>
-        </div>
-      </section>
+
       {optimization ? (
         <output className="optimization-export-summary">
           <strong>Salud de exportación: {optimization.score}/100</strong>
@@ -792,6 +671,138 @@ export function ExportPanel({
           </Button>
         </article>
       </div>
+</> },
+{ id: "verify", label: "Verificar publicación", content: <>
+      <section
+        className="audit-panel export-cloudflare-verifier"
+        data-testid="ui-cloudflare-verifier"
+      >
+        <header>
+          <div>
+            <h3>Verificar publicación en Cloudflare Pages</h3>
+            <p>La comprobación usa CORS y nunca marca verde si el hosting no expone sus headers.</p>
+          </div>
+        </header>
+        <div className="export-actions">
+          <input
+            aria-label="URL pública para verificar"
+            value={publishedSiteUrl}
+            onChange={(event) => setPublishedSiteUrl(event.target.value)}
+            placeholder={project.baseUrl}
+          />
+          <Button
+            size="sm"
+            variant="quiet"
+            onClick={() => void verifyCloudflare()}
+            disabled={cloudflareBusy}
+          >
+            {cloudflareBusy ? "Verificando…" : "Verificar URL"}
+          </Button>
+        </div>
+        {cloudflareVerification ? (
+          <div data-testid="ui-cloudflare-result" data-status={cloudflareVerification.status}>
+            <p>
+              Resultado:{" "}
+              {cloudflareVerification.status === "pass"
+                ? "verificado"
+                : cloudflareVerification.status === "fail"
+                  ? "falló"
+                  : "no verificado"}
+              {cloudflareVerification.revision
+                ? ` · revisión ${cloudflareVerification.revision}`
+                : ""}
+            </p>
+            <ul>
+              {cloudflareVerification.checks.map((entry) => (
+                <li key={entry.id} data-status={entry.status}>
+                  {entry.label}: {entry.status} — {entry.detail}
+                </li>
+              ))}
+            </ul>
+            {cloudflareVerification.status === "unverified" ? (
+              <pre>{cloudflareVerification.curlCommands.join("\n")}</pre>
+            ) : null}
+          </div>
+        ) : null}
+        <ul aria-label="Checklist manual Cloudflare">
+          {(
+            [
+              ["upload", "Subí únicamente la carpeta hija dedicada"],
+              ["functions", "No hay Pages Functions"],
+              ["previews", "Previews desactivados o protegidos con Access"],
+              ["https", "Dominio HTTPS activo"],
+              ["verified", "Verificación posterior completada"],
+            ] as const
+          ).map(([id, label]) => (
+            <li key={id}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={cloudflareChecklist.has(id)}
+                  onChange={() => toggleCloudflareCheck(id)}
+                />
+                {label}
+              </label>
+            </li>
+          ))}
+        </ul>
+        <small>
+          Los previews de Cloudflare son públicos por defecto; protegé o eliminá las versiones
+          antiguas manualmente.
+        </small>
+      </section>
+
+</> },
+{ id: "recover", label: "Recuperar tienda", content: <>
+      <section className="audit-panel export-recovery" data-testid="ui-export-recovery">
+        <header>
+          <div>
+            <h3>Recuperar desde un sitio publicado</h3>
+            <p>
+              Pegá la URL completa de `solara-recovery/.../manifest.json`. Se descargará solo el
+              contenido publicado y se verificarán sus hashes.
+            </p>
+          </div>
+        </header>
+        <div className="export-actions">
+          <input
+            aria-label="URL del manifest de recuperación"
+            value={recoveryUrl}
+            onChange={(event) => setRecoveryUrl(event.target.value)}
+            placeholder="https://tu-dominio.com/solara-recovery/.../manifest.json"
+          />
+          <Button
+            size="sm"
+            variant="quiet"
+            onClick={() => void recoverFromUrl()}
+            disabled={Boolean(busy)}
+          >
+            {busy === "recovery" ? "Recuperando…" : "Recuperar proyecto"}
+          </Button>
+          <input
+            ref={recoveryFolderRef}
+            className="visually-hidden"
+            type="file"
+            aria-label="Seleccionar carpeta del sitio publicado"
+            webkitdirectory="true"
+            onChange={(event) => {
+              const files = Array.from(event.target.files ?? []);
+              event.target.value = "";
+              if (files.length > 0) void recoverFromFolder(files);
+            }}
+          />
+          <Button
+            size="sm"
+            variant="quiet"
+            onClick={() => recoveryFolderRef.current?.click()}
+            disabled={Boolean(busy)}
+          >
+            Recuperar carpeta
+          </Button>
+        </div>
+      </section>
+</> }
+]} />
 
       {history.length > 0 ? (
         <div className="audit-panel" data-testid="ui-export-history">

@@ -400,7 +400,7 @@ export function Assets({
     <section className="workspace-section">
       <SectionHeader
         title="Recursos"
-        description="Las imágenes se corrigen, redimensionan y convierten fuera del hilo principal."
+        description="Biblioteca de imágenes y videos. Buscá, reemplazá y revisá dónde se usa cada recurso."
         actions={
           <>
             <input

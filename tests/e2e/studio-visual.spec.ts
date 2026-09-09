@@ -231,6 +231,114 @@ test("dashboard cosmic muestra datos reales y creación guiada", async ({ page }
   await expect(createDialog).toBeHidden();
 });
 
+test("el contenedor de tiendas es transparente y conserva a sus hijos", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(studioUrl);
+
+  const surface = await page.locator(".dashboard-cosmic-library").evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      borderTopWidth: style.borderTopWidth,
+      borderRightWidth: style.borderRightWidth,
+      borderBottomWidth: style.borderBottomWidth,
+      borderLeftWidth: style.borderLeftWidth,
+      backgroundColor: style.backgroundColor,
+      backgroundImage: style.backgroundImage,
+      boxShadow: style.boxShadow,
+      contain: style.contain,
+      childClasses: [...element.children].map((child) => child.className),
+    };
+  });
+
+  expect(surface).toMatchObject({
+    borderTopWidth: "0px",
+    borderRightWidth: "0px",
+    borderBottomWidth: "0px",
+    borderLeftWidth: "0px",
+    backgroundColor: "rgba(0, 0, 0, 0)",
+    backgroundImage: "none",
+    boxShadow: "none",
+    contain: "layout paint",
+  });
+  expect(surface.childClasses).toEqual([
+    "dashboard-cosmic-library-head",
+    "dashboard-cosmic-count visually-hidden",
+    "dashboard-cosmic-toolbar",
+    "dashboard-cosmic-actions",
+    expect.stringMatching(/^dashboard-cosmic-results dashboard-cosmic-results--/),
+  ]);
+});
+
+test("la paginación queda al fondo del contenedor de tiendas", async ({ page }) => {
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 1024, height: 768 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(studioUrl);
+
+    const layout = await page.locator(".dashboard-cosmic-store-groups").evaluate((element) => {
+      const pagination = element.querySelector<HTMLElement>(".dashboard-cosmic-pagination");
+      if (!pagination) throw new Error("Falta la paginación de tiendas");
+      const groups = element.getBoundingClientRect();
+      const controls = pagination.getBoundingClientRect();
+      return { groupsBottom: groups.bottom, paginationBottom: controls.bottom };
+    });
+
+    expect(Math.abs(layout.groupsBottom - layout.paginationBottom)).toBeLessThanOrEqual(1);
+  }
+});
+
+test("el detalle seleccionado llega hasta el fondo de la fila de tiendas", async ({ page }) => {
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 1024, height: 768 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(studioUrl);
+
+    const layout = await page.locator(".dashboard-cosmic-results").evaluate((element) => {
+      const groups = element.querySelector<HTMLElement>(".dashboard-cosmic-store-groups");
+      const pagination = element.querySelector<HTMLElement>(".dashboard-cosmic-pagination");
+      const detail = element.querySelector<HTMLElement>(".dashboard-store-detail.is-open");
+      const actions = detail?.querySelector<HTMLElement>(".dashboard-store-detail__actions");
+      if (!groups || !pagination || !detail || !actions) {
+        throw new Error("Falta una superficie del dashboard");
+      }
+      const actionItems = Array.from(actions.children).map((child) =>
+        (child as HTMLElement).getBoundingClientRect(),
+      );
+      const actionButtons = Array.from(actions.querySelectorAll<HTMLElement>(".button")).map((button) =>
+        button.getBoundingClientRect(),
+      );
+      if (actionItems.length < 2) throw new Error("Faltan grupos de acciones");
+      if (actionButtons.length < 2) throw new Error("Faltan botones de acciones");
+      const groupsBounds = groups.getBoundingClientRect();
+      const paginationBounds = pagination.getBoundingClientRect();
+      const detailBounds = detail.getBoundingClientRect();
+      const actionsBounds = actions.getBoundingClientRect();
+      return {
+        paginationBottom: paginationBounds.bottom,
+        detailTop: detailBounds.top,
+        detailBottom: detailBounds.bottom,
+        groupsTop: groupsBounds.top,
+        actionsBottom: actionsBounds.bottom,
+        lastActionBottom: actionItems.at(-1)?.bottom ?? 0,
+        maxButtonHeight: Math.max(...actionButtons.map((button) => button.height)),
+        minButtonHeight: Math.min(...actionButtons.map((button) => button.height)),
+      };
+    });
+
+    expect(Math.abs(layout.detailBottom - layout.paginationBottom)).toBeLessThanOrEqual(1);
+    expect(layout.detailTop).toBeGreaterThanOrEqual(layout.groupsTop - 1);
+    expect(Math.abs(layout.actionsBottom - layout.lastActionBottom)).toBeLessThanOrEqual(1);
+    expect(layout.maxButtonHeight).toBeLessThanOrEqual(56);
+    expect(layout.minButtonHeight).toBeGreaterThanOrEqual(40);
+    expect(layout.maxButtonHeight - layout.minButtonHeight).toBeLessThanOrEqual(2);
+  }
+});
+
 test("el fondo del dashboard es un gradiente estático sin canvas ni animación", async ({
   page,
 }) => {

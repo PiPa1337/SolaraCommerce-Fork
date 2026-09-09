@@ -1,3 +1,4 @@
+import { DockedInspector } from "../workbench/InspectorDock";
 /** Edición de producto y variantes; entrega snapshots validados al reducer del catálogo. */
 import { ArrowDown, ArrowUp, Copy, Plus, Trash, X } from "@phosphor-icons/react";
 import {
@@ -190,7 +191,7 @@ export function ProductEditor({
     if (!dialog) return;
     openerRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    dialog.showModal();
+    dialog.show();
     return () => {
       if (dialog.open) dialog.close();
       const opener = openerRef.current;
@@ -377,11 +378,13 @@ export function ProductEditor({
   };
 
   return (
-    <dialog
+    <DockedInspector><dialog
+      open
       ref={dialogRef}
       className="product-dialog"
       aria-labelledby={titleId}
       data-dirty={isDirty ? "true" : undefined}
+      onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); requestClose(); } }}
       onCancel={(event) => {
         event.preventDefault();
         requestClose();
@@ -1027,6 +1030,6 @@ export function ProductEditor({
           onCancel={() => setPendingVariantDelete(null)}
         />
       ) : null}
-    </dialog>
+    </dialog></DockedInspector>
   );
 }

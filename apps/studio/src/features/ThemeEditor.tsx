@@ -1,3 +1,4 @@
+import { WorkspaceGroups } from "./workbench/WorkspaceNav";
 /** Inspector de tokens visuales persistidos; no introduce estilos públicos paralelos. */
 import {
   ArrowCounterClockwise,
@@ -836,8 +837,10 @@ export function ThemeEditor({
         description="Un sistema de tokens consistente para todos los módulos de la tienda."
       />
 
+  <WorkspaceGroups label="Opciones del tema" groups={[
+{ id: "palette", label: "Paleta y contraste", content: <>
       {project.commerceTemplates.designFamily?.startsWith("catalog-modern") ? (
-        <fieldset className="theme-presets-panel">
+      <fieldset className="theme-presets-panel">
           <legend>Familia visual</legend>
           <div className="theme-presets">
             <div
@@ -895,6 +898,134 @@ export function ThemeEditor({
         </div>
       </fieldset>
 
+        <fieldset>
+          <legend>
+            <PaintBrush aria-hidden size={19} /> Color
+          </legend>
+          <div className="fieldset-toolbar">
+            <Button
+              variant="quiet"
+              size="sm"
+              icon={ArrowCounterClockwise}
+              data-testid="ui-reset-colors"
+              onClick={() => resetGroup("colors")}
+            >
+              Restaurar colores
+            </Button>
+          </div>
+          <div className="color-grid">
+            {(Object.keys(colorLabels) as Array<keyof Theme["colors"]>).map((key) => (
+              <Field
+                label={colorLabels[key]}
+                key={key}
+                {...(colorErrors[key]
+                  ? { error: COLOR_ERROR, errorId: `theme-color-error-${key}` }
+                  : {})}
+              >
+                <span className="color-input">
+                  <input
+                    type="color"
+                    value={editableThemeColor(project.theme.colors, key)}
+                    aria-label={`${colorLabels[key]} selector de color`}
+                    data-testid={`ui-color-native-${key}`}
+                    onChange={(event) => commitColor(key, event.target.value)}
+                  />
+                  <input
+                    type="text"
+                    value={colorDrafts[key] ?? editableThemeColor(project.theme.colors, key)}
+                    aria-label={`${colorLabels[key]} valor hexadecimal`}
+                    aria-invalid={colorErrors[key] ? true : undefined}
+                    aria-describedby={colorErrors[key] ? `theme-color-error-${key}` : undefined}
+                    data-testid={`ui-color-text-${key}`}
+                    onChange={(event) => commitColor(key, event.target.value)}
+                  />
+                </span>
+              </Field>
+            ))}
+          </div>
+          <div className="contrast-check" aria-live="polite">
+            <strong className="contrast-check__title">Contraste (WCAG)</strong>
+            {contrastChecks.map((check) => {
+              const ratio = check.ratio;
+              const invalid = ratio === null;
+              const passing = !invalid && ratio >= CONTRAST_THRESHOLD;
+              const testid = invalid
+                ? "ui-contrast-warn"
+                : passing
+                  ? "ui-contrast-ok"
+                  : "ui-contrast-warning";
+              return (
+                <div
+                  className={`contrast-check__row${passing ? "" : " is-failing"}`}
+                  data-testid={testid}
+                  key={check.id}
+                >
+                  <span>{check.label}</span>
+                  <span className="contrast-check__ratio">
+                    {check.ratio === null
+                      ? "color no válido"
+                      : `${check.ratio.toFixed(2)}:1${passing ? "" : ` — inferior a ${CONTRAST_THRESHOLD}:1`}`}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </fieldset>
+
+
+</> },
+{ id: "type", label: "Tipografía", content: <>
+        <fieldset>
+          <legend>
+            <TextT aria-hidden size={19} /> Tipografía
+          </legend>
+          <div className="fieldset-toolbar">
+            <Button
+              variant="quiet"
+              size="sm"
+              icon={ArrowCounterClockwise}
+              data-testid="ui-reset-typography"
+              onClick={() => resetGroup("typography")}
+            >
+              Restaurar tipografía
+            </Button>
+          </div>
+          <Field label="Familia de títulos">
+            <FontSelect
+              value={project.theme.typography.display}
+              testId="ui-font-display"
+              label="Familia de títulos"
+              onChange={(stack) => commitFont("display", stack)}
+            />
+          </Field>
+          <Field label="Familia de texto">
+            <FontSelect
+              value={project.theme.typography.body}
+              testId="ui-font-body"
+              label="Familia de texto"
+              onChange={(stack) => commitFont("body", stack)}
+            />
+          </Field>
+          <Field label={`Escala ${project.theme.typography.scale.toFixed(2)}`}>
+            <input
+              type="range"
+              min={0.8}
+              max={1.4}
+              step={0.05}
+              value={project.theme.typography.scale}
+              onChange={(event) =>
+                updateTheme({
+                  ...project.theme,
+                  typography: { ...project.theme.typography, scale: Number(event.target.value) },
+                })
+              }
+            />
+          </Field>
+        </fieldset>
+
+
+</> },
+{ id: "surfaces", label: "Superficies y espacio", content: <>
       <fieldset className="theme-background-panel">
         <legend>
           <ImageIcon aria-hidden size={19} /> Fondo decorativo
@@ -989,129 +1120,6 @@ export function ThemeEditor({
         </div>
       </fieldset>
 
-      <div className="theme-layout">
-        <fieldset>
-          <legend>
-            <PaintBrush aria-hidden size={19} /> Color
-          </legend>
-          <div className="fieldset-toolbar">
-            <Button
-              variant="quiet"
-              size="sm"
-              icon={ArrowCounterClockwise}
-              data-testid="ui-reset-colors"
-              onClick={() => resetGroup("colors")}
-            >
-              Restaurar colores
-            </Button>
-          </div>
-          <div className="color-grid">
-            {(Object.keys(colorLabels) as Array<keyof Theme["colors"]>).map((key) => (
-              <Field
-                label={colorLabels[key]}
-                key={key}
-                {...(colorErrors[key]
-                  ? { error: COLOR_ERROR, errorId: `theme-color-error-${key}` }
-                  : {})}
-              >
-                <span className="color-input">
-                  <input
-                    type="color"
-                    value={editableThemeColor(project.theme.colors, key)}
-                    aria-label={`${colorLabels[key]} selector de color`}
-                    data-testid={`ui-color-native-${key}`}
-                    onChange={(event) => commitColor(key, event.target.value)}
-                  />
-                  <input
-                    type="text"
-                    value={colorDrafts[key] ?? editableThemeColor(project.theme.colors, key)}
-                    aria-label={`${colorLabels[key]} valor hexadecimal`}
-                    aria-invalid={colorErrors[key] ? true : undefined}
-                    aria-describedby={colorErrors[key] ? `theme-color-error-${key}` : undefined}
-                    data-testid={`ui-color-text-${key}`}
-                    onChange={(event) => commitColor(key, event.target.value)}
-                  />
-                </span>
-              </Field>
-            ))}
-          </div>
-          <div className="contrast-check" aria-live="polite">
-            <strong className="contrast-check__title">Contraste (WCAG)</strong>
-            {contrastChecks.map((check) => {
-              const ratio = check.ratio;
-              const invalid = ratio === null;
-              const passing = !invalid && ratio >= CONTRAST_THRESHOLD;
-              const testid = invalid
-                ? "ui-contrast-warn"
-                : passing
-                  ? "ui-contrast-ok"
-                  : "ui-contrast-warning";
-              return (
-                <div
-                  className={`contrast-check__row${passing ? "" : " is-failing"}`}
-                  data-testid={testid}
-                  key={check.id}
-                >
-                  <span>{check.label}</span>
-                  <span className="contrast-check__ratio">
-                    {check.ratio === null
-                      ? "color no válido"
-                      : `${check.ratio.toFixed(2)}:1${passing ? "" : ` — inferior a ${CONTRAST_THRESHOLD}:1`}`}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </fieldset>
-
-        <fieldset>
-          <legend>
-            <TextT aria-hidden size={19} /> Tipografía
-          </legend>
-          <div className="fieldset-toolbar">
-            <Button
-              variant="quiet"
-              size="sm"
-              icon={ArrowCounterClockwise}
-              data-testid="ui-reset-typography"
-              onClick={() => resetGroup("typography")}
-            >
-              Restaurar tipografía
-            </Button>
-          </div>
-          <Field label="Familia de títulos">
-            <FontSelect
-              value={project.theme.typography.display}
-              testId="ui-font-display"
-              label="Familia de títulos"
-              onChange={(stack) => commitFont("display", stack)}
-            />
-          </Field>
-          <Field label="Familia de texto">
-            <FontSelect
-              value={project.theme.typography.body}
-              testId="ui-font-body"
-              label="Familia de texto"
-              onChange={(stack) => commitFont("body", stack)}
-            />
-          </Field>
-          <Field label={`Escala ${project.theme.typography.scale.toFixed(2)}`}>
-            <input
-              type="range"
-              min={0.8}
-              max={1.4}
-              step={0.05}
-              value={project.theme.typography.scale}
-              onChange={(event) =>
-                updateTheme({
-                  ...project.theme,
-                  typography: { ...project.theme.typography, scale: Number(event.target.value) },
-                })
-              }
-            />
-          </Field>
-        </fieldset>
-
         <fieldset>
           <legend>
             <Wrench aria-hidden size={19} /> Geometría
@@ -1164,7 +1172,6 @@ export function ThemeEditor({
             />
           </Field>
         </fieldset>
-      </div>
       <fieldset className="theme-text-shadow-panel">
         <legend>
           <TextT aria-hidden size={19} /> Sombra del hero mobile
@@ -1221,6 +1228,9 @@ export function ThemeEditor({
           </Button>
         </div>
       </fieldset>
+
+</> }
+]} />
       <p className="inspector-note">
         Los resets vuelven cada grupo al tema que tenía la tienda al abrir esta pestaña (
         {groupLabels.colors}, {groupLabels.typography}, {groupLabels.geometry},

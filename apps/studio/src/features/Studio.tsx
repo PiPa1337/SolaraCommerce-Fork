@@ -1,3 +1,4 @@
+import { InspectorDockProvider } from "./workbench/InspectorDock";
 /**
  * Shell del editor: coordina historial undo/redo, navegación entre herramientas,
  * preview y guardado. Los editores de cada pestaña modifican el proyecto a
@@ -347,7 +348,7 @@ export function Studio({
   const [tab, setTab] = useState<StudioTab>("guided");
   const [editorOpen, setEditorOpen] = useState<boolean>(() => {
     try {
-      return window.localStorage.getItem(`solara-editor-pane:${initialProject.id}`) === "open";
+      return window.localStorage.getItem(`solara-editor-pane:${initialProject.id}`) !== "closed";
     } catch {
       return false;
     }
@@ -365,6 +366,9 @@ export function Studio({
     } catch {}
   }, [previewRoute]);
   const [previewSize, setPreviewSize] = useState<PreviewSize>("desktop");
+  const [inspectorOpen, setInspectorOpen] = useState(false);
+  // Keep the user's device untouched; closing the last inspector restores it exactly.
+  const effectivePreviewSize = inspectorOpen ? "tablet" : previewSize;
   const [previewZoom, setPreviewZoom] = useState<PreviewZoom>(() => {
     try {
       const stored = Number(window.sessionStorage.getItem("solara-preview-zoom"));
@@ -967,7 +971,9 @@ export function Studio({
   return (
     <>
       <div
-        className="studio-shell"
+        className="studio-shell studio-workbench"
+        data-preview-size={effectivePreviewSize}
+        data-inspector-open={inspectorOpen || undefined}
         data-studio-focus={focusMode || undefined}
         inert={conflict ? true : undefined}
       >
@@ -1017,10 +1023,10 @@ export function Studio({
           <PreviewToolbar
             routes={previewRoutes}
             route={previewRoute}
-            size={previewSize}
+            size={effectivePreviewSize}
             zoom={previewZoom}
             onRouteChange={setPreviewRoute}
-            onSizeChange={setPreviewSize}
+            onSizeChange={(size) => { if (!inspectorOpen) setPreviewSize(size); }}
             onZoomChange={changePreviewZoom}
             onOpenEditor={() => setPaneOpen(true)}
           />
@@ -1153,6 +1159,7 @@ export function Studio({
                 type="button"
                 key={id}
                 id={`studio-tab-${id}`}
+                data-nav-group={id === "guided" || id === "overview" ? "base" : id === "seo" || id === "export" ? "publish" : "design"}
                 data-testid="ui-tab"
                 role="tab"
                 aria-selected={tab === id}
@@ -1195,6 +1202,7 @@ export function Studio({
         ) : null}
 
         <main className="studio-workspace">
+          <InspectorDockProvider onOpenChange={setInspectorOpen}>
           <section
             ref={paneRef}
             id={editorPaneId}
@@ -1235,7 +1243,7 @@ export function Studio({
           <MemoizedPreview
             project={project}
             route={previewRoute}
-            size={previewSize}
+            size={effectivePreviewSize}
             zoom={previewZoom}
             canvasMode={canvasMode}
             onCanvasModeChange={setCanvasMode}
@@ -1386,6 +1394,7 @@ export function Studio({
               replaceProject(applied);
             }}
           />
+        </InspectorDockProvider>
         </main>
 
         {focusMode ? (

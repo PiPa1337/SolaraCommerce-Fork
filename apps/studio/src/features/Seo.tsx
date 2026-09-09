@@ -1,3 +1,4 @@
+import { WorkspaceGroups } from "./workbench/WorkspaceNav";
 /** Auditoría previa a exportación para metadata, JSON-LD, sitemap, Merchant y contexto IA. */
 import {
   ArrowClockwise,
@@ -381,7 +382,9 @@ export function Seo({
           </div>
         }
       />
-      <div className="seo-grid">
+<WorkspaceGroups label="Herramientas SEO" groups={[
+{ id: "appearance", label: "Apariencia en buscadores", content: <>
+
         <fieldset className="seo-fieldset seo-fieldset--appearance">
           <legend>
             <MagnifyingGlass aria-hidden size={19} /> Apariencia
@@ -566,125 +569,6 @@ export function Seo({
           </dl>
         </fieldset>
 
-        <div className="audit-panel" data-testid="ui-seo-audit-panel">
-          <header>
-            <div>
-              <h3>Auditoría</h3>
-              <p>
-                {auditStatus === "loading"
-                  ? "Analizando metadata, rutas y datos estructurados…"
-                  : auditStatus === "error"
-                    ? auditError
-                    : `${errors} errores críticos, ${warnings} advertencias.`}
-              </p>
-              {auditStatus === "ready" && report.merchantMode === "experimental-whatsapp" ? (
-                <p className="audit-note">
-                  Merchant en modo experimental: el checkout final por WhatsApp puede no cumplir los
-                  requisitos de Google.
-                </p>
-              ) : null}
-            </div>
-            {auditStatus === "ready" && errors === 0 ? (
-              <span className={`audit-ready${warnings > 0 ? " audit-ready--warning" : ""}`}>
-                {warnings > 0 ? (
-                  <WarningCircle aria-hidden size={18} weight="fill" />
-                ) : (
-                  <CheckCircle aria-hidden size={18} weight="fill" />
-                )}
-                {warnings > 0 ? "Requiere revisión" : "Sin observaciones"}
-              </span>
-            ) : null}
-          </header>
-          {auditStatus === "loading" ? (
-            <output
-              className="audit-state audit-state--loading"
-              data-testid="ui-seo-audit-loading"
-              aria-live="polite"
-            >
-              <span className="spinner" aria-hidden />
-              <p>Ejecutando la auditoría local…</p>
-            </output>
-          ) : auditStatus === "error" ? (
-            <div
-              className="audit-state audit-state--error"
-              data-testid="ui-seo-audit-error"
-              role="alert"
-            >
-              <WarningCircle aria-hidden size={22} />
-              <p>{auditError}</p>
-              <Button
-                variant="quiet"
-                size="sm"
-                icon={ArrowClockwise}
-                onClick={() => setAuditAttempt((attempt) => attempt + 1)}
-              >
-                Reintentar
-              </Button>
-            </div>
-          ) : issues.length === 0 ? (
-            <div className="audit-empty">
-              <CheckCircle aria-hidden size={26} />
-              <p>No se detectaron problemas con el proyecto actual.</p>
-            </div>
-          ) : (
-            <div className="audit-list">
-              {issues.map((issue) => {
-                const Icon = iconFor(issue);
-                return (
-                  <article className={`audit-item audit-item--${issue.severity}`} key={issue.id}>
-                    <Icon
-                      aria-hidden
-                      size={19}
-                      weight={issue.severity === "info" ? "regular" : "fill"}
-                    />
-                    <div>
-                      <strong title={issue.title}>{issue.title}</strong>
-                      {issue.message ? <p>{issue.message}</p> : null}
-                      {issue.area || issue.fixTarget ? (
-                        <small className="audit-item__meta">
-                          <Badge
-                            tone={
-                              issue.severity === "error"
-                                ? "danger"
-                                : issue.severity === "warning"
-                                  ? "warning"
-                                  : "info"
-                            }
-                            className="audit-item__severity"
-                          >
-                            {SEVERITY_LABELS[issue.severity]}
-                          </Badge>
-                          {issue.area ? (
-                            <span> · {AREA_LABELS[issue.area] ?? issue.area}</span>
-                          ) : null}
-                          {issue.fixTarget ? (
-                            <span>
-                              {" · Corregir en "}
-                              {FIX_LABELS[issue.fixTarget] ?? issue.fixTarget}
-                            </span>
-                          ) : null}
-                        </small>
-                      ) : null}
-                    </div>
-                    {issue.fixTarget && issue.fixTarget !== "seo" ? (
-                      <Button
-                        variant="quiet"
-                        size="sm"
-                        icon={ArrowRight}
-                        aria-label={`Ir a ${FIX_LABELS[issue.fixTarget] ?? "corregir"} para resolver: ${issueContext(issue)}`}
-                        data-testid="ui-seo-audit-fix"
-                        onClick={() => navigateToFix(issue.fixTarget ?? "", onNavigate)}
-                      >
-                        Ir a {FIX_LABELS[issue.fixTarget] ?? "corregir"}
-                      </Button>
-                    ) : null}
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
         <div className="seo-previews">
           <article className="asset-item" data-testid="ui-seo-preview-google">
             <div>
@@ -812,6 +696,131 @@ export function Seo({
           </article>
         </div>
 
+
+</> },
+{ id: "audit", label: "Diagnóstico", content: <>
+        <div className="audit-panel" data-testid="ui-seo-audit-panel">
+          <header>
+            <div>
+              <h3>Auditoría</h3>
+              <p>
+                {auditStatus === "loading"
+                  ? "Analizando metadata, rutas y datos estructurados…"
+                  : auditStatus === "error"
+                    ? auditError
+                    : `${errors} errores críticos, ${warnings} advertencias.`}
+              </p>
+              {auditStatus === "ready" && report.merchantMode === "experimental-whatsapp" ? (
+                <p className="audit-note">
+                  Merchant en modo experimental: el checkout final por WhatsApp puede no cumplir los
+                  requisitos de Google.
+                </p>
+              ) : null}
+            </div>
+            {auditStatus === "ready" && errors === 0 ? (
+              <span className={`audit-ready${warnings > 0 ? " audit-ready--warning" : ""}`}>
+                {warnings > 0 ? (
+                  <WarningCircle aria-hidden size={18} weight="fill" />
+                ) : (
+                  <CheckCircle aria-hidden size={18} weight="fill" />
+                )}
+                {warnings > 0 ? "Requiere revisión" : "Sin observaciones"}
+              </span>
+            ) : null}
+          </header>
+          {auditStatus === "loading" ? (
+            <output
+              className="audit-state audit-state--loading"
+              data-testid="ui-seo-audit-loading"
+              aria-live="polite"
+            >
+              <span className="spinner" aria-hidden />
+              <p>Ejecutando la auditoría local…</p>
+            </output>
+          ) : auditStatus === "error" ? (
+            <div
+              className="audit-state audit-state--error"
+              data-testid="ui-seo-audit-error"
+              role="alert"
+            >
+              <WarningCircle aria-hidden size={22} />
+              <p>{auditError}</p>
+              <Button
+                variant="quiet"
+                size="sm"
+                icon={ArrowClockwise}
+                onClick={() => setAuditAttempt((attempt) => attempt + 1)}
+              >
+                Reintentar
+              </Button>
+            </div>
+          ) : issues.length === 0 ? (
+            <div className="audit-empty">
+              <CheckCircle aria-hidden size={26} />
+              <p>No se detectaron problemas con el proyecto actual.</p>
+            </div>
+          ) : (
+            <div className="audit-list">
+              {issues.map((issue) => {
+                const Icon = iconFor(issue);
+                return (
+                  <article className={`audit-item audit-item--${issue.severity}`} key={issue.id}>
+                    <Icon
+                      aria-hidden
+                      size={19}
+                      weight={issue.severity === "info" ? "regular" : "fill"}
+                    />
+                    <div>
+                      <strong title={issue.title}>{issue.title}</strong>
+                      {issue.message ? <p>{issue.message}</p> : null}
+                      {issue.area || issue.fixTarget ? (
+                        <small className="audit-item__meta">
+                          <Badge
+                            tone={
+                              issue.severity === "error"
+                                ? "danger"
+                                : issue.severity === "warning"
+                                  ? "warning"
+                                  : "info"
+                            }
+                            className="audit-item__severity"
+                          >
+                            {SEVERITY_LABELS[issue.severity]}
+                          </Badge>
+                          {issue.area ? (
+                            <span> · {AREA_LABELS[issue.area] ?? issue.area}</span>
+                          ) : null}
+                          {issue.fixTarget ? (
+                            <span>
+                              {" · Corregir en "}
+                              {FIX_LABELS[issue.fixTarget] ?? issue.fixTarget}
+                            </span>
+                          ) : null}
+                        </small>
+                      ) : null}
+                    </div>
+                    {issue.fixTarget && issue.fixTarget !== "seo" ? (
+                      <Button
+                        variant="quiet"
+                        size="sm"
+                        icon={ArrowRight}
+                        aria-label={`Ir a ${FIX_LABELS[issue.fixTarget] ?? "corregir"} para resolver: ${issueContext(issue)}`}
+                        data-testid="ui-seo-audit-fix"
+                        onClick={() => navigateToFix(issue.fixTarget ?? "", onNavigate)}
+                      >
+                        Ir a {FIX_LABELS[issue.fixTarget] ?? "corregir"}
+                      </Button>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+
+</> },
+{ id: "publish", label: "Publicación y rastreo", content: <>
         <section className="guided-checklist" data-testid="ui-seo-checklist">
           <div className="guided-checklist__header">
             <div>
@@ -1007,7 +1016,9 @@ export function Seo({
             </section>
           </div>
         ) : null}
-      </div>
+
+</> }
+]} />
     </section>
   );
 }
