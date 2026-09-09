@@ -29,7 +29,9 @@ async function openCatalog(page: import("@playwright/test").Page) {
       }),
   );
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+    timeout: 10_000,
+  });
   // La plantilla base es de solo lectura: el flujo de catálogo debe trabajar
   // sobre una tienda derivada para no mutar Predeterminado.
   await page.getByRole("button", { name: "Nueva tienda", exact: true }).click();

@@ -136,6 +136,9 @@ async function openCatalog(page: Page): Promise<void> {
 
 async function uploadCsv(page: Page, csv: string, name: string): Promise<void> {
   const chooserPromise = page.waitForEvent("filechooser");
+  if ((await page.locator(".workbench-transfer").getAttribute("open")) === null) {
+    await page.locator(".workbench-transfer > summary").click();
+  }
   await page.getByTestId("ui-csv-import").click();
   const chooser = await chooserPromise;
   expect(await chooser.isMultiple()).toBe(false);
@@ -150,6 +153,9 @@ async function uploadCsv(page: Page, csv: string, name: string): Promise<void> {
 
 async function uploadPackage(page: Page, directory: string): Promise<void> {
   const chooserPromise = page.waitForEvent("filechooser");
+  if ((await page.locator(".workbench-transfer").getAttribute("open")) === null) {
+    await page.locator(".workbench-transfer > summary").click();
+  }
   await page.getByRole("button", { name: "Importar carpeta + imágenes", exact: true }).click();
   const chooser = await chooserPromise;
   expect(await chooser.isMultiple()).toBe(true);
@@ -218,6 +224,9 @@ test("Exportar CSV descarga el catálogo completo con feedback de ocupado", asyn
   await openCatalog(page);
 
   const downloadPromise = page.waitForEvent("download");
+  if ((await page.locator(".workbench-transfer").getAttribute("open")) === null) {
+    await page.locator(".workbench-transfer > summary").click();
+  }
   await page.getByRole("button", { name: "Exportar CSV", exact: true }).click();
 
   // Auto-feedback: ambos botones de exportación marcan "Generando" y quedan
@@ -233,6 +242,9 @@ test("Exportar CSV descarga el catálogo completo con feedback de ocupado", asyn
   expect(lines).toHaveLength(61);
   expect(csv).toContain("Remera esencial de algodón");
 
+  if ((await page.locator(".workbench-transfer").getAttribute("open")) === null) {
+    await page.locator(".workbench-transfer > summary").click();
+  }
   await expect(page.getByRole("button", { name: "Exportar CSV", exact: true })).toBeEnabled();
   await assertAppAlive(page);
 });
@@ -241,6 +253,9 @@ test("CSV comercial descarga el catálogo comercial con cabecera y títulos", as
   await openCatalog(page);
 
   const downloadPromise = page.waitForEvent("download");
+  if ((await page.locator(".workbench-transfer").getAttribute("open")) === null) {
+    await page.locator(".workbench-transfer > summary").click();
+  }
   await page.getByRole("button", { name: "CSV comercial", exact: true }).click();
 
   await assertBusyFeedback(page, "Generando", null, 2);
@@ -425,6 +440,9 @@ test("Carpeta sin productos.csv: error visible, sin revisión y app viva", async
     const alert = page.getByTestId("ui-inline-error");
     await expect(alert).toBeVisible();
     await expect(alert).toContainText("La carpeta debe contener productos.csv.");
+    if ((await page.locator(".workbench-transfer").getAttribute("open")) === null) {
+      await page.locator(".workbench-transfer > summary").click();
+    }
     await expect(page.getByRole("button", { name: "Importar carpeta + imágenes" })).toBeEnabled();
 
     // Sin revisión ni cambios: el catálogo queda intacto.

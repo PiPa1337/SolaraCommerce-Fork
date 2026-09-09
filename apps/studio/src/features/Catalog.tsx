@@ -425,7 +425,17 @@ const CatalogRow = memo(
         style={{ contentVisibility: "auto", containIntrinsicSize: "56px" } as React.CSSProperties}
       >
         {row.getVisibleCells().map((cell) => (
-          <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+          <td
+            key={cell.id}
+            data-column={cell.column.id}
+            data-label={
+              typeof cell.column.columnDef.header === "string"
+                ? cell.column.columnDef.header
+                : undefined
+            }
+          >
+            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          </td>
         ))}
       </tr>
     );
@@ -948,33 +958,40 @@ export function Catalog({ project, onCommand, onChange }: CatalogProps) {
                 event.target.value = "";
               }}
             />
-            <details className="workbench-transfer"><summary>Importar / exportar</summary><div>
-            <Button
-              icon={UploadSimple}
-              onClick={() => document.getElementById(packageInputId)?.click()}
-              disabled={Boolean(busy)}
-            >
-              {busy === "package" ? "Leyendo carpeta" : "Importar carpeta + imágenes"}
-            </Button>
-            <Button
-              icon={UploadSimple}
-              data-testid="ui-csv-import"
-              onClick={() => importRef.current?.click()}
-              disabled={Boolean(busy)}
-            >
-              {busy === "import" ? "Procesando" : "Importar CSV"}
-            </Button>
-            <Button icon={DownloadSimple} onClick={() => void exportCsv()} disabled={Boolean(busy)}>
-              {busy === "export" ? "Generando" : "Exportar CSV"}
-            </Button>
-            <Button
-              icon={DownloadSimple}
-              onClick={() => void exportCommercialCsv()}
-              disabled={Boolean(busy)}
-            >
-              {busy === "export" ? "Generando" : "CSV comercial"}
-            </Button>
-            </div></details>
+            <details className="workbench-transfer">
+              <summary>Importar / exportar</summary>
+              <div>
+                <Button
+                  icon={UploadSimple}
+                  onClick={() => document.getElementById(packageInputId)?.click()}
+                  disabled={Boolean(busy)}
+                >
+                  {busy === "package" ? "Leyendo carpeta" : "Importar carpeta + imágenes"}
+                </Button>
+                <Button
+                  icon={UploadSimple}
+                  data-testid="ui-csv-import"
+                  onClick={() => importRef.current?.click()}
+                  disabled={Boolean(busy)}
+                >
+                  {busy === "import" ? "Procesando" : "Importar CSV"}
+                </Button>
+                <Button
+                  icon={DownloadSimple}
+                  onClick={() => void exportCsv()}
+                  disabled={Boolean(busy)}
+                >
+                  {busy === "export" ? "Generando" : "Exportar CSV"}
+                </Button>
+                <Button
+                  icon={DownloadSimple}
+                  onClick={() => void exportCommercialCsv()}
+                  disabled={Boolean(busy)}
+                >
+                  {busy === "export" ? "Generando" : "CSV comercial"}
+                </Button>
+              </div>
+            </details>
             <Button
               variant="primary"
               icon={Plus}

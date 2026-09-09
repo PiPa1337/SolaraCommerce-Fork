@@ -576,7 +576,7 @@ export function ProjectCard({
                     onSubmit={(e) => e.preventDefault()}
                     onMouseDown={(event) => event.stopPropagation()}
                   >
-                    <header className="dashboard-calculator-dialog__header">
+                    <div className="dashboard-calculator-dialog__header">
                       <div className="dashboard-calculator-dialog__title">
                         <span className="dashboard-calculator-dialog__eyebrow">Tarifas</span>
                         <h2 id={calculatorTitleId}>Precio de tu tienda online</h2>
@@ -589,7 +589,7 @@ export function ProjectCard({
                         autoFocus
                         onClick={closeCalculator}
                       />
-                    </header>
+                    </div>
 
                     <div className="dashboard-calculator-dialog__body">
                       <div

@@ -1,14 +1,18 @@
 import { expect, type Page } from "@playwright/test";
 
 export async function createCleanStore(page: Page, name = "Tienda de prueba"): Promise<void> {
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+    timeout: 10_000,
+  });
   await page.getByRole("button", { name: "Nueva tienda", exact: true }).click();
   await page.getByLabel("Nueva tienda").fill(name);
   await page.getByRole("button", { name: "Continuar", exact: true }).click();
   await page.getByRole("button", { name: "Continuar", exact: true }).click();
   await page.getByRole("button", { name: "Continuar", exact: true }).click();
   await page.getByRole("button", { name: "Crear tienda desde plantilla", exact: true }).click();
-  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
+    timeout: 20_000,
+  });
 }
 
 export async function resetStudioIndexedDb(
@@ -37,7 +41,9 @@ export async function openMutableScaleStore(
   page: Page,
   name = "Tienda de escala mutable",
 ): Promise<string> {
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+    timeout: 10_000,
+  });
   await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
   await page
     .getByRole("region", { name: "Tienda seleccionada: Predeterminado" })

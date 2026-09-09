@@ -1,6 +1,11 @@
 import { useEffect, useRef } from "react";
 import { GRAVITY_FRAGMENT_SHADER } from "./gravity-cinematic-shader";
 import { createGravityDustTexture } from "./gravity-dust-texture";
+import {
+  DEFAULT_GRAVITY_SETTINGS,
+  type GravitySettings,
+  type GravityTaaQuality,
+} from "./gravitySettings";
 
 interface GravityFieldProps {
   activeIndex: number;
@@ -11,6 +16,17 @@ interface GravityFieldProps {
   introDurationMs?: number;
   pauseWhileAppBooting?: boolean;
   renderScaleMultiplier?: number;
+  clockOrigin?: number | undefined;
+  settings?: GravitySettings;
+  telemetryEnabled?: boolean;
+  onTelemetryChange?: ((snapshot: GravityTelemetrySnapshot | null) => void) | undefined;
+}
+
+export interface GravityTelemetrySnapshot {
+  gpuName: string;
+  gpuUsage: number | null;
+  cpuName: string;
+  cpuUsage: number | null;
 }
 
 interface GravityPointer {
@@ -21,7 +37,7 @@ interface GravityPointer {
 // Gargantua conserva una respuesta sutil: queda en el 30% del movimiento
 // anterior para que el fondo no domine la interacción del dashboard.
 const GRAVITY_PARALLAX_RESPONSE = 0.09;
-const GRAVITY_SETTLED_ELAPSED_MS = 6000;
+export const GRAVITY_INTRO_DURATION_MS = 1_500;
 
 interface GravityWebGLScene {
   gl: WebGL2RenderingContext;
@@ -29,6 +45,8 @@ interface GravityWebGLScene {
   vertexArray: WebGLVertexArrayObject;
   buffer: WebGLBuffer;
   dust: WebGLTexture;
+  taa: GravityTaaTargets | null;
+  telemetry: GravityTelemetryState;
   uniforms: {
     resolution: WebGLUniformLocation | null;
     viewport: WebGLUniformLocation | null;
@@ -43,8 +61,103 @@ interface GravityWebGLScene {
     selectionVisible: WebGLUniformLocation | null;
     templateSelected: WebGLUniformLocation | null;
     launchProgress: WebGLUniformLocation | null;
+    materialSpeed: WebGLUniformLocation | null;
+    starDensity: WebGLUniformLocation | null;
+    dustIntensity: WebGLUniformLocation | null;
+    haloIntensity: WebGLUniformLocation | null;
+    warmth: WebGLUniformLocation | null;
+    contrast: WebGLUniformLocation | null;
+    diskLayers: WebGLUniformLocation | null;
+    turbulence: WebGLUniformLocation | null;
+    filamentDetail: WebGLUniformLocation | null;
+    gasAbsorption: WebGLUniformLocation | null;
+    diskTilt: WebGLUniformLocation | null;
+    lensStrength: WebGLUniformLocation | null;
+    bloomSpread: WebGLUniformLocation | null;
+    causticIntensity: WebGLUniformLocation | null;
+    galaxyIntensity: WebGLUniformLocation | null;
+    starTwinkle: WebGLUniformLocation | null;
+    vignette: WebGLUniformLocation | null;
+    taaJitter: WebGLUniformLocation | null;
+    taaHistory: WebGLUniformLocation | null;
+    taaHistoryWeight: WebGLUniformLocation | null;
+    taaHistoryValid: WebGLUniformLocation | null;
   };
 }
+
+interface GravityTaaTargets {
+  textures: [WebGLTexture, WebGLTexture];
+  framebuffers: [WebGLFramebuffer, WebGLFramebuffer];
+  sourceWidth: number;
+  sourceHeight: number;
+  historyScale: number;
+  width: number;
+  height: number;
+  readIndex: number;
+  historyValid: boolean;
+}
+
+interface GravityTimerQueryExtension {
+  TIME_ELAPSED_EXT: number;
+  GPU_DISJOINT_EXT: number;
+}
+
+interface GravityTelemetryState {
+  gpuName: string;
+  extension: GravityTimerQueryExtension | null;
+  pendingQueries: WebGLQuery[];
+  lastGpuTimeMs: number | null;
+  lastPublishedAt: number;
+}
+
+const GRAVITY_TAA_PROFILES: Record<
+  GravityTaaQuality,
+  {
+    historyWeight: number;
+    jitterScale: number;
+    sampleCount: number;
+    maxFps: number;
+    historyScale: number;
+  }
+> = {
+  off: { historyWeight: 0, jitterScale: 0, sampleCount: 1, maxFps: 0, historyScale: 0 },
+  low: { historyWeight: 0.52, jitterScale: 0.35, sampleCount: 2, maxFps: 60, historyScale: 0.25 },
+  medium: { historyWeight: 0.68, jitterScale: 0.6, sampleCount: 4, maxFps: 36, historyScale: 0.5 },
+  high: { historyWeight: 0.82, jitterScale: 0.85, sampleCount: 8, maxFps: 24, historyScale: 0.65 },
+  "very-high": {
+    historyWeight: 0.88,
+    jitterScale: 1,
+    sampleCount: 12,
+    maxFps: 20,
+    historyScale: 0.75,
+  },
+  extreme: {
+    historyWeight: 0.92,
+    jitterScale: 1.15,
+    sampleCount: 16,
+    maxFps: 15,
+    historyScale: 0.9,
+  },
+};
+
+const GRAVITY_TAA_JITTER_SEQUENCE: ReadonlyArray<readonly [number, number]> = [
+  [-0.25, -0.25],
+  [0.25, 0.25],
+  [0.25, -0.25],
+  [-0.25, 0.25],
+  [-0.375, 0.125],
+  [0.125, -0.375],
+  [0.375, 0.375],
+  [-0.125, -0.125],
+  [-0.1875, 0.3125],
+  [0.3125, -0.1875],
+  [0.0625, 0.0625],
+  [-0.3125, -0.3125],
+  [-0.4375, 0.4375],
+  [0.4375, -0.4375],
+  [0.1875, -0.0625],
+  [-0.0625, 0.1875],
+];
 
 const GRAVITY_VERTEX_SHADER = `#version 300 es
 in vec2 aPosition;
@@ -53,6 +166,79 @@ void main() {
   gl_Position = vec4(aPosition, 0.0, 1.0);
 }
 `;
+
+function getGravityGpuName(gl: WebGL2RenderingContext): string {
+  try {
+    const info = gl.getExtension("WEBGL_debug_renderer_info") as {
+      UNMASKED_RENDERER_WEBGL: number;
+    } | null;
+    const renderer = info
+      ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL)
+      : gl.getParameter(gl.RENDERER);
+    return typeof renderer === "string" && renderer.trim() ? renderer.trim() : "GPU WebGL";
+  } catch {
+    return "GPU WebGL";
+  }
+}
+
+function getGravityCpuName(): string {
+  const browserNavigator = navigator as Navigator & {
+    userAgentData?: { platform?: string };
+  };
+  const platform = browserNavigator.userAgentData?.platform || navigator.platform || "CPU del sistema";
+  const threadCount = navigator.hardwareConcurrency;
+  return threadCount ? `${platform} · ${threadCount} hilos` : platform;
+}
+
+function createGravityTelemetryState(gl: WebGL2RenderingContext): GravityTelemetryState {
+  return {
+    gpuName: getGravityGpuName(gl),
+    extension: gl.getExtension("EXT_disjoint_timer_query_webgl2") as GravityTimerQueryExtension | null,
+    pendingQueries: [],
+    lastGpuTimeMs: null,
+    lastPublishedAt: 0,
+  };
+}
+
+function beginGravityTelemetryQuery(scene: GravityWebGLScene): WebGLQuery | null {
+  const { extension, pendingQueries } = scene.telemetry;
+  if (!extension || pendingQueries.length >= 3) return null;
+  const query = scene.gl.createQuery();
+  if (!query) return null;
+  scene.gl.beginQuery(extension.TIME_ELAPSED_EXT, query);
+  return query;
+}
+
+function finishGravityTelemetryQuery(scene: GravityWebGLScene, query: WebGLQuery | null) {
+  if (!query || !scene.telemetry.extension) return;
+  scene.gl.endQuery(scene.telemetry.extension.TIME_ELAPSED_EXT);
+  scene.telemetry.pendingQueries.push(query);
+}
+
+function readGravityGpuTime(scene: GravityWebGLScene): number | null {
+  const { gl, telemetry } = scene;
+  const extension = telemetry.extension;
+  if (!extension) return null;
+  while (telemetry.pendingQueries.length > 0) {
+    const query = telemetry.pendingQueries[0];
+    if (!query || !gl.getQueryParameter(query, gl.QUERY_RESULT_AVAILABLE)) break;
+    const disjoint = Boolean(gl.getParameter(extension.GPU_DISJOINT_EXT));
+    const elapsedNanoseconds = gl.getQueryParameter(query, gl.QUERY_RESULT);
+    telemetry.pendingQueries.shift();
+    gl.deleteQuery(query);
+    if (!disjoint && typeof elapsedNanoseconds === "number" && Number.isFinite(elapsedNanoseconds)) {
+      telemetry.lastGpuTimeMs = elapsedNanoseconds / 1_000_000;
+    }
+  }
+  return telemetry.lastGpuTimeMs;
+}
+
+function clearGravityTelemetryQueries(scene: GravityWebGLScene) {
+  for (const query of scene.telemetry.pendingQueries) scene.gl.deleteQuery(query);
+  scene.telemetry.pendingQueries = [];
+  scene.telemetry.lastGpuTimeMs = null;
+  scene.telemetry.lastPublishedAt = 0;
+}
 
 function compileGravityShader(
   gl: WebGL2RenderingContext,
@@ -148,11 +334,142 @@ function createGravityWebGLScene(canvas: HTMLCanvasElement): GravityWebGLScene |
       selectionVisible: gl.getUniformLocation(program, "uSelectionVisible"),
       templateSelected: gl.getUniformLocation(program, "uTemplateSelected"),
       launchProgress: gl.getUniformLocation(program, "uLaunchProgress"),
+      materialSpeed: gl.getUniformLocation(program, "uMaterialSpeed"),
+      starDensity: gl.getUniformLocation(program, "uStarDensity"),
+      dustIntensity: gl.getUniformLocation(program, "uDustIntensity"),
+      haloIntensity: gl.getUniformLocation(program, "uHaloIntensity"),
+      warmth: gl.getUniformLocation(program, "uWarmth"),
+      contrast: gl.getUniformLocation(program, "uContrast"),
+      diskLayers: gl.getUniformLocation(program, "uDiskLayers"),
+      turbulence: gl.getUniformLocation(program, "uTurbulence"),
+      filamentDetail: gl.getUniformLocation(program, "uFilamentDetail"),
+      gasAbsorption: gl.getUniformLocation(program, "uGasAbsorption"),
+      diskTilt: gl.getUniformLocation(program, "uDiskTilt"),
+      lensStrength: gl.getUniformLocation(program, "uLensStrength"),
+      bloomSpread: gl.getUniformLocation(program, "uBloomSpread"),
+      causticIntensity: gl.getUniformLocation(program, "uCausticIntensity"),
+      galaxyIntensity: gl.getUniformLocation(program, "uGalaxyIntensity"),
+      starTwinkle: gl.getUniformLocation(program, "uStarTwinkle"),
+      vignette: gl.getUniformLocation(program, "uVignette"),
+      taaJitter: gl.getUniformLocation(program, "uTaaJitter"),
+      taaHistory: gl.getUniformLocation(program, "uTaaHistory"),
+      taaHistoryWeight: gl.getUniformLocation(program, "uTaaHistoryWeight"),
+      taaHistoryValid: gl.getUniformLocation(program, "uTaaHistoryValid"),
     },
+    taa: null,
+    telemetry: createGravityTelemetryState(gl),
   };
 }
 
+function destroyGravityTaaTargets(gl: WebGL2RenderingContext, targets: GravityTaaTargets) {
+  for (const framebuffer of targets.framebuffers) gl.deleteFramebuffer(framebuffer);
+  for (const texture of targets.textures) gl.deleteTexture(texture);
+}
+
+function createGravityTaaTargets(
+  gl: WebGL2RenderingContext,
+  width: number,
+  height: number,
+  historyScale: number,
+): GravityTaaTargets | null {
+  // El historial usa una resolución acotada: evita duplicar el buffer visible
+  // y mantiene libres los eventos del dashboard incluso en calidades altas.
+  const historyWidthCap = historyScale >= 0.85 ? 1024 : historyScale >= 0.7 ? 768 : 512;
+  const historyHeightCap = historyScale >= 0.85 ? 576 : historyScale >= 0.7 ? 432 : 288;
+  const targetScale = Math.min(
+    historyScale,
+    historyWidthCap / Math.max(width, 1),
+    historyHeightCap / Math.max(height, 1),
+  );
+  const targetWidth = Math.max(1, Math.floor(width * targetScale));
+  const targetHeight = Math.max(1, Math.floor(height * targetScale));
+  const textures: WebGLTexture[] = [];
+  const framebuffers: WebGLFramebuffer[] = [];
+  const cleanup = () => {
+    for (const texture of textures) gl.deleteTexture(texture);
+    for (const framebuffer of framebuffers) gl.deleteFramebuffer(framebuffer);
+  };
+
+  for (let index = 0; index < 2; index += 1) {
+    const texture = gl.createTexture();
+    const framebuffer = gl.createFramebuffer();
+    if (!texture || !framebuffer) {
+      if (texture) gl.deleteTexture(texture);
+      if (framebuffer) gl.deleteFramebuffer(framebuffer);
+      cleanup();
+      return null;
+    }
+    textures.push(texture);
+    framebuffers.push(framebuffer);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA8,
+      targetWidth,
+      targetHeight,
+      0,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      null,
+    );
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+    if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+      cleanup();
+      return null;
+    }
+  }
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.bindTexture(gl.TEXTURE_2D, null);
+  const firstTexture = textures[0];
+  const secondTexture = textures[1];
+  const firstFramebuffer = framebuffers[0];
+  const secondFramebuffer = framebuffers[1];
+  if (!firstTexture || !secondTexture || !firstFramebuffer || !secondFramebuffer) {
+    cleanup();
+    return null;
+  }
+  return {
+    textures: [firstTexture, secondTexture],
+    framebuffers: [firstFramebuffer, secondFramebuffer],
+    sourceWidth: width,
+    sourceHeight: height,
+    historyScale,
+    width: targetWidth,
+    height: targetHeight,
+    readIndex: 0,
+    historyValid: false,
+  };
+}
+
+function ensureGravityTaaTargets(
+  scene: GravityWebGLScene,
+  width: number,
+  height: number,
+  historyScale: number,
+): GravityTaaTargets | null {
+  if (
+    scene.taa?.sourceWidth === width &&
+    scene.taa.sourceHeight === height &&
+    scene.taa.historyScale === historyScale
+  ) {
+    return scene.taa;
+  }
+  if (scene.taa) destroyGravityTaaTargets(scene.gl, scene.taa);
+  scene.taa = createGravityTaaTargets(scene.gl, width, height, historyScale);
+  return scene.taa;
+}
+
 function destroyGravityWebGLScene(scene: GravityWebGLScene) {
+  clearGravityTelemetryQueries(scene);
+  if (scene.taa) destroyGravityTaaTargets(scene.gl, scene.taa);
   scene.gl.deleteTexture(scene.dust);
   scene.gl.deleteBuffer(scene.buffer);
   scene.gl.deleteVertexArray(scene.vertexArray);
@@ -171,14 +488,23 @@ function drawGravityWebGL(
   selectionVisible: boolean,
   templateSelected: boolean,
   launchProgress: number,
+  settings: GravitySettings,
+  taaJitter: readonly [number, number],
+  taaHistoryTexture: WebGLTexture | null,
+  taaHistoryWeight: number,
+  taaHistoryValid: boolean,
+  outputWidth?: number,
+  outputHeight?: number,
 ) {
   const { gl, program, vertexArray, uniforms } = scene;
+  const framebufferWidth = outputWidth ?? gl.drawingBufferWidth;
+  const framebufferHeight = outputHeight ?? gl.drawingBufferHeight;
   const wideScene = width >= 1120;
   const tabletScene = width >= 700;
   const compactness = Math.min(1, Math.max(0.72, width / 1320));
   const parallaxPointer = {
-    x: 0.5 + (pointer.x - 0.5) * GRAVITY_PARALLAX_RESPONSE,
-    y: 0.35 + (pointer.y - 0.35) * GRAVITY_PARALLAX_RESPONSE,
+    x: 0.5 + (pointer.x - 0.5) * GRAVITY_PARALLAX_RESPONSE * settings.pointerResponse,
+    y: 0.35 + (pointer.y - 0.35) * GRAVITY_PARALLAX_RESPONSE * settings.pointerResponse,
   };
   const centerXBase = wideScene ? 0.724 : tabletScene ? 0.7 : 0.72;
   const centerYBase = wideScene ? 0.49 : tabletScene ? 0.49 : 0.35;
@@ -191,13 +517,13 @@ function drawGravityWebGL(
   const diskWidth = Math.min(width * (wideScene ? 0.5 : 0.78), height * 0.56) * compactness;
   const diskHeight = Math.max(68, diskWidth * 0.32);
 
-  gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+  gl.viewport(0, 0, framebufferWidth, framebufferHeight);
   gl.clear(gl.COLOR_BUFFER_BIT);
   // WebGL's useProgram is an imperative GPU call, not a React hook.
   // biome-ignore lint/correctness/useHookAtTopLevel: WebGL API method, not a React hook.
   gl.useProgram(program);
   gl.bindVertexArray(vertexArray);
-  gl.uniform2f(uniforms.resolution, gl.drawingBufferWidth, gl.drawingBufferHeight);
+  gl.uniform2f(uniforms.resolution, framebufferWidth, framebufferHeight);
   gl.uniform2f(uniforms.viewport, width, height);
   gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_2D, scene.dust);
@@ -212,6 +538,31 @@ function drawGravityWebGL(
   gl.uniform1f(uniforms.selectionVisible, selectionVisible ? 1 : 0);
   gl.uniform1f(uniforms.templateSelected, templateSelected ? 1 : 0);
   gl.uniform1f(uniforms.launchProgress, Math.min(1, Math.max(0, launchProgress)));
+  gl.uniform1f(uniforms.materialSpeed, settings.materialSpeed);
+  gl.uniform1f(uniforms.starDensity, settings.starDensity);
+  gl.uniform1f(uniforms.dustIntensity, settings.dustIntensity);
+  gl.uniform1f(uniforms.haloIntensity, settings.haloIntensity);
+  gl.uniform1f(uniforms.warmth, settings.warmth);
+  gl.uniform1f(uniforms.contrast, settings.contrast);
+  gl.uniform1f(uniforms.diskLayers, settings.diskLayers);
+  gl.uniform1f(uniforms.turbulence, settings.turbulence);
+  gl.uniform1f(uniforms.filamentDetail, settings.filamentDetail);
+  gl.uniform1f(uniforms.gasAbsorption, settings.gasAbsorption);
+  gl.uniform1f(uniforms.diskTilt, settings.diskTilt);
+  gl.uniform1f(uniforms.lensStrength, settings.lensStrength);
+  gl.uniform1f(uniforms.bloomSpread, settings.bloomSpread);
+  gl.uniform1f(uniforms.causticIntensity, settings.causticIntensity);
+  gl.uniform1f(uniforms.galaxyIntensity, settings.galaxyIntensity);
+  gl.uniform1f(uniforms.starTwinkle, settings.starTwinkle);
+  gl.uniform1f(uniforms.vignette, settings.vignette);
+  gl.uniform2f(uniforms.taaJitter, taaJitter[0], taaJitter[1]);
+  if (uniforms.taaHistory) {
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, taaHistoryTexture);
+    gl.uniform1i(uniforms.taaHistory, 1);
+    gl.uniform1f(uniforms.taaHistoryWeight, taaHistoryWeight);
+    gl.uniform1f(uniforms.taaHistoryValid, taaHistoryValid ? 1 : 0);
+  }
   gl.drawArrays(gl.TRIANGLES, 0, 3);
   gl.bindVertexArray(null);
 }
@@ -222,9 +573,13 @@ export function GravityField({
   selectionVisible = true,
   templateSelected = false,
   launchProgress = 0,
-  introDurationMs = 6000,
+  introDurationMs = GRAVITY_INTRO_DURATION_MS,
   pauseWhileAppBooting = true,
   renderScaleMultiplier = 1,
+  clockOrigin,
+  settings = DEFAULT_GRAVITY_SETTINGS,
+  telemetryEnabled = false,
+  onTelemetryChange,
 }: GravityFieldProps) {
   const fieldRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -234,12 +589,19 @@ export function GravityField({
   const selectionVisibleRef = useRef(selectionVisible);
   const templateSelectedRef = useRef(templateSelected);
   const launchProgressRef = useRef(launchProgress);
+  const settingsRef = useRef(settings);
+  const telemetryEnabledRef = useRef(telemetryEnabled);
+  const onTelemetryChangeRef = useRef(onTelemetryChange);
+  const sceneRef = useRef<GravityWebGLScene | null>(null);
   const redrawRef = useRef<(() => void) | null>(null);
   activeIndexRef.current = activeIndex;
   storeCountRef.current = storeCount;
   selectionVisibleRef.current = selectionVisible;
   templateSelectedRef.current = templateSelected;
   launchProgressRef.current = launchProgress;
+  settingsRef.current = settings;
+  telemetryEnabledRef.current = telemetryEnabled;
+  onTelemetryChangeRef.current = onTelemetryChange;
 
   useEffect(() => {
     const field = fieldRef.current;
@@ -250,7 +612,9 @@ export function GravityField({
     const initialScene = createGravityWebGLScene(canvas);
     field.dataset.renderer = initialScene ? "webgl2" : "unavailable";
     if (!initialScene) return;
+    field.dataset.telemetryState = telemetryEnabledRef.current ? "active" : "inactive";
     let scene = initialScene;
+    sceneRef.current = scene;
     let contextLost = false;
 
     const motionMedia = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -275,22 +639,75 @@ export function GravityField({
     let rootTop = 0;
     let rootWidth = 1;
     let rootHeight = 1;
-    const bootStateAtMount = document.documentElement.dataset.solaraBoot;
-    const settleSceneAtMount = pauseWhileAppBooting && bootStateAtMount === "entering";
-    let sceneStartedAt = performance.now() - (settleSceneAtMount ? GRAVITY_SETTLED_ELAPSED_MS : 0);
+    let sceneStartedAt = clockOrigin ?? performance.now();
+    let taaFrameIndex = 0;
     const appBootOverlayMountedBeforeMarker =
       pauseWhileAppBooting &&
       document.documentElement.dataset.solaraBoot === undefined &&
-      document.querySelector(".app-boot-sequence") !== null;
+      document.querySelector('.app-boot-sequence[data-boot-phase="loading"]') !== null;
     const isAppBooting = () =>
       pauseWhileAppBooting && document.documentElement.dataset.solaraBoot === "loading";
     // The overlay and dashboard mount in the same commit. The one-time DOM
     // fallback closes that first-effect race before the overlay writes its dataset.
     let appBootPaused = isAppBooting() || appBootOverlayMountedBeforeMarker;
+    let entryPaused = document.documentElement.dataset.solaraBoot === "entering";
+    let entryPausedAt: number | undefined = entryPaused ? performance.now() : undefined;
+    const shouldAnimate = () =>
+      !reducedMotion &&
+      !appBootPaused &&
+      (!settingsRef.current.pauseWhenHidden || document.visibilityState === "visible");
 
     const draw = (time: number) => {
       if (appBootPaused || contextLost) return;
       if (!reducedMotion && gpuFrames.length >= 2) return;
+      const currentSettings = settingsRef.current;
+      const taaProfile = GRAVITY_TAA_PROFILES[currentSettings.taaQuality];
+      const taaEnabled = !reducedMotion && currentSettings.taaQuality !== "off";
+      const shouldMeasureTelemetry = telemetryEnabledRef.current;
+      const telemetryStartedAt = shouldMeasureTelemetry ? performance.now() : 0;
+      const telemetryQuery = shouldMeasureTelemetry ? beginGravityTelemetryQuery(scene) : null;
+      const taaTargets = taaEnabled
+        ? ensureGravityTaaTargets(
+            scene,
+            scene.gl.drawingBufferWidth,
+            scene.gl.drawingBufferHeight,
+            taaProfile.historyScale,
+          )
+        : null;
+      if (!taaEnabled && scene.taa) {
+        destroyGravityTaaTargets(scene.gl, scene.taa);
+        scene.taa = null;
+        taaFrameIndex = 0;
+      }
+      const taaJitterSample =
+        GRAVITY_TAA_JITTER_SEQUENCE[taaFrameIndex % taaProfile.sampleCount] ?? [0, 0];
+      const taaJitter: readonly [number, number] = taaTargets
+        ? [
+            taaJitterSample[0] * taaProfile.jitterScale,
+            taaJitterSample[1] * taaProfile.jitterScale,
+          ]
+        : [0, 0];
+      const taaState = taaTargets
+        ? "active"
+        : currentSettings.taaQuality === "off"
+          ? "off"
+          : "unavailable";
+      if (field.dataset.taaQuality !== currentSettings.taaQuality) {
+        field.dataset.taaQuality = currentSettings.taaQuality;
+      }
+      if (field.dataset.taaState !== taaState) field.dataset.taaState = taaState;
+      const taaWriteIndex = taaTargets ? 1 - taaTargets.readIndex : 0;
+      const taaReadTexture = taaTargets
+        ? taaTargets.readIndex === 0
+          ? taaTargets.textures[0]
+          : taaTargets.textures[1]
+        : null;
+      const taaWriteFramebuffer = taaTargets
+        ? taaWriteIndex === 0
+          ? taaTargets.framebuffers[0]
+          : taaTargets.framebuffers[1]
+        : null;
+      if (taaTargets) scene.gl.bindFramebuffer(scene.gl.FRAMEBUFFER, taaWriteFramebuffer);
       const elapsed = Math.max(0, time - sceneStartedAt);
       smoothPointer.x += (pointerRef.current.x-smoothPointer.x)*.065;
       smoothPointer.y += (pointerRef.current.y-smoothPointer.y)*.065;
@@ -306,7 +723,59 @@ export function GravityField({
         selectionVisibleRef.current,
         templateSelectedRef.current,
         launchProgressRef.current,
+        currentSettings,
+        taaJitter,
+        taaReadTexture,
+        taaProfile.historyWeight,
+        taaTargets?.historyValid ?? false,
+        taaTargets?.width,
+        taaTargets?.height,
       );
+      if (taaTargets) {
+        scene.gl.bindFramebuffer(scene.gl.READ_FRAMEBUFFER, taaWriteFramebuffer);
+        scene.gl.bindFramebuffer(scene.gl.DRAW_FRAMEBUFFER, null);
+        scene.gl.blitFramebuffer(
+          0,
+          0,
+          taaTargets.width,
+          taaTargets.height,
+          0,
+          0,
+          scene.gl.drawingBufferWidth,
+          scene.gl.drawingBufferHeight,
+          scene.gl.COLOR_BUFFER_BIT,
+          scene.gl.LINEAR,
+        );
+        scene.gl.bindFramebuffer(scene.gl.FRAMEBUFFER, null);
+        taaTargets.readIndex = taaWriteIndex;
+        taaTargets.historyValid = true;
+        taaFrameIndex += 1;
+      }
+      if (telemetryQuery) finishGravityTelemetryQuery(scene, telemetryQuery);
+      if (shouldMeasureTelemetry) {
+        const now = performance.now();
+        const gpuTimeMs = readGravityGpuTime(scene);
+        if (now - scene.telemetry.lastPublishedAt >= 250) {
+          const frameRate =
+            taaProfile.maxFps > 0
+              ? Math.min(currentSettings.maxFps, taaProfile.maxFps)
+              : currentSettings.maxFps;
+          const frameBudgetMs = 1_000 / Math.max(1, frameRate);
+          const usagePercent = (durationMs: number | null) =>
+            durationMs === null
+              ? null
+              : Math.min(100, Math.max(0, (durationMs / frameBudgetMs) * 100));
+          scene.telemetry.lastPublishedAt = now;
+          onTelemetryChangeRef.current?.({
+            gpuName: scene.telemetry.gpuName,
+            gpuUsage: usagePercent(gpuTimeMs),
+            cpuName: getGravityCpuName(),
+            cpuUsage: usagePercent(now - telemetryStartedAt),
+          });
+        }
+      } else {
+        clearGravityTelemetryQueries(scene);
+      }
       const gpuFrame = reducedMotion
         ? null
         : scene.gl.fenceSync(scene.gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
@@ -316,7 +785,7 @@ export function GravityField({
       }
     };
 
-    const resize = () => {
+    const resizeCanvas = () => {
       const bounds = root.getBoundingClientRect();
       const fieldBounds = field.getBoundingClientRect();
       rootLeft = bounds.left;
@@ -331,8 +800,12 @@ export function GravityField({
       devicePixelRatio = Math.min(window.devicePixelRatio || 1, 1.25);
       const qualityScale = width >= 700 ? 1 : 0.9;
       const renderScale = Math.min(
-        1.25,
-        devicePixelRatio * qualityScale * renderScaleMultiplier * adaptiveScale,
+        2.5,
+        devicePixelRatio *
+          qualityScale *
+          renderScaleMultiplier *
+          settingsRef.current.renderScaleMultiplier *
+          adaptiveScale,
       );
       for (const gpuFrame of gpuFrames) scene.gl.deleteSync(gpuFrame);
       gpuFrames = [];
@@ -340,37 +813,58 @@ export function GravityField({
       canvas.height = Math.max(1, Math.floor(height * renderScale));
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
+    };
+
+    const resize = () => {
+      resizeCanvas();
       draw(performance.now());
     };
 
     const syncAppBootState = () => {
       const next = isAppBooting();
-      if (next === appBootPaused) return;
+      const entering = document.documentElement.dataset.solaraBoot === "entering";
+      if (next === appBootPaused && entering === entryPaused) return;
+      const wasLoading = appBootPaused;
+      const now = performance.now();
       appBootPaused = next;
-      field.dataset.animationState = next ? "paused" : "running";
-      if (next) {
+      entryPaused = entering;
+      field.dataset.animationState = next || entering ? "paused" : "running";
+      if (next || entering) {
         if (frame !== undefined) window.cancelAnimationFrame(frame);
         frame = undefined;
+        if (entering) {
+          entryPausedAt = now;
+          // Prepare the dashboard once, then crossfade retained canvases while
+          // the glass controls enter. Two live shaders starved this transition.
+          if (wasLoading) {
+            draw(now);
+          }
+        }
         return;
       }
-      // The boot overlay owns the only cinematic entrance. When it releases,
-      // hand the dashboard the settled frame instead of replaying its own zoom.
-      sceneStartedAt = performance.now() - GRAVITY_SETTLED_ELAPSED_MS;
+      if (entryPausedAt !== undefined) {
+        sceneStartedAt += now - entryPausedAt;
+        entryPausedAt = undefined;
+      }
       draw(performance.now());
-      if (!reducedMotion && document.visibilityState === "visible") {
+      if (shouldAnimate()) {
         frame = window.requestAnimationFrame(animate);
       }
     };
 
     redrawRef.current = () => {
+      if (scene.taa) scene.taa.historyValid = false;
+      taaFrameIndex = 0;
+      resizeCanvas();
       syncAppBootState();
       draw(performance.now());
+      if (shouldAnimate() && frame === undefined) frame = window.requestAnimationFrame(animate);
     };
 
     const animate = (time: number) => {
       frame = undefined;
       syncAppBootState();
-      if (appBootPaused || contextLost) return;
+      if (appBootPaused || entryPaused || contextLost) return;
       // Double buffering avoids an IPC round-trip halving the frame rate, while
       // bounding queued work leaves room for library and pointer updates.
       while (gpuFrames.length > 0) {
@@ -386,12 +880,17 @@ export function GravityField({
       const interval = time - lastDrawAt;
       // Keep 120/144 Hz monitors from doubling this decorative GPU workload.
       if (time >= nextDrawAt) {
-        if (lastDrawAt > 0 && interval < 150) {
+        // Sustained GPU stalls must count too; excluding >150 ms intervals
+        // prevented quality adaptation precisely on the slowest renderers.
+        if (lastDrawAt > 0) {
           measuredFrames += 1;
           if (interval > 23) slowFrames += 1;
         }
         lastDrawAt = time;
-        nextDrawAt = Math.max(nextDrawAt + 1000 / 60, time);
+        const taaMaxFps = GRAVITY_TAA_PROFILES[settingsRef.current.taaQuality].maxFps;
+        const frameRate =
+          taaMaxFps > 0 ? Math.min(settingsRef.current.maxFps, taaMaxFps) : settingsRef.current.maxFps;
+        nextDrawAt = Math.max(nextDrawAt + 1000 / frameRate, time);
         // Only reduce resolution after sustained pressure, never during one hiccup.
         if (measuredFrames >= 90 || time - qualityWindowStartedAt > 1500) {
           if (measuredFrames > 3 && slowFrames > measuredFrames * 0.4 && adaptiveScale > 0.4) {
@@ -407,11 +906,11 @@ export function GravityField({
         if (time-lastQualityStepAt > 350 && Math.abs(targetScale-adaptiveScale) > .001) {
           adaptiveScale += Math.sign(targetScale-adaptiveScale)*Math.min(.015,Math.abs(targetScale-adaptiveScale));
           lastQualityStepAt = time;
-          resize();
+          resizeCanvas();
         }
         draw(time);
       }
-      if (!reducedMotion && !appBootPaused && document.visibilityState === "visible") {
+      if (shouldAnimate()) {
         frame = window.requestAnimationFrame(animate);
       }
     };
@@ -430,24 +929,27 @@ export function GravityField({
 
     const handleVisibility = () => {
       const now = performance.now();
-      if (document.visibilityState === "hidden") hiddenAt ??= now;
-      else if (hiddenAt !== undefined) {
+      if (document.visibilityState === "hidden" && settingsRef.current.pauseWhenHidden) {
+        hiddenAt ??= now;
+      } else if (hiddenAt !== undefined && settingsRef.current.pauseWhenHidden) {
         // Resume the same material phase instead of jumping by hidden wall time.
         sceneStartedAt += now-hiddenAt;
         hiddenAt = undefined;
         nextDrawAt = now;
       }
+      if (scene.taa) scene.taa.historyValid = false;
+      taaFrameIndex = 0;
+      if (!settingsRef.current.pauseWhenHidden) hiddenAt = undefined;
       lastDrawAt = 0;
       syncAppBootState();
-      if (
-        document.visibilityState === "visible" &&
-        !reducedMotion &&
-        !appBootPaused &&
-        frame === undefined
-      ) {
+      if (shouldAnimate() && frame === undefined) {
         frame = window.requestAnimationFrame(animate);
       }
-      if (document.visibilityState === "hidden" && frame !== undefined) {
+      if (
+        document.visibilityState === "hidden" &&
+        settingsRef.current.pauseWhenHidden &&
+        frame !== undefined
+      ) {
         window.cancelAnimationFrame(frame);
         frame = undefined;
       }
@@ -457,8 +959,14 @@ export function GravityField({
       // preventDefault requests restoration; the CSS image covers the lost frame.
       event.preventDefault();
       contextLost = true;
+      clearGravityTelemetryQueries(scene);
+      sceneRef.current = null;
+      onTelemetryChangeRef.current?.(null);
+      scene.taa = null;
+      taaFrameIndex = 0;
       gpuFrames = [];
       field.dataset.renderer = "unavailable";
+      field.dataset.telemetryState = "unavailable";
       if (frame !== undefined) window.cancelAnimationFrame(frame);
       frame = undefined;
     };
@@ -467,11 +975,14 @@ export function GravityField({
       const restored = createGravityWebGLScene(canvas);
       if (!restored) return;
       scene = restored;
+      sceneRef.current = scene;
       contextLost = false;
+      taaFrameIndex = 0;
       field.dataset.renderer = "webgl2";
+      field.dataset.telemetryState = telemetryEnabledRef.current ? "active" : "inactive";
       lastDrawAt = 0;
       resize();
-      if (!reducedMotion && !appBootPaused && document.visibilityState === "visible") {
+      if (shouldAnimate()) {
         frame = window.requestAnimationFrame(animate);
       }
     };
@@ -484,7 +995,7 @@ export function GravityField({
         adaptiveScale = 1;
         targetScale = 1;
         resize();
-      } else if (document.visibilityState === "visible" && !appBootPaused && frame === undefined) {
+      } else if (shouldAnimate() && frame === undefined) {
         frame = window.requestAnimationFrame(animate);
       }
     };
@@ -508,7 +1019,7 @@ export function GravityField({
     const resizeObserver =
       typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(resize);
     const bootObserver =
-      pauseWhileAppBooting && typeof MutationObserver !== "undefined"
+      typeof MutationObserver !== "undefined"
         ? new MutationObserver(syncAppBootState)
         : undefined;
     resizeObserver?.observe(root);
@@ -523,12 +1034,13 @@ export function GravityField({
     canvas.addEventListener("webglcontextrestored", handleContextRestored);
     document.addEventListener("visibilitychange", handleVisibility);
     addMotionListener();
-    field.dataset.animationState = appBootPaused ? "paused" : "running";
+    field.dataset.animationState = appBootPaused || entryPaused ? "paused" : "running";
     resize();
-    if (!reducedMotion && !appBootPaused) frame = window.requestAnimationFrame(animate);
+    if (shouldAnimate()) frame = window.requestAnimationFrame(animate);
 
     return () => {
       redrawRef.current = null;
+      sceneRef.current = null;
       resizeObserver?.disconnect();
       bootObserver?.disconnect();
       if (!resizeObserver) window.removeEventListener("resize", resize);
@@ -541,8 +1053,26 @@ export function GravityField({
       if (frame !== undefined) window.cancelAnimationFrame(frame);
       for (const gpuFrame of gpuFrames) scene.gl.deleteSync(gpuFrame);
       destroyGravityWebGLScene(scene);
+      onTelemetryChangeRef.current?.(null);
     };
-  }, [introDurationMs, pauseWhileAppBooting, renderScaleMultiplier]);
+  }, [clockOrigin, introDurationMs, pauseWhileAppBooting, renderScaleMultiplier]);
+
+  // Measurement follows the inspector lifecycle without rebuilding the WebGL scene.
+  useEffect(() => {
+    fieldRef.current?.setAttribute("data-telemetry-state", telemetryEnabled ? "active" : "inactive");
+    const scene = sceneRef.current;
+    onTelemetryChangeRef.current?.(
+      telemetryEnabled && scene
+        ? {
+            gpuName: scene.telemetry.gpuName,
+            gpuUsage: null,
+            cpuName: getGravityCpuName(),
+            cpuUsage: null,
+          }
+        : null,
+    );
+    redrawRef.current?.();
+  }, [telemetryEnabled]);
 
   // Redraw on prop changes so reduced-motion mode still reflects selection and launch state.
   // biome-ignore lint/correctness/useExhaustiveDependencies: refs keep the scene stable while these props trigger a redraw.
@@ -550,7 +1080,7 @@ export function GravityField({
     // The scene is initialized once; redraw keeps state synchronized without
     // rebuilding the WebGL program or its GPU buffers.
     redrawRef.current?.();
-  }, [activeIndex, launchProgress, selectionVisible, storeCount, templateSelected]);
+  }, [activeIndex, launchProgress, settings, selectionVisible, storeCount, templateSelected]);
 
   return (
     <div className="dashboard-gravity-field" ref={fieldRef} aria-hidden="true">

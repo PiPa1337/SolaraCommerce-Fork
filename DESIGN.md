@@ -16,6 +16,15 @@ colors:
   studio-muted: "#9a9a96"
   studio-accent: "#ff6a00"
   studio-cosmic-amber: "#e8b56f"
+  workbench-background: "#080b0e"
+  workbench-surface: "#101820"
+  workbench-surface-raised: "#17212b"
+  workbench-glass: "rgb(13 22 36 / 0.78)"
+  workbench-ink: "#f2f5f7"
+  workbench-muted: "#b1bdc8"
+  workbench-line: "rgb(232 242 255 / 0.16)"
+  workbench-line-strong: "rgb(242 248 255 / 0.3)"
+  workbench-field: "#0b141e"
   white: "#ffffff"
 typography:
   storefront-display:
@@ -35,6 +44,8 @@ rounded:
   studio-input: "6px"
   studio-panel: "16px"
   studio-large: "24px"
+  workbench-control: "8px"
+  workbench-group: "10px"
 spacing:
   studio-1: "4px"
   studio-2: "8px"
@@ -54,6 +65,15 @@ components:
     textColor: "{colors.studio-ink}"
     rounded: "{rounded.studio-panel}"
     padding: "24px"
+  workbench-panel:
+    backgroundColor: "{colors.workbench-glass}"
+    textColor: "{colors.workbench-ink}"
+    rounded: "{rounded.studio-panel}"
+    padding: "0 22px 24px"
+  workbench-field:
+    backgroundColor: "{colors.workbench-field}"
+    textColor: "{colors.workbench-ink}"
+    rounded: "{rounded.workbench-control}"
 ---
 
 # Design System: SolaraCommerce
@@ -70,6 +90,11 @@ wide containers, asymmetric media, deliberate rhythm, and restrained surfaces.
 The dashboard's cosmic shell is an editor surface, not a storefront theme. Do not
 merge their tokens or infer that a Studio treatment belongs in exported commerce
 pages.
+
+The desktop store workbench inherits the dashboard's cool glass, depth and Arial
+typography on a stationary background. Its scoped tokens override the older
+Studio defaults only inside the workbench. The operational layout and eight-area
+tool map are documented in `docs/EDITOR_WORKBENCH.md`.
 
 **Key Characteristics:**
 
@@ -94,6 +119,10 @@ storefront values.
 - **Terracotta accent** (`#a63d2f`): primary action and editorial emphasis in the
   Catalog Modern V2 reference.
 - **Studio orange** (`#ff6a00`): active controls and focus language inside Studio.
+- **Workbench champagne:** the existing cosmic amber marks actions, selected
+  navigation icons and focus inside the workbench; cool translucent surfaces and
+  pale text remain dominant. Orange remains a base Studio token, not the
+  workbench's effective accent.
 
 ### Neutral
 
@@ -116,6 +145,11 @@ the V2 reference. Studio prioritizes scanability and stable control dimensions.
 Do not replace the existing families merely because a generic design heuristic
 prefers another font; the incumbent code and theme contract are authoritative.
 
+The workbench retains the dashboard's Arial stack. Section headings use 25px,
+1.15 line-height and -0.03em tracking, reducing to 22px in narrow panel containers.
+Body and field copy use 13px with 1.5 line-height; navigation uses 12px. Text has
+no decorative shadow. These are operational roles, not public display tokens.
+
 ## Layout
 
 The public renderer uses a theme-provided container and spacing scale. Catalog
@@ -125,9 +159,24 @@ contract is tested at 390x844, 1024x900 and 1440x900, with boundary checks aroun
 768px and 1200px.
 
 Studio is a full-height application shell. The dashboard may scroll with its
-content, while the editor contains scrolling inside its panels. Keep the minimum
-usable width at 320px and preserve the existing 4px spacing scale for editor
-alignment.
+content, while the editor contains scrolling inside its panels. Preserve the
+existing 4px spacing scale for editor alignment. The desktop workbench has a
+left navigation rail, a main panel filling the space up to a right-aligned preview,
+with 12px gutters and no 768px cap on the main panel. Tablet and Mobile reserve
+up to 768px and 390px respectively for the preview and give the remainder to the
+main panel. A selected item or section opens its detail in that same panel,
+replacing the visible list while keeping it mounted to preserve state and scroll.
+There is one visible working panel beside the preview. Container queries adapt
+fields and toolbars to the panel's actual available width.
+
+**The Preview Viewport Rule.** Tablet (768px) and Mobile (390px) describe the
+iframe's internal viewport, not supported editor device classes. Scale the
+rendered frame to fit without changing that viewport. Opening the main panel
+temporarily selects Tablet; device changes while it is open remain temporary,
+and closing it restores the preset selected before opening. Opening or closing
+a detail within that panel leaves the preview device, route and zoom unchanged;
+the device selector remains available. The
+desktop editor must not be documented as a 320px mobile application.
 
 ## Elevation & Depth
 
@@ -136,12 +185,24 @@ overlays use the theme's shadow tokens rather than arbitrary decoration. Studio
 uses restrained panel and floating shadows (`0 24px 60px rgba(0, 0, 0, 0.44)` and
 `0 8px 24px rgba(0, 0, 0, 0.36)`) against dark surfaces.
 
+The workbench overrides panel depth with a soft shadow
+(`0 18px 48px rgb(0 0 0 / 0.28)`), a faint inset highlight and 16px backdrop blur.
+Its subtle radial background and panel gradients are stationary. Detail and
+sticky navigation surfaces are more opaque to keep controls readable.
+
+**The Stationary Workshop Rule.** Inherit the dashboard's glass materials, not
+its animated background; the preview remains the store's own rendered document.
+
 ## Shapes
 
 Public shape is controlled by the store theme. The V2 reference uses a 2px base
 radius and square search-form treatment. Studio uses 6px inputs, 16px panels and
 24px large surfaces. Focus rings are visible and must not be replaced with
 decoration that reduces contrast.
+
+Workbench overrides use 8px controls, 10px navigation/group surfaces and 16px
+main/detail surfaces. The preview has rounded 12px corners and an inset outline,
+so decoration does not subtract pixels from the emulated viewport.
 
 ## Components
 
@@ -161,6 +222,9 @@ decoration that reduces contrast.
 
 - Storefront fields preserve semantic labels, visible focus and the active theme.
 - Studio fields use `--radius-input`, `--surface-raised` and the shared focus ring.
+- Workbench fields override these with a stable dark fill, 8px radius and 38px
+  minimum height (excluding checkboxes/radios). Focus uses a 2px amber outline
+  offset by 3px; selected primary-action text remains dark for contrast.
 
 ### Navigation
 
@@ -168,6 +232,13 @@ Public navigation must remain crawlable, keyboard accessible and useful without
 JavaScript. Mobile navigation is a full interaction state with focus return and
 no horizontal scroll. Studio navigation belongs to the editor shell and should
 not leak public-storefront styles.
+
+Workbench navigation separates preparation, editing and publication while
+retaining all eight areas. Selected areas use a light border and glass highlight.
+Sticky local navigation scrolls and focuses a group without unmounting its forms;
+the active treatment records the selected group. Contextual details use the same
+working panel through portals and return focus on close. Sections and assets have
+explicit return actions; saving or cancelling a product returns to its catalog.
 
 ## Do's and Don'ts
 
@@ -178,10 +249,14 @@ not leak public-storefront styles.
 - **Do** preserve Preview/export parity and test the three responsive modes.
 - **Do** keep reduced-motion and no-JavaScript states useful.
 - **Do** scope public CSS under the existing storefront/module roots.
+- **Do** scope workbench materials to the editor shell and adapt controls to
+  panel width in both list and detail views.
 
 ### Don't:
 
 - **Don't** mix Studio tokens with storefront tokens.
+- **Don't** interpret Tablet/Mobile preview presets as tablet/mobile editor
+  layouts or copy the dashboard animation into the workbench.
 - **Don't** introduce a new visual family when the task is a refinement.
 - **Don't** solve a design finding by changing persisted data, schema, IDs or
   native-agent operations.

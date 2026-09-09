@@ -1,5 +1,67 @@
+### Secuencia de splash y zoom del arranque (2026-09-09)
+
+- La splash de glassmorfismo queda centrada sobre un fondo negro plano; al completar la precarga, el panel se desvanece a negro y un segundo fade acompaña el zoom sincronizado hacia Gargantua antes de ejecutar la entrada escalonada del dashboard.
+- Se elimina el halo dorado del logo y la barra de progreso; el dashboard inicia sin tienda seleccionada ni foco automático.
+
+### Black hole con más definición visual (2026-09-09)
+
+- Se contiene la emisión del disco, el borde crítico y el bloom interior para conservar textura y separar mejor la sombra negra del material luminoso, sin alterar el zoom ni el reloj de la animación.
+
+### TAA configurable para el fondo de Gargantua (2026-09-09)
+
+- Se añade antialias temporal exclusivo del canvas WebGL del fondo, con calidades Bajo, Medio, Alto, Muy alto y Extremo, además de Off para conservar exactamente el render actual por defecto; la elección se incluye en los presets persistentes.
+
+### Telemetría efímera del fondo de Gargantua (2026-09-09)
+
+- El inspector muestra una card lateral con renderer GPU, plataforma e hilos CPU y uso estimado; las muestras sólo se toman mientras el menú está abierto y se detienen al cerrarlo.
+
+### Presets de Gargantua alineados con sus rangos (2026-09-09)
+
+- Eficiencia usa los mínimos visuales no nulos, Actual conserva los valores vigentes y Máxima usa los nuevos máximos de resolución, cuadros, capas y acabado, con TAA Extremo para sostener esa carga.
+
+### Continuidad del arranque de Gargantua (2026-09-09)
+
+- El canvas de arranque y el dashboard comparten el reloj de escena y la duración de introducción, evitando que el fondo cambie de fase o repita el zoom al estabilizarse.
+
+### Ajustes de calidad del fondo desde el dashboard (2026-09-09)
+
+- Se agrega una tuerca junto a “Cerrar app” que abre un inspector lateral para ajustar en vivo la calidad, movimiento, presencia y acabado de Gargantua; el dashboard se oculta mientras el inspector está abierto y “Actual” conserva el comportamiento vigente.
+- Se amplían al doble los máximos de calidad y se llevan los mínimos a valores bajos pero no nulos, manteniendo “Actual” sin modificaciones.
+- Se incorporan diez controles avanzados adicionales y tres ranuras de presets del usuario, guardadas localmente junto con la última configuración elegida para recuperarlas al reabrir la aplicación.
+
+### Popup de calculadora del dashboard (2026-09-09)
+
+- Se refinan los estados “Resumen y simulación”, simulación activa y “Configurar tarifa” a 1920×912: superficie más opaca, jerarquía de importes, controles activos y separación entre tarifa global y descuento por tienda.
+- Se agrega una prueba visual dedicada con capturas antes/después y verificación de encaje sin overflow.
+
+### Auditoría visual del editor a 1920×912 (2026-09-09)
+
+- Se corrige la separación entre etiquetas y campos en todas las áreas y se evita estirar las cabeceras para rellenar altura.
+- Catálogo compacta búsqueda, vistas y selección; Constructor mantiene reconocibles sus acciones disponibles.
+- Recursos muestra miniaturas completas, campos más amplios y Copiar ID con estilo de acción normal.
+- Tema compacta la información de familia y alinea las paletas; Exportar compara producción y borrador y da espacio a la verificación de publicación.
+- Se conservan la X fija, el panel único y las funciones existentes; la auditoría captura las ocho aperturas antes y después únicamente a 1920×912.
+
+### Correcciones de scroll del editor (2026-09-09)
+
+- La X permanece visible al recorrer áreas y detalles, con espacio reservado para no tapar controles.
+- Catálogo ajusta las columnas al panel y presenta los productos en fichas de dos columnas cuando el panel es estrecho; evita el estiramiento de Agregar producto y mejora el contraste de su barra fija.
+- La muestra de sombra de Tema recupera contraste y los controles de elementos repetibles ganan separación.
+- Se agrega un recorrido visual del contenido vertical completo a 1920×912 con detección de scroll lateral interno.
+
 ### Dashboard paginado sin scroll (2026-09-08)
 
+- La aparición del dashboard compone cuadros retenidos de Gargantua durante el fundido y reanuda el gas al finalizar, evitando que dos escenas WebGL compitan con la entrada de los controles.
+- El borde final de Gargantua adopta una única línea fina blanco crema con bloom suave continuo, reemplazando las bandas gruesas e irregulares según los recortes de referencia.
+- La calidad adaptativa de Gargantua vuelve a responder a intervalos superiores a 150 ms y evita dibujar dos veces al cambiar resolución; el shader y su iluminación permanecen intactos.
+- Se añade bloom exterior al borde blanco de Gargantua y se reduce la apertura lateral del arco superior cerca del plano para converger hacia el borde interior del disco.
+- El gas central de Gargantua aumenta su emisión un 20 % y el borde luminoso principal multiplica su ancho intrínseco por seis, desplazándose hacia fuera para conservar la sombra.
+- Se calibra la luz de Gargantua por zonas frente a la referencia: aumenta el arco superior y el disco frontal, se añade dispersión exterior amplia y se conserva la intensidad del arco inferior y las máscaras de las uniones.
+- Gargantua adopta una iluminación blanco cálido más intensa, un arco inferior más visible y un halo exterior más amplio, conservando la geometría y las máscaras de sus empalmes.
+- El horizonte visual de Gargantua incorpora cobertura de píxel para una sombra nítida, bandas luminosas subpíxel con energía conservada, brillo angular ligado al gas y dispersión exterior; el disco frontal mantiene su oclusión independiente.
+- Se corrige la intrusión de los empalmes de Gargantua al mantener la máscara de la lente también durante la mezcla orbital y en el halo. Se refuerzan la emisión y la exposición conservando la sombra negra.
+- Se suavizan los empalmes laterales del arco de Gargantua mediante interpolación orbital, relevo gradual hacia el disco y eliminación del recorte circular en la unión; aumenta la emisión del gas y se aclara su luz frontal.
+- Se incluye la imagen original de respaldo de Gargantua en los recursos públicos para cubrir la ausencia de WebGL y resolver la referencia faltante durante el build.
 - Gargantua aumenta un 300 % la velocidad del gas (×4), añade estrellas con movimiento en profundidad y centelleo suave, polvo precalculado, capas con absorción ordenada, transición de lente variable, remolinos locales y filtrado estable. El reloj se conserva al ocultar la pestaña y el lanzamiento deja de multiplicar el tiempo acumulado.
 - Se recupera el contraste de los filamentos de Gargantua mezclando su energía después del perfil luminoso, se reduce el suavizado entre capas y se aumenta el flujo local conservando la envolvente estable.
 - Gargantua incorpora flujo orbital lento con entrada radial y renovación continua del gas, espesor irregular, absorción según densidad, distinta proyección del arco inferior, filtrado de filamentos y halo ligado a la emisión. Se verifican los empalmes temporales y una hora simulada sin saltos.
@@ -3293,6 +3355,21 @@ formales: los cambios se agrupan por fecha de trabajo hasta que exista una
 versión publicada.
 
 ## [Unreleased]
+
+### Changed
+
+- El editor de tiendas adopta el vidrio frío del dashboard con fondo estático,
+  navegación por tareas y grupos internos en Resumen, Tema, SEO y Exportar.
+- Productos, secciones y recursos se editan en el mismo panel grande que su
+  lista, sin una segunda columna. Volver recupera el listado y conserva sus
+  cambios; entrar al detalle no mueve ni cambia el preset de la preview.
+- Abrir el panel principal de cualquiera de las ocho áreas activa Tablet y
+  cerrarlo restaura el preset previo. El panel ocupa el espacio libre hasta la
+  preview, con 12 px de separación, según la referencia visual corregida.
+- El editor se verifica como aplicación de escritorio; Tablet y Mobile son
+  exclusivamente presets de la tienda. Se mantienen borradores, confirmaciones,
+  restauración de foco y transferencias de catálogo agrupadas.
+
 
 - Corregido el menú móvil del storefront V2 para que conserve su panel completo al abrir categorías y subcategorías, incluso durante la animación de entrada del header.
 - Refinada la densidad de las cards de productos en home, búsqueda, categorías y productos relacionados, con `sizes` alineados al ancho visual reducido.

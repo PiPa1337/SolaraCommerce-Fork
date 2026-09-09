@@ -1,4 +1,3 @@
-import { WorkspaceGroups } from "./workbench/WorkspaceNav";
 /** Panel de exportación que distingue draft/production y muestra bloqueos accionables. */
 import {
   ArrowRight,
@@ -38,6 +37,7 @@ import {
   recoverProjectFromFolderInWorker,
   recoverProjectFromUrlInWorker,
 } from "../lib/workers";
+import { WorkspaceGroups } from "./workbench/WorkspaceNav";
 
 const EXPORT_STAGES = [
   { id: "validate", label: "Validando proyecto" },
@@ -184,8 +184,7 @@ export function ExportPanel({
     setExportDone(false);
     setDoneStages(new Set());
     try {
-      const exportDirectory =
-        mode === "production" ? await chooseExportDirectory() : undefined;
+      const exportDirectory = mode === "production" ? await chooseExportDirectory() : undefined;
       if (mode === "production" && !exportDirectory) {
         setNotice("Exportación cancelada. No se modificó ninguna carpeta.");
         return;
@@ -485,7 +484,11 @@ export function ExportPanel({
         >
           {auditReady ? (
             <>
-              <CheckCircle aria-hidden size={17} />
+              {critical > 0 ? (
+                <WarningCircle aria-hidden size={17} />
+              ) : (
+                <CheckCircle aria-hidden size={17} />
+              )}
               {critical > 0
                 ? `Auditoría lista: ${critical} errores críticos deben resolverse.`
                 : "Auditoría lista: la producción está habilitada."}
@@ -555,254 +558,288 @@ export function ExportPanel({
           </ul>
         </section>
       ) : null}
-<WorkspaceGroups label="Entrega de la tienda" groups={[
-{ id: "generate", label: "Generar archivos", content: <>
-      <label className="export-ai-context">
-        <input
-          type="checkbox"
-          data-testid="ui-export-ai-context"
-          checked={publicAiContext}
-          onChange={(event) => setPublicAiContext(event.target.checked)}
-        />
-        Publicar contexto público para agentes (`llms.txt` y `ai-context.json`)
-      </label>
-      {publicAiContext || externalHosts.length > 0 ? (
-        <aside
-          className="audit-panel export-public-exposure"
-          data-testid="ui-export-public-exposure"
-        >
-          <h3>Exposición pública deliberada</h3>
-          {publicAiContext ? (
-            <p>
-              Se publicarán contacto, políticas, SKUs, precios y productos activos para agentes.
-            </p>
-          ) : null}
-          {externalHosts.length > 0 ? (
-            <p>
-              Hosts externos de medios: {externalHosts.join(", ")}. Se mostrarán como advertencias.
-            </p>
-          ) : null}
-        </aside>
-      ) : null}
+      <WorkspaceGroups
+        label="Entrega de la tienda"
+        groups={[
+          {
+            id: "generate",
+            label: "Generar archivos",
+            content: (
+              <>
+                <div className="export-options">
+                  <article>
+                    <ShieldCheck aria-hidden size={25} />
+                    <div>
+                      <h3>Sitio de producción</h3>
+                      <p>
+                        Genera HTML estático, sitemap, datos estructurados y feed desde el mismo
+                        proyecto.
+                      </p>
+                      {critical > 0 ? (
+                        <span className="export-warning">
+                          {critical} errores críticos deben resolverse.
+                        </span>
+                      ) : null}
+                    </div>
+                    <Button
+                      variant="primary"
+                      data-testid="ui-export-production"
+                      onClick={() => setConfirmAction("production")}
+                      disabled={Boolean(busy) || !auditReady || critical > 0}
+                    >
+                      {busy === "production" ? "Generando" : "Elegir carpeta y exportar"}
+                    </Button>
+                  </article>
+                  <article>
+                    <WarningCircle aria-hidden size={25} />
+                    <div>
+                      <h3>Sitio borrador</h3>
+                      <p>Incluye noindex y excluye el feed de Merchant para revisión privada.</p>
+                    </div>
+                    <Button
+                      data-testid="ui-export-draft"
+                      onClick={() => void exportSite("draft")}
+                      disabled={Boolean(busy)}
+                    >
+                      {busy === "draft" ? "Generando" : "Exportar borrador"}
+                    </Button>
+                  </article>
+                </div>
+                <details className="export-content-options">
+                  <summary>Opciones de contenido público</summary>
+                  <label className="export-ai-context">
+                    <input
+                      type="checkbox"
+                      data-testid="ui-export-ai-context"
+                      checked={publicAiContext}
+                      onChange={(event) => setPublicAiContext(event.target.checked)}
+                    />
+                    Publicar contexto público para agentes (`llms.txt` y `ai-context.json`)
+                  </label>
+                  {publicAiContext || externalHosts.length > 0 ? (
+                    <aside
+                      className="audit-panel export-public-exposure"
+                      data-testid="ui-export-public-exposure"
+                    >
+                      <h3>Exposición pública deliberada</h3>
+                      {publicAiContext ? (
+                        <p>
+                          Se publicarán contacto, políticas, SKUs, precios y productos activos para
+                          agentes.
+                        </p>
+                      ) : null}
+                      {externalHosts.length > 0 ? (
+                        <p>
+                          Hosts externos de medios: {externalHosts.join(", ")}. Se mostrarán como
+                          advertencias.
+                        </p>
+                      ) : null}
+                    </aside>
+                  ) : null}
 
-      {optimization ? (
-        <output className="optimization-export-summary">
-          <strong>Salud de exportación: {optimization.score}/100</strong>
-          <span>{critical} críticos</span>
-          <span>{optimization.counts.warnings} advertencias</span>
-          <span>{optimization.counts.indexable} rutas indexables</span>
-        </output>
-      ) : null}
-      <div className="export-options">
-        <article>
-          <FileArchive aria-hidden size={25} />
-          <div>
-            <h3>Respaldo de proyecto</h3>
-            <p>Conserva catálogo, diseño, SEO, configuración y recursos del proyecto.</p>
-          </div>
-          <div className="export-actions">
-            <Button
-              icon={DownloadSimple}
-              data-testid="ui-export-backup"
-              onClick={() => void backup()}
-              disabled={Boolean(busy)}
-            >
-              Descargar .solara.json
-            </Button>
-            <input
-              ref={importRef}
-              className="visually-hidden"
-              type="file"
-              aria-label="Seleccionar respaldo de proyecto"
-              accept=".json,.solara.json,application/json"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) {
-                  setPendingImport(file);
-                  setConfirmAction("import");
-                }
-                event.target.value = "";
-              }}
-            />
-            <Button
-              icon={UploadSimple}
-              data-testid="ui-export-import"
-              onClick={() => importRef.current?.click()}
-              disabled={Boolean(busy)}
-            >
-              Importar respaldo
-            </Button>
-          </div>
-        </article>
-
-        <article>
-          <WarningCircle aria-hidden size={25} />
-          <div>
-            <h3>Sitio borrador</h3>
-            <p>Incluye noindex y excluye el feed de Merchant para revisión privada.</p>
-          </div>
-          <Button
-            data-testid="ui-export-draft"
-            onClick={() => void exportSite("draft")}
-            disabled={Boolean(busy)}
-          >
-            {busy === "draft" ? "Generando" : "Exportar borrador"}
-          </Button>
-        </article>
-
-        <article>
-          <ShieldCheck aria-hidden size={25} />
-          <div>
-            <h3>Sitio de producción</h3>
-            <p>
-              Genera HTML estático, sitemap, datos estructurados y feed desde el mismo proyecto.
-            </p>
-            {critical > 0 ? (
-              <span className="export-warning">{critical} errores críticos deben resolverse.</span>
-            ) : null}
-          </div>
-          <Button
-            variant="primary"
-            data-testid="ui-export-production"
-            onClick={() => setConfirmAction("production")}
-            disabled={Boolean(busy) || !auditReady || critical > 0}
-          >
-            {busy === "production" ? "Generando" : "Elegir carpeta y exportar"}
-          </Button>
-        </article>
-      </div>
-</> },
-{ id: "verify", label: "Verificar publicación", content: <>
-      <section
-        className="audit-panel export-cloudflare-verifier"
-        data-testid="ui-cloudflare-verifier"
-      >
-        <header>
-          <div>
-            <h3>Verificar publicación en Cloudflare Pages</h3>
-            <p>La comprobación usa CORS y nunca marca verde si el hosting no expone sus headers.</p>
-          </div>
-        </header>
-        <div className="export-actions">
-          <input
-            aria-label="URL pública para verificar"
-            value={publishedSiteUrl}
-            onChange={(event) => setPublishedSiteUrl(event.target.value)}
-            placeholder={project.baseUrl}
-          />
-          <Button
-            size="sm"
-            variant="quiet"
-            onClick={() => void verifyCloudflare()}
-            disabled={cloudflareBusy}
-          >
-            {cloudflareBusy ? "Verificando…" : "Verificar URL"}
-          </Button>
-        </div>
-        {cloudflareVerification ? (
-          <div data-testid="ui-cloudflare-result" data-status={cloudflareVerification.status}>
-            <p>
-              Resultado:{" "}
-              {cloudflareVerification.status === "pass"
-                ? "verificado"
-                : cloudflareVerification.status === "fail"
-                  ? "falló"
-                  : "no verificado"}
-              {cloudflareVerification.revision
-                ? ` · revisión ${cloudflareVerification.revision}`
-                : ""}
-            </p>
-            <ul>
-              {cloudflareVerification.checks.map((entry) => (
-                <li key={entry.id} data-status={entry.status}>
-                  {entry.label}: {entry.status} — {entry.detail}
-                </li>
-              ))}
-            </ul>
-            {cloudflareVerification.status === "unverified" ? (
-              <pre>{cloudflareVerification.curlCommands.join("\n")}</pre>
-            ) : null}
-          </div>
-        ) : null}
-        <ul aria-label="Checklist manual Cloudflare">
-          {(
-            [
-              ["upload", "Subí únicamente la carpeta hija dedicada"],
-              ["functions", "No hay Pages Functions"],
-              ["previews", "Previews desactivados o protegidos con Access"],
-              ["https", "Dominio HTTPS activo"],
-              ["verified", "Verificación posterior completada"],
-            ] as const
-          ).map(([id, label]) => (
-            <li key={id}>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={cloudflareChecklist.has(id)}
-                  onChange={() => toggleCloudflareCheck(id)}
-                />
-                {label}
-              </label>
-            </li>
-          ))}
-        </ul>
-        <small>
-          Los previews de Cloudflare son públicos por defecto; protegé o eliminá las versiones
-          antiguas manualmente.
-        </small>
-      </section>
-
-</> },
-{ id: "recover", label: "Recuperar tienda", content: <>
-      <section className="audit-panel export-recovery" data-testid="ui-export-recovery">
-        <header>
-          <div>
-            <h3>Recuperar desde un sitio publicado</h3>
-            <p>
-              Pegá la URL completa de `solara-recovery/.../manifest.json`. Se descargará solo el
-              contenido publicado y se verificarán sus hashes.
-            </p>
-          </div>
-        </header>
-        <div className="export-actions">
-          <input
-            aria-label="URL del manifest de recuperación"
-            value={recoveryUrl}
-            onChange={(event) => setRecoveryUrl(event.target.value)}
-            placeholder="https://tu-dominio.com/solara-recovery/.../manifest.json"
-          />
-          <Button
-            size="sm"
-            variant="quiet"
-            onClick={() => void recoverFromUrl()}
-            disabled={Boolean(busy)}
-          >
-            {busy === "recovery" ? "Recuperando…" : "Recuperar proyecto"}
-          </Button>
-          <input
-            ref={recoveryFolderRef}
-            className="visually-hidden"
-            type="file"
-            aria-label="Seleccionar carpeta del sitio publicado"
-            webkitdirectory="true"
-            onChange={(event) => {
-              const files = Array.from(event.target.files ?? []);
-              event.target.value = "";
-              if (files.length > 0) void recoverFromFolder(files);
-            }}
-          />
-          <Button
-            size="sm"
-            variant="quiet"
-            onClick={() => recoveryFolderRef.current?.click()}
-            disabled={Boolean(busy)}
-          >
-            Recuperar carpeta
-          </Button>
-        </div>
-      </section>
-</> }
-]} />
+                  {optimization ? (
+                    <output className="optimization-export-summary">
+                      <strong>Salud de exportación: {optimization.score}/100</strong>
+                      <span>{critical} críticos</span>
+                      <span>{optimization.counts.warnings} advertencias</span>
+                      <span>{optimization.counts.indexable} rutas indexables</span>
+                    </output>
+                  ) : null}
+                </details>
+              </>
+            ),
+          },
+          {
+            id: "verify",
+            label: "Verificar publicación",
+            content: (
+              <>
+                <section
+                  className="audit-panel export-cloudflare-verifier"
+                  data-testid="ui-cloudflare-verifier"
+                >
+                  <header>
+                    <div>
+                      <h3>Verificar publicación en Cloudflare Pages</h3>
+                      <p>
+                        La comprobación usa CORS y nunca marca verde si el hosting no expone sus
+                        headers.
+                      </p>
+                    </div>
+                  </header>
+                  <div className="export-actions">
+                    <input
+                      aria-label="URL pública para verificar"
+                      value={publishedSiteUrl}
+                      onChange={(event) => setPublishedSiteUrl(event.target.value)}
+                      placeholder={project.baseUrl}
+                    />
+                    <Button
+                      size="sm"
+                      variant="quiet"
+                      onClick={() => void verifyCloudflare()}
+                      disabled={cloudflareBusy}
+                    >
+                      {cloudflareBusy ? "Verificando…" : "Verificar URL"}
+                    </Button>
+                  </div>
+                  {cloudflareVerification ? (
+                    <div
+                      data-testid="ui-cloudflare-result"
+                      data-status={cloudflareVerification.status}
+                    >
+                      <p>
+                        Resultado:{" "}
+                        {cloudflareVerification.status === "pass"
+                          ? "verificado"
+                          : cloudflareVerification.status === "fail"
+                            ? "falló"
+                            : "no verificado"}
+                        {cloudflareVerification.revision
+                          ? ` · revisión ${cloudflareVerification.revision}`
+                          : ""}
+                      </p>
+                      <ul>
+                        {cloudflareVerification.checks.map((entry) => (
+                          <li key={entry.id} data-status={entry.status}>
+                            {entry.label}: {entry.status} — {entry.detail}
+                          </li>
+                        ))}
+                      </ul>
+                      {cloudflareVerification.status === "unverified" ? (
+                        <pre>{cloudflareVerification.curlCommands.join("\n")}</pre>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  <ul aria-label="Checklist manual Cloudflare">
+                    {(
+                      [
+                        ["upload", "Subí únicamente la carpeta hija dedicada"],
+                        ["functions", "No hay Pages Functions"],
+                        ["previews", "Previews desactivados o protegidos con Access"],
+                        ["https", "Dominio HTTPS activo"],
+                        ["verified", "Verificación posterior completada"],
+                      ] as const
+                    ).map(([id, label]) => (
+                      <li key={id}>
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={cloudflareChecklist.has(id)}
+                            onChange={() => toggleCloudflareCheck(id)}
+                          />
+                          {label}
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                  <small>
+                    Los previews de Cloudflare son públicos por defecto; protegé o eliminá las
+                    versiones antiguas manualmente.
+                  </small>
+                </section>
+              </>
+            ),
+          },
+          {
+            id: "recover",
+            label: "Recuperar tienda",
+            content: (
+              <>
+                <div className="export-options">
+                  <article>
+                    <FileArchive aria-hidden size={25} />
+                    <div>
+                      <h3>Respaldo de proyecto</h3>
+                      <p>Conserva catálogo, diseño, SEO, configuración y recursos del proyecto.</p>
+                    </div>
+                    <div className="export-actions">
+                      <Button
+                        icon={DownloadSimple}
+                        data-testid="ui-export-backup"
+                        onClick={() => void backup()}
+                        disabled={Boolean(busy)}
+                      >
+                        Descargar .solara.json
+                      </Button>
+                      <input
+                        ref={importRef}
+                        className="visually-hidden"
+                        type="file"
+                        aria-label="Seleccionar respaldo de proyecto"
+                        accept=".json,.solara.json,application/json"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          if (file) {
+                            setPendingImport(file);
+                            setConfirmAction("import");
+                          }
+                          event.target.value = "";
+                        }}
+                      />
+                      <Button
+                        icon={UploadSimple}
+                        data-testid="ui-export-import"
+                        onClick={() => importRef.current?.click()}
+                        disabled={Boolean(busy)}
+                      >
+                        Importar respaldo
+                      </Button>
+                    </div>
+                  </article>
+                </div>
+                <section className="audit-panel export-recovery" data-testid="ui-export-recovery">
+                  <header>
+                    <div>
+                      <h3>Recuperar desde un sitio publicado</h3>
+                      <p>
+                        Pegá la URL completa de `solara-recovery/.../manifest.json`. Se descargará
+                        solo el contenido publicado y se verificarán sus hashes.
+                      </p>
+                    </div>
+                  </header>
+                  <div className="export-actions">
+                    <input
+                      aria-label="URL del manifest de recuperación"
+                      value={recoveryUrl}
+                      onChange={(event) => setRecoveryUrl(event.target.value)}
+                      placeholder="https://tu-dominio.com/solara-recovery/.../manifest.json"
+                    />
+                    <Button
+                      size="sm"
+                      variant="quiet"
+                      onClick={() => void recoverFromUrl()}
+                      disabled={Boolean(busy)}
+                    >
+                      {busy === "recovery" ? "Recuperando…" : "Recuperar proyecto"}
+                    </Button>
+                    <input
+                      ref={recoveryFolderRef}
+                      className="visually-hidden"
+                      type="file"
+                      aria-label="Seleccionar carpeta del sitio publicado"
+                      webkitdirectory="true"
+                      onChange={(event) => {
+                        const files = Array.from(event.target.files ?? []);
+                        event.target.value = "";
+                        if (files.length > 0) void recoverFromFolder(files);
+                      }}
+                    />
+                    <Button
+                      size="sm"
+                      variant="quiet"
+                      onClick={() => recoveryFolderRef.current?.click()}
+                      disabled={Boolean(busy)}
+                    >
+                      Recuperar carpeta
+                    </Button>
+                  </div>
+                </section>
+              </>
+            ),
+          },
+        ]}
+      />
 
       {history.length > 0 ? (
         <div className="audit-panel" data-testid="ui-export-history">
@@ -851,9 +888,7 @@ export function ExportPanel({
           body={
             <p>
               Se generará el HTML final con sitemap, datos estructurados y feed de Merchant.
-              {
-                " Primero se abrirá el selector de carpetas para elegir dónde guardar el sitio."
-              }
+              {" Primero se abrirá el selector de carpetas para elegir dónde guardar el sitio."}
               {publicAiContext
                 ? " El contexto público incluirá contacto, políticas, SKUs, precios y productos activos."
                 : ""}

@@ -47,7 +47,6 @@ import {
   clearStoredSelectedId,
   type DashboardView,
   readPinnedIds,
-  readStoredSelectedId,
   readStoredSort,
   readStoredStatusFilter,
   readStoredView,
@@ -64,10 +63,19 @@ import { CompareView } from "./dashboard/CompareView";
 import { CreateStoreDialog } from "./dashboard/CreateStoreDialog";
 import { DashboardToolbar } from "./dashboard/DashboardToolbar";
 import { DuplicateDialog } from "./dashboard/DuplicateDialog";
-import { GravityField } from "./dashboard/GravityField";
+import { GravityField, type GravityTelemetrySnapshot } from "./dashboard/GravityField";
+import {
+  DEFAULT_GRAVITY_SETTINGS,
+  type GravitySettings,
+} from "./dashboard/gravitySettings";
 import { formatCompactDate, ProjectCard, statusLabel } from "./dashboard/ProjectCard";
 
 interface DashboardProps {
+  gravitySettings?: GravitySettings;
+  clockOrigin?: number;
+  settingsOpen?: boolean;
+  gravityTelemetryEnabled?: boolean;
+  onGravityTelemetryChange?(snapshot: GravityTelemetrySnapshot | null): void;
   projects: StoredProject[];
   onCreate(input: { name: string; brandName: string; email: string; phone: string }): Promise<void>;
   onImport(file: File): Promise<void>;
@@ -97,22 +105,6 @@ interface DashboardStoreCardProps {
   onSelect(id: string): void;
   onToggleCompare(id: string): void;
   onKeyDown(event: ReactKeyboardEvent<HTMLElement>, record: StoredProject): void;
-}
-
-function useMediaQuery(query: string) {
-  const [matches, setMatches] = useState(() =>
-    typeof window === "undefined" ? false : window.matchMedia(query).matches,
-  );
-
-  useEffect(() => {
-    const media = window.matchMedia(query);
-    const update = () => setMatches(media.matches);
-    update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, [query]);
-
-  return matches;
 }
 
 const DashboardStoreCard = memo(function DashboardStoreCard({
@@ -257,6 +249,11 @@ const GARGANTUA_LAUNCH_DURATION_MS = 1460;
 const GARGANTUA_LAUNCH_HANDOFF = 0.84;
 
 export function Dashboard({
+  gravitySettings = DEFAULT_GRAVITY_SETTINGS,
+  clockOrigin,
+  settingsOpen = false,
+  gravityTelemetryEnabled = false,
+  onGravityTelemetryChange,
   projects,
   onCreate,
   onImport,
@@ -277,14 +274,9 @@ export function Dashboard({
   const [view, setView] = useState<DashboardView>(readStoredView);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
-  const [selectedId, setSelectedId] = useState<string | undefined>(() => {
-    // En compacto el detalle es un bottom-sheet: no debe abrirse solo al cargar
-    // porque taparía las primeras cards y bloquearía la biblioteca.
-    if (typeof window !== "undefined" && window.matchMedia("(max-width: 820px)").matches) {
-      return undefined;
-    }
-    return readStoredSelectedId();
-  });
+  // El dashboard abre neutral: la card y el detalle sólo se resaltan por una
+  // acción explícita del usuario, no por una selección vieja o arbitraria.
+  const [selectedId, setSelectedId] = useState<string | undefined>();
   const [pinnedIds, setPinnedIds] = useState<string[]>(readPinnedIds);
   const [creating, setCreating] = useState(false);
   const [backupId, setBackupId] = useState<string>();
@@ -316,7 +308,6 @@ export function Dashboard({
   const searchInputRef = useRef<HTMLInputElement>(null);
   const cardButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const lastSelectedIdRef = useRef<string | undefined>(undefined);
-  const selectionInitializedRef = useRef(false);
   const focusCardOnSelectRef = useRef(false);
   const actionNoticeTimerRef = useRef<number | undefined>(undefined);
   const launchFrameRef = useRef<number | undefined>(undefined);
@@ -326,8 +317,6 @@ export function Dashboard({
   const shutdownTitleId = useId();
   const pinnedGroupTitleId = useId();
   const backupHintId = useId();
-  const desktopViewport = useMediaQuery("(min-width: 821px)");
-
   const visible = useMemo(
     () => filterDashboardProjects(projects, query, statusFilter, sort),
     [projects, query, sort, statusFilter],
@@ -384,7 +373,6 @@ export function Dashboard({
 
   useEffect(() => {
     if (projects.length === 0) {
-      selectionInitializedRef.current = false;
       if (selectedId) {
         clearStoredSelectedId();
         setSelectedId(undefined);
@@ -394,10 +382,7 @@ export function Dashboard({
     const selectedIsVisible = selectedId
       ? visible.some((record) => record.id === selectedId)
       : false;
-    if (selectedIsVisible) {
-      selectionInitializedRef.current = true;
-      return;
-    }
+    if (selectedIsVisible) return;
     if (selectedId) {
       const exists = projects.some((record) => record.id === selectedId);
       if (exists) {
@@ -406,20 +391,17 @@ export function Dashboard({
         // detalle del proyecto seleccionado aunque el filtro lo oculte.
         return;
       }
-      // Selección borrada (no existe en projects): seguir a primera visible
-      setSelectedId(visible[0]?.id);
-      return;
+      // La selección borrada no debe reaparecer como otra selección implícita.
+      clearStoredSelectedId();
+      setSelectedId(undefined);
     }
-    if (!selectionInitializedRef.current && visible[0]) {
-      if (!desktopViewport) return;
-      selectionInitializedRef.current = true;
-      setSelectedId(visible[0].id);
-    }
-  }, [desktopViewport, projects, selectedId, visible]);
+  }, [projects, selectedId, visible]);
 
   useEffect(() => {
     if (creating) return;
-    const opener = createOpenerRef.current ?? createButtonRef.current;
+    // Sin opener no hay una acción que devolverle el foco; evita enfocar
+    // "Nueva tienda" en el primer montaje del dashboard.
+    const opener = createOpenerRef.current;
     createOpenerRef.current = null;
     if (!opener?.isConnected) return;
     const frame = requestAnimationFrame(() => opener.focus({ preventScroll: true }));
@@ -485,9 +467,7 @@ export function Dashboard({
       if (focusCardOnSelectRef.current) {
         focusCardOnSelectRef.current = false;
         requestAnimationFrame(() => cardButtonRefs.current.get(selected.id)?.focus());
-        return;
       }
-      selectedPanelRef.current?.focus();
       return;
     }
     const lastSelectedId = lastSelectedIdRef.current;
@@ -974,6 +954,10 @@ export function Dashboard({
       aria-busy={openingStoreId ? "true" : undefined}
     >
       <GravityField
+        clockOrigin={clockOrigin}
+        settings={gravitySettings}
+        telemetryEnabled={gravityTelemetryEnabled}
+        onTelemetryChange={onGravityTelemetryChange}
         activeIndex={selectedId ? (pageIndexById.get(selectedId) ?? 0) : 0}
         selectionVisible={Boolean(
           selectedId && !selectedFilteredOut && pageIndexById.has(selectedId),
@@ -991,7 +975,10 @@ export function Dashboard({
           <span className="visually-hidden">Abriendo {openingStore?.name ?? "la tienda"}.</span>
         </output>
       ) : null}
-      <div className="dashboard-wrap dashboard-cosmic__content">
+      <div
+        className="dashboard-wrap dashboard-cosmic__content"
+        aria-hidden={settingsOpen ? "true" : undefined}
+      >
         {isShutdownTerminal ? (
           <output className="shutdown-status shutdown-status--cosmic">
             <CheckCircle aria-hidden size={18} />

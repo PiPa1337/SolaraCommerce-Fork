@@ -16,6 +16,27 @@ uniform float uStoreCount;
 uniform float uSelectionVisible;
 uniform float uTemplateSelected;
 uniform float uLaunchProgress;
+uniform float uMaterialSpeed;
+uniform float uStarDensity;
+uniform float uDustIntensity;
+uniform float uHaloIntensity;
+uniform float uWarmth;
+uniform float uContrast;
+uniform float uDiskLayers;
+uniform float uTurbulence;
+uniform float uFilamentDetail;
+uniform float uGasAbsorption;
+uniform float uDiskTilt;
+uniform float uLensStrength;
+uniform float uBloomSpread;
+uniform float uCausticIntensity;
+uniform float uGalaxyIntensity;
+uniform float uStarTwinkle;
+uniform float uVignette;
+uniform vec2 uTaaJitter;
+uniform sampler2D uTaaHistory;
+uniform float uTaaHistoryWeight;
+uniform float uTaaHistoryValid;
 const float TAU = 6.28318530718;
 
 float hash(vec2 p) {
@@ -38,6 +59,11 @@ float fbm(vec2 p) {
 }
 mat2 rotate(float a) { return mat2(cos(a), -sin(a), sin(a), cos(a)); }
 float band(float x, float width) { return exp(-x*x / (width*width)); }
+// Preserve the energy of subpixel light bands as render resolution changes.
+float filteredBand(float distance, float width, float footprint) {
+  float filteredWidth=sqrt(width*width+footprint*footprint*.25);
+  return band(distance,filteredWidth)*width/filteredWidth;
+}
 
 // Two overlapping gas populations renew before shear can accumulate aliasing.
 // Their velocities always point inward and forward; only their density fades.
@@ -48,7 +74,7 @@ vec3 gasPopulation(vec2 orbit, float r, float age, float footprint) {
   vec2 cell = floor(flow*1.7);
   vec2 local = fract(flow*1.7)-.5;
   float eddy = band(length(local),.38)*(hash(cell)*2.0-1.0);
-  flow += (rotate(age*.025*eddy)*local-local)*.12;
+  flow += (rotate(age*.025*eddy)*local-local)*.12*uTurbulence;
   vec2 direction = flow/sourceRadius;
   float cloud = fbm(flow*3.3 + vec2(sourceRadius*1.4,0));
   float warp = noise(flow*7.0 + cloud*2.0);
@@ -86,7 +112,7 @@ vec4 matter(vec2 orbit, float t) {
   float cloud = mix(envelope,gas.x,.5);
   float erosion = smoothstep(.22,.72,gas.x*.65+envelope*.35);
   float lanes=smoothstep(.25,.66,noise(orbit*5.5+vec2(gas.x*2.0,0)));
-  float streaks = (gas.y*2.7+gas.z*1.1)*erosion;
+  float streaks = (gas.y*2.7+gas.z*1.1)*erosion*uFilamentDetail;
   float wisps = (.08+cloud*.22+streaks*1.1)*(.25+cloud)*(.5+lanes*.5);
   float inner = smoothstep(1.05+(cloud-.5)*.035,1.27,r);
   float outer = 1.0 - smoothstep(2.5,5.6,r);
@@ -94,19 +120,21 @@ vec4 matter(vec2 orbit, float t) {
   outer *= mix(.65+erosion*.35,.045+streamers*2.5,smoothstep(3.2,5.4,r));
   float heat = exp(-(r - 1.2) * .87);
   vec3 copper = vec3(.72,.235,.068);
-  vec3 cream = vec3(1.0,.67,.35);
-  vec3 hot = vec3(1.0,.84,.60);
+  vec3 cream = vec3(1.0,.80,.55);
+  vec3 hot = vec3(1.0,.95,.83);
   vec3 temperature = mix(copper,cream,smoothstep(.08,.8,heat));
   temperature = mix(temperature,hot,pow(heat,3.0)*(.5+gas.x*.3));
   float beaming = .8 + .65 * smoothstep(-3.0,2.0,orbit.x);
   float hotRim = band(r-1.26-(cloud-.5)*.09,.055) * (.2+cloud*.8);
-  vec3 emission = (temperature*wisps+hot*hotRim*.25)*inner*outer*heat*beaming*3.0;
+  vec3 emission = (temperature*wisps+hot*hotRim*.26)*inner*outer*heat*beaming*5.0;
+  // Concentrate the extra emission in the inner gas, not the outer halo.
+  emission *= 1.0+.2*(1.0-smoothstep(2.0,3.0,r));
   // Dense cool lanes may absorb strongly while emitting very little.
   float density = inner*outer*(.18+envelope*.9+(1.0-lanes)*.8+erosion*.35);
   return vec4(emission,density);
 }
 
-vec3 stars(vec2 p, float scale, float threshold, float t, float depth) {
+vec3 stars(vec2 p, float scale, float threshold, float t, float depth, float density) {
   p += vec2(t*.00024,t*.00007)*depth;
   vec2 cell = floor(p * scale);
   vec2 f = fract(p * scale) - .5;
@@ -118,9 +146,10 @@ vec3 stars(vec2 p, float scale, float threshold, float t, float depth) {
   float filteredRadius=sqrt(radius*radius+pixel*pixel*.25);
   float core=band(length(d),filteredRadius)*radius*radius/(filteredRadius*filteredRadius);
   float glow=band(length(d),radius*5.0)*.05;
-  float shimmer=1.0+.08*sin(t*(.22+h*.3)+hash(cell+9.0)*TAU);
+  float shimmer=1.0+.08*sin(t*(.22+h*.3)*uStarTwinkle+hash(cell+9.0)*TAU);
   vec3 tint=mix(vec3(.65,.77,1.0),vec3(1.0,.72,.48),hash(cell+27.0));
-  return tint*(core*2.0+glow)*step(threshold,h)*shimmer;
+  float visible = step(clamp(threshold + (1.0-density)*.18,.68,.999),h);
+  return tint*(core*2.0+glow)*visible*shimmer;
 }
 
 vec3 sky(vec2 p, float t) {
@@ -136,23 +165,23 @@ vec3 sky(vec2 p, float t) {
   float grains = dustSample.g*dustSample.b;
   vec3 c = vec3(.0006,.00085,.0013);
   c += mix(vec3(.055,.067,.08), vec3(.17,.085,.042),cloud)
-    * dust * (rifts*.7 + grains*.6) * 1.3;
-  c += stars(p,18.0,.91,t,1.0)*1.0;
-  c += stars(p+3.1,42.0,.96,t,.42)*.9;
-  c += stars(p-1.7,78.0,.978,t,.14)*.65;
+    * dust * (rifts*.7 + grains*.6) * 1.3 * uDustIntensity;
+  c += stars(p,18.0,.91,t,1.0,uStarDensity)*1.0;
+  c += stars(p+3.1,42.0,.96,t,.42,uStarDensity)*.9;
+  c += stars(p-1.7,78.0,.978,t,.14,uStarDensity)*.65;
   // A distant inclined spiral galaxy supplies a quiet depth cue on the left.
   vec2 g = rotate(.55) * (p - vec2(-.85,-.18));
   g.x *= 2.4;
   float gr = length(g);
   float ga = atan(g.y,g.x);
   float arms = .5 + .5*cos(ga*2.0 - log(gr+.002)*4.2);
-  c += vec3(.25,.12,.055) * exp(-gr*65.0) * (.3+arms*.7);
+  c += vec3(.25,.12,.055) * exp(-gr*65.0) * (.3+arms*.7)*uGalaxyIntensity;
   return c;
 }
 
 void main() {
   float aspect = uResolution.x / uResolution.y;
-  vec2 screen = (gl_FragCoord.xy / uResolution - .5) * vec2(aspect,1);
+  vec2 screen = ((gl_FragCoord.xy + uTaaJitter) / uResolution - .5) * vec2(aspect,1);
   float seconds = uTime * .001;
   float intro = smoothstep(.55,6.0,seconds * 6000.0 / max(uIntroDuration,1.0));
   float launch = smoothstep(0.0,1.0,uLaunchProgress);
@@ -164,16 +193,16 @@ void main() {
   float radial = length(q);
   // +300% = four times the prior material clock. Launch only changes camera
   // position; multiplying accumulated time by launch caused phase jumps.
-  float t = seconds * 4.0;
-  float deflection=.038/(radial*radial+.5);
+  float t = seconds * 4.0 * uMaterialSpeed;
+  float deflection=.038*uLensStrength/(radial*radial+.5);
   vec2 bent=q*(1.0-deflection);
   vec2 skyPoint=center+rotate(-.16)*bent*radius/zoom;
-  vec3 background = sky(skyPoint,seconds);
+  vec3 background = sky(skyPoint,seconds * uMaterialSpeed);
   vec3 color = background;
 
   // Rays meet a genuinely inclined disk in 3D. Several parallel slices give
   // the optically thin gas thickness without a costly full-screen ray march.
-  float inclination = .15;
+  float inclination = .15*uDiskTilt;
   vec3 eye = vec3(0.0, inclination*18.0,18.0);
   vec3 forward = normalize(-eye);
   vec3 right = vec3(1,0,0);
@@ -182,8 +211,12 @@ void main() {
   vec3 behind = vec3(0), front = vec3(0);
   float frontTransmission = 1.0;
   vec2 directOrbit=vec2(0);
-  for(int layer=0; layer<3; layer++) {
-    float slice = float(layer)-1.0;
+  for(int layer=0; layer<6; layer++) {
+    if (float(layer) >= uDiskLayers) continue;
+    float activeLayerCount = clamp(uDiskLayers,1.0,6.0);
+    float slice = activeLayerCount <= 3.0
+      ? float(layer)-1.0
+      : float(layer)-(activeLayerCount-1.0)*.5;
     float altitude = slice*.023;
     float depth = (altitude-eye.y) / min(ray.y,-.00001);
     vec3 hit = eye + ray*depth;
@@ -192,12 +225,14 @@ void main() {
     depth = (altitude+corrugation-eye.y)/min(ray.y,-.00001);
     hit = eye+ray*depth;
     vec2 orbit = hit.xz;
-    if (layer == 1) directOrbit=orbit;
-    float density = layer == 1 ? .72 : .14;
+    bool centralLayer = abs(slice) < .25;
+    if (layer == 1 || (uDiskLayers > 3.0 && layer == int(floor(uDiskLayers*.5)))
+      || (uDiskLayers < 2.0 && layer == 0)) directOrbit=orbit;
+    float density = (centralLayer && uDiskLayers >= 2.0) ? .72 : .14;
     vec4 gas = matter(orbit,t);
     float nearSide = smoothstep(-.1,.1,hit.z);
     float pathLength=clamp(.15/max(abs(ray.y),.045),.6,3.0);
-    float tau=gas.a*density*pathLength*3.4;
+    float tau=gas.a*density*pathLength*3.4*uGasAbsorption;
     float nearTrans=exp(-tau*nearSide);
     float farTrans=exp(-tau*(1.0-nearSide));
     vec3 source=gas.rgb/(gas.a+.25);
@@ -215,6 +250,9 @@ void main() {
   // Flare the far image tangentially into the disk instead of terminating
   // a circular hoop vertically at either side of the shadow.
   float flare = exp(-abs(q.y)*2.0)/(abs(q.y)+.18)*mix(.025,.105,upper);
+  // Pull the upper image toward the inner disk lip as it approaches the
+  // plane; the old lateral flare landed too far out on the disk surface.
+  flare *= mix(1.0,mix(.18,1.0,smoothstep(.08,.65,abs(q.y))),upper);
   vec2 lensPoint = vec2(q.x/(1.0+flare),q.y);
   float lensRadius = length(lensPoint);
   float arcDistance = lensRadius-arcRadius;
@@ -226,38 +264,66 @@ void main() {
   float parity=q.y >= 0.0 ? 1.0 : -1.0;
   vec2 lensedOrbit = vec2(parity*arcDirection.x,
     -abs(arcDirection.y)) * lensedRadius;
-  float junction=(1.0-smoothstep(.12,.42,abs(q.y)))
-    *smoothstep(.9,1.3,abs(q.x))*(1.0-smoothstep(1.55,2.15,abs(q.x)));
+  // A tangent transition has no outer cutoff to fold the filaments back.
+  // Interpolate radius and direction separately: Cartesian blending shortened
+  // orbits at the junction and created the visible compressed zigzag bands.
+  float junction=band(q.y,.34)*smoothstep(.88,1.12,abs(q.x));
   vec2 farOrbit=vec2(directOrbit.x,-abs(directOrbit.y));
-  lensedOrbit=mix(lensedOrbit,farOrbit,junction);
-  float arcVisibility = smoothstep(-.015,.035,arcDistance);
-  float merge = max(smoothstep(.015,.22,abs(arcDirection.y)),junction*.65);
+  float farRadius=max(length(farOrbit),.001);
+  float orbitBlend=junction*upper;
+  vec2 mergedDirection=normalize(mix(lensedOrbit/lensedRadius,farOrbit/farRadius,orbitBlend));
+  float mergedRadius=exp(mix(log(lensedRadius),log(farRadius),orbitBlend));
+  lensedOrbit=mergedDirection*mergedRadius;
+  // The orbital merge must never bypass the lensed silhouette. Fade only
+  // outward from its edge; only the separately composited near disk crosses it.
+  float arcVisibility = smoothstep(0.0,.075,arcDistance);
+  // The direct image takes over at the plane instead of adding the same gas twice.
+  float merge = smoothstep(.0,.20,abs(arcDirection.y))*(1.0-junction*.85);
   vec4 lensedGas = matter(lensedOrbit,t);
   vec3 lensed = lensedGas.rgb * arcVisibility * merge;
   float lowerLanes=smoothstep(.25,.75,noise(lensedOrbit*vec2(6.0,2.0)+vec2(t*.012,0)));
-  float lowerBreakup = mix(.12,.55,lowerLanes)*smoothstep(.15,.8,lensedGas.a);
-  color += lensed * mix(lowerBreakup,1.8,upper);
+  float lowerBreakup = mix(.24,.95,lowerLanes)*smoothstep(.15,.8,lensedGas.a);
+  color += lensed * mix(lowerBreakup,3.6,upper);
   // Low-frequency emission controls the local halo, not individual hot pixels.
   float glowCloud=texture(uDust,lensedOrbit*.06+vec2(t*.0002,0)).r;
   float glowEnergy=exp(-max(lensedRadius-1.2,0.0)*.8)*(.35+glowCloud*.9);
-  color += vec3(1.0,.56,.23) * band(lensRadius-1.12,.18+glowEnergy*.025)
-    * mix(.06,.18,upper)*merge*min(glowEnergy,1.6);
+  float bloomWidth = (.24+glowEnergy*.04)*uBloomSpread;
+  color += vec3(1.0,.78,.48) * band(lensRadius-1.12,bloomWidth)
+    * mix(.18,.55,upper)*merge*min(glowEnergy,1.6)*arcVisibility*uHaloIntensity;
+  // Broad exterior scattering is separate from filament exposure. Keep it
+  // above the disk and under the shadow/front masks to protect the junctions.
+  float exteriorHalo=band(radial-1.35,.75*uBloomSpread)*smoothstep(1.02,1.25,radial)
+    *smoothstep(.05,.42,q.y);
+  color+=vec3(1.0,.86,.73)*exteriorHalo*.28*uHaloIntensity;
 
-  // A narrow critical curve, never a broad uniform outline. The foreground
-  // is composited AFTER capture; the black silhouette cannot erase near gas.
-  float edge = max(fwidth(radial),.0015);
-  float outside = smoothstep(.985-edge,1.0+edge,radial);
+  // The shadow is geometrically stable; only its surrounding light moves.
+  // One pixel of coverage replaces the old broad, resolution-dependent rim.
+  float edge=max(length(vec2(dFdx(radial),dFdy(radial))),.0001);
+  float shadowDistance=radial-1.0;
+  float outside=smoothstep(-edge*.5,edge*.5,shadowDistance);
+  vec2 criticalDirection=q/max(radial,.001);
+  float angularCloud=noise(rotate(t*.037)*criticalDirection*7.0);
+  // The final reference is a single continuous ivory line, not broken bands.
+  float illumination=mix(.72,1.0,upper)*(.96+angularCloud*.08);
+  vec3 criticalTint=vec3(1.0,.92,.84);
+  float primary=filteredBand(shadowDistance-.004,.0025,edge);
+  color+=criticalTint*illumination*primary*1.1;
+  // Mask all rear emission and scattering together. Near gas is added after
+  // occultation, preserving its real passage across the lower silhouette.
   color *= outside;
-  float photon = band(radial-1.015,.005+edge*.6);
-  color += vec3(1.0,.68,.36)*photon*mix(.08,.2,upper);
-  color = color * frontTransmission + front*vec3(.94,.8,.62);
+  // Optical bloom may soften a few pixels inward; geometry stays occulted.
+  // Its short falloff leaves the center black and the near disk in front.
+  float rimBloom=band(shadowDistance-.004,.022)*.14
+    +band(shadowDistance-.004,.065)*.03;
+  color+=criticalTint*illumination*rimBloom*uHaloIntensity;
+  color = color * frontTransmission + front*vec3(1.0,.97,.91)*1.25;
 
   // Bloom is analytical and local to the caustics, keeping the empty space black.
   float causticY = q.y + .23 + .014*q.x*q.x;
   float caustic = band(causticY,.018) * exp(-abs(q.x)*.9);
   float contact = band(radial-1.01,.015)*band(causticY,.035);
   float frontEnergy = min(dot(front,vec3(.2126,.7152,.0722)),1.5);
-  color += vec3(1.0,.76,.47) * (caustic*.12 + contact*.35)*frontEnergy;
+  color += vec3(1.0,.76,.47) * (caustic*.12 + contact*.35)*frontEnergy*uHaloIntensity*uCausticIntensity;
 
   // A selected store only modulates a tiny outer ember, never the shadow.
   float selection = uSelectionVisible*(1.0-uTemplateSelected)*step(.5,uStoreCount);
@@ -265,14 +331,28 @@ void main() {
   vec2 ember = vec2(cos(phase)*3.5,sin(phase)*.52);
   color += vec3(.6,.31,.12)*band(length(q-ember),.015)*selection*.2;
   color = mix(background,color,intro);
+  float warmthShift = clamp(uWarmth - 1.0,-1.0,1.0);
+  vec3 cooler = color*vec3(.88,.96,1.1);
+  vec3 warmer = color*vec3(1.08,.92,.72);
+  color = warmthShift < 0.0
+    ? mix(color,cooler,-warmthShift)
+    : mix(color,warmer,warmthShift);
+  float edgeDistance = length(screen/vec2(aspect,1.0));
+  float vignetteMask = smoothstep(.24,.72,edgeDistance);
+  color *= 1.0-vignetteMask*(uVignette-1.0)*.3;
   // Exposure plus display transfer preserves warm highlights and dark dust detail.
   // Luminance compression retains warm chroma in the brightest filaments.
   color=max(color,vec3(0));
   float luminance=dot(color,vec3(.2126,.7152,.0722));
-  vec3 mapped=color/(1.0+luminance*.65);
-  mapped=1.0-exp(-mapped*1.5);
+  vec3 mapped=color/(1.0+luminance*.25);
+  mapped=1.0-exp(-mapped*2.1);
   mapped = pow(mapped,vec3(.86));
+  mapped = clamp((mapped-.5)*uContrast+.5,0.0,1.0);
   mapped *= 1.0 - smoothstep(.86,1.0,launch)*.85;
+  if (uTaaHistoryValid > 0.5) {
+    vec3 history = texture(uTaaHistory, gl_FragCoord.xy / uResolution).rgb;
+    mapped = mix(mapped, history, uTaaHistoryWeight);
+  }
   fragColor = vec4(mapped,1);
 }
 `;

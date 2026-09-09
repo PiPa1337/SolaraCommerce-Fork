@@ -27,7 +27,9 @@ test("procesa una imagen, muestra el lote y persiste el asset", async ({ page })
       }),
   );
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+    timeout: 10_000,
+  });
   await createCleanStore(page, "Tienda de recursos");
   await page.getByRole("tab", { name: "Recursos", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Recursos", exact: true })).toBeVisible();

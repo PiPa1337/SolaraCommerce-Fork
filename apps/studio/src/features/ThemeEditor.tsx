@@ -1,4 +1,3 @@
-import { WorkspaceGroups } from "./workbench/WorkspaceNav";
 /** Inspector de tokens visuales persistidos; no introduce estilos públicos paralelos. */
 import {
   ArrowCounterClockwise,
@@ -17,6 +16,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { ImageAssetPicker } from "../components/ImageAssetPicker";
 import { Button, Field, SectionHeader } from "../components/Ui";
+import { WorkspaceGroups } from "./workbench/WorkspaceNav";
 
 const HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 const COLOR_ERROR = "Ingresá un color hex como #1a2b3c.";
@@ -837,400 +837,432 @@ export function ThemeEditor({
         description="Un sistema de tokens consistente para todos los módulos de la tienda."
       />
 
-  <WorkspaceGroups label="Opciones del tema" groups={[
-{ id: "palette", label: "Paleta y contraste", content: <>
-      {project.commerceTemplates.designFamily?.startsWith("catalog-modern") ? (
-      <fieldset className="theme-presets-panel">
-          <legend>Familia visual</legend>
-          <div className="theme-presets">
-            <div
-              className="theme-preset"
-              data-testid="ui-design-family-v2"
-              data-active={
-                project.commerceTemplates.designFamily === "catalog-modern-v2" || undefined
-              }
-            >
-              <strong>Editorial V2</strong>
-              <small>Familia visual actual de SolaraCommerce.</small>
-            </div>
-          </div>
-          <p className="inspector-note">
-            La familia visual actual es única. Catálogo, contenido, SEO y configuración comercial se
-            conservan.
-          </p>
-        </fieldset>
-      ) : null}
+      <WorkspaceGroups
+        label="Opciones del tema"
+        groups={[
+          {
+            id: "palette",
+            label: "Paleta y contraste",
+            content: (
+              <>
+                {project.commerceTemplates.designFamily?.startsWith("catalog-modern") ? (
+                  <fieldset className="theme-presets-panel theme-family-panel">
+                    <legend>Familia visual</legend>
+                    <div className="theme-presets">
+                      <div
+                        className="theme-preset"
+                        data-testid="ui-design-family-v2"
+                        data-active={
+                          project.commerceTemplates.designFamily === "catalog-modern-v2" ||
+                          undefined
+                        }
+                      >
+                        <strong>Editorial V2</strong>
+                        <small>Familia visual actual de SolaraCommerce.</small>
+                      </div>
+                    </div>
+                    <p className="inspector-note">
+                      La familia visual actual es única. Catálogo, contenido, SEO y configuración
+                      comercial se conservan.
+                    </p>
+                  </fieldset>
+                ) : null}
 
-      <fieldset className="theme-presets-panel">
-        <legend>Paletas</legend>
-        <div className="theme-presets">
-          {THEME_PRESETS.map((preset) => {
-            const active = Object.keys(project.theme.colors).every(
-              (key) =>
-                project.theme.colors[key as keyof Theme["colors"]] ===
-                preset.colors[key as keyof Theme["colors"]],
-            );
-            return (
-              <button
-                type="button"
-                key={preset.id}
-                className="theme-preset"
-                data-testid="ui-theme-preset"
-                aria-label={`Aplicar paleta ${preset.name}`}
-                aria-pressed={active}
-                data-active={active || undefined}
-                onClick={() => applyPreset(preset)}
-              >
-                <span className="theme-preset__swatches" aria-hidden>
-                  {PRESET_SWATCH_KEYS.map((key) => (
-                    <span
-                      key={key}
-                      className="theme-preset__swatch"
-                      style={{ background: preset.colors[key] }}
+                <fieldset className="theme-presets-panel">
+                  <legend>Paletas</legend>
+                  <div className="theme-presets">
+                    {THEME_PRESETS.map((preset) => {
+                      const active = Object.keys(project.theme.colors).every(
+                        (key) =>
+                          project.theme.colors[key as keyof Theme["colors"]] ===
+                          preset.colors[key as keyof Theme["colors"]],
+                      );
+                      return (
+                        <button
+                          type="button"
+                          key={preset.id}
+                          className="theme-preset"
+                          data-testid="ui-theme-preset"
+                          aria-label={`Aplicar paleta ${preset.name}`}
+                          aria-pressed={active}
+                          data-active={active || undefined}
+                          onClick={() => applyPreset(preset)}
+                        >
+                          <span className="theme-preset__swatches" aria-hidden>
+                            {PRESET_SWATCH_KEYS.map((key) => (
+                              <span
+                                key={key}
+                                className="theme-preset__swatch"
+                                style={{ background: preset.colors[key] }}
+                              />
+                            ))}
+                          </span>
+                          <strong>{preset.name}</strong>
+                          <small>{preset.description}</small>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+
+                <fieldset>
+                  <legend>
+                    <PaintBrush aria-hidden size={19} /> Color
+                  </legend>
+                  <div className="fieldset-toolbar">
+                    <Button
+                      variant="quiet"
+                      size="sm"
+                      icon={ArrowCounterClockwise}
+                      data-testid="ui-reset-colors"
+                      onClick={() => resetGroup("colors")}
+                    >
+                      Restaurar colores
+                    </Button>
+                  </div>
+                  <div className="color-grid">
+                    {(Object.keys(colorLabels) as Array<keyof Theme["colors"]>).map((key) => (
+                      <Field
+                        label={colorLabels[key]}
+                        key={key}
+                        {...(colorErrors[key]
+                          ? { error: COLOR_ERROR, errorId: `theme-color-error-${key}` }
+                          : {})}
+                      >
+                        <span className="color-input">
+                          <input
+                            type="color"
+                            value={editableThemeColor(project.theme.colors, key)}
+                            aria-label={`${colorLabels[key]} selector de color`}
+                            data-testid={`ui-color-native-${key}`}
+                            onChange={(event) => commitColor(key, event.target.value)}
+                          />
+                          <input
+                            type="text"
+                            value={
+                              colorDrafts[key] ?? editableThemeColor(project.theme.colors, key)
+                            }
+                            aria-label={`${colorLabels[key]} valor hexadecimal`}
+                            aria-invalid={colorErrors[key] ? true : undefined}
+                            aria-describedby={
+                              colorErrors[key] ? `theme-color-error-${key}` : undefined
+                            }
+                            data-testid={`ui-color-text-${key}`}
+                            onChange={(event) => commitColor(key, event.target.value)}
+                          />
+                        </span>
+                      </Field>
+                    ))}
+                  </div>
+                  <div className="contrast-check" aria-live="polite">
+                    <strong className="contrast-check__title">Contraste (WCAG)</strong>
+                    {contrastChecks.map((check) => {
+                      const ratio = check.ratio;
+                      const invalid = ratio === null;
+                      const passing = !invalid && ratio >= CONTRAST_THRESHOLD;
+                      const testid = invalid
+                        ? "ui-contrast-warn"
+                        : passing
+                          ? "ui-contrast-ok"
+                          : "ui-contrast-warning";
+                      return (
+                        <div
+                          className={`contrast-check__row${passing ? "" : " is-failing"}`}
+                          data-testid={testid}
+                          key={check.id}
+                        >
+                          <span>{check.label}</span>
+                          <span className="contrast-check__ratio">
+                            {check.ratio === null
+                              ? "color no válido"
+                              : `${check.ratio.toFixed(2)}:1${passing ? "" : ` — inferior a ${CONTRAST_THRESHOLD}:1`}`}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+              </>
+            ),
+          },
+          {
+            id: "type",
+            label: "Tipografía",
+            content: (
+              <>
+                <fieldset>
+                  <legend>
+                    <TextT aria-hidden size={19} /> Tipografía
+                  </legend>
+                  <div className="fieldset-toolbar">
+                    <Button
+                      variant="quiet"
+                      size="sm"
+                      icon={ArrowCounterClockwise}
+                      data-testid="ui-reset-typography"
+                      onClick={() => resetGroup("typography")}
+                    >
+                      Restaurar tipografía
+                    </Button>
+                  </div>
+                  <Field label="Familia de títulos">
+                    <FontSelect
+                      value={project.theme.typography.display}
+                      testId="ui-font-display"
+                      label="Familia de títulos"
+                      onChange={(stack) => commitFont("display", stack)}
                     />
-                  ))}
-                </span>
-                <strong>{preset.name}</strong>
-                <small>{preset.description}</small>
-              </button>
-            );
-          })}
-        </div>
-      </fieldset>
+                  </Field>
+                  <Field label="Familia de texto">
+                    <FontSelect
+                      value={project.theme.typography.body}
+                      testId="ui-font-body"
+                      label="Familia de texto"
+                      onChange={(stack) => commitFont("body", stack)}
+                    />
+                  </Field>
+                  <Field label={`Escala ${project.theme.typography.scale.toFixed(2)}`}>
+                    <input
+                      type="range"
+                      min={0.8}
+                      max={1.4}
+                      step={0.05}
+                      value={project.theme.typography.scale}
+                      onChange={(event) =>
+                        updateTheme({
+                          ...project.theme,
+                          typography: {
+                            ...project.theme.typography,
+                            scale: Number(event.target.value),
+                          },
+                        })
+                      }
+                    />
+                  </Field>
+                </fieldset>
+              </>
+            ),
+          },
+          {
+            id: "surfaces",
+            label: "Superficies y espacio",
+            content: (
+              <>
+                <fieldset className="theme-background-panel">
+                  <legend>
+                    <ImageIcon aria-hidden size={19} /> Fondo decorativo
+                  </legend>
+                  <p className="inspector-note">
+                    Opcional: elegí una imagen de Recursos para repetirla detrás del sitio. Las
+                    tiendas nuevas comienzan sin fondo.
+                  </p>
+                  <div className="fieldset-toolbar">
+                    <Button
+                      variant="quiet"
+                      size="sm"
+                      icon={ArrowCounterClockwise}
+                      data-testid="ui-reset-background"
+                      onClick={() => resetGroup("background")}
+                    >
+                      Restaurar fondo
+                    </Button>
+                  </div>
+                  <div className="theme-background-grid">
+                    <Field
+                      label="Imagen del patrón"
+                      hint="Podés elegir un asset existente o subir uno nuevo."
+                    >
+                      <ImageAssetPicker
+                        value={background?.imageAssetId ?? ""}
+                        assets={project.assets}
+                        knownAssets={project.assets}
+                        noneLabel="Sin fondo decorativo"
+                        ariaLabel="Imagen del fondo decorativo"
+                        onChange={setBackgroundImage}
+                        onUpload={applyUploadedBackground}
+                      />
+                    </Field>
+                    <Field label="Repetición">
+                      <select
+                        value={background?.repeat ?? "repeat"}
+                        disabled={!background}
+                        data-testid="ui-theme-background-repeat"
+                        aria-label="Repetición del fondo decorativo"
+                        onChange={(event) =>
+                          updateBackground({
+                            repeat: event.target.value as ThemeBackground["repeat"],
+                          })
+                        }
+                      >
+                        {BACKGROUND_REPEAT_OPTIONS.map((option) => (
+                          <option key={option} value={option}>
+                            {option === "repeat"
+                              ? "En ambas direcciones"
+                              : option === "repeat-x"
+                                ? "Horizontal"
+                                : option === "repeat-y"
+                                  ? "Vertical"
+                                  : "Una sola vez"}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label="Tamaño">
+                      <select
+                        value={background?.size ?? "480px"}
+                        disabled={!background}
+                        data-testid="ui-theme-background-size"
+                        aria-label="Tamaño del fondo decorativo"
+                        onChange={(event) => updateBackground({ size: event.target.value })}
+                      >
+                        {backgroundSizeIsCustom ? (
+                          <option value={background.size}>{background.size}</option>
+                        ) : null}
+                        {BACKGROUND_SIZE_OPTIONS.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field
+                      label={`Presencia ${Math.round((background?.opacity ?? 1) * 100)}%`}
+                      hint="Menor presencia deja ver más el color de fondo."
+                    >
+                      <input
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        value={background?.opacity ?? 1}
+                        disabled={!background}
+                        data-testid="ui-theme-background-opacity"
+                        aria-label="Presencia del fondo decorativo"
+                        onChange={(event) =>
+                          updateBackground({ opacity: Number(event.target.value) })
+                        }
+                      />
+                    </Field>
+                  </div>
+                </fieldset>
 
-        <fieldset>
-          <legend>
-            <PaintBrush aria-hidden size={19} /> Color
-          </legend>
-          <div className="fieldset-toolbar">
-            <Button
-              variant="quiet"
-              size="sm"
-              icon={ArrowCounterClockwise}
-              data-testid="ui-reset-colors"
-              onClick={() => resetGroup("colors")}
-            >
-              Restaurar colores
-            </Button>
-          </div>
-          <div className="color-grid">
-            {(Object.keys(colorLabels) as Array<keyof Theme["colors"]>).map((key) => (
-              <Field
-                label={colorLabels[key]}
-                key={key}
-                {...(colorErrors[key]
-                  ? { error: COLOR_ERROR, errorId: `theme-color-error-${key}` }
-                  : {})}
-              >
-                <span className="color-input">
-                  <input
-                    type="color"
-                    value={editableThemeColor(project.theme.colors, key)}
-                    aria-label={`${colorLabels[key]} selector de color`}
-                    data-testid={`ui-color-native-${key}`}
-                    onChange={(event) => commitColor(key, event.target.value)}
-                  />
-                  <input
-                    type="text"
-                    value={colorDrafts[key] ?? editableThemeColor(project.theme.colors, key)}
-                    aria-label={`${colorLabels[key]} valor hexadecimal`}
-                    aria-invalid={colorErrors[key] ? true : undefined}
-                    aria-describedby={colorErrors[key] ? `theme-color-error-${key}` : undefined}
-                    data-testid={`ui-color-text-${key}`}
-                    onChange={(event) => commitColor(key, event.target.value)}
-                  />
-                </span>
-              </Field>
-            ))}
-          </div>
-          <div className="contrast-check" aria-live="polite">
-            <strong className="contrast-check__title">Contraste (WCAG)</strong>
-            {contrastChecks.map((check) => {
-              const ratio = check.ratio;
-              const invalid = ratio === null;
-              const passing = !invalid && ratio >= CONTRAST_THRESHOLD;
-              const testid = invalid
-                ? "ui-contrast-warn"
-                : passing
-                  ? "ui-contrast-ok"
-                  : "ui-contrast-warning";
-              return (
-                <div
-                  className={`contrast-check__row${passing ? "" : " is-failing"}`}
-                  data-testid={testid}
-                  key={check.id}
-                >
-                  <span>{check.label}</span>
-                  <span className="contrast-check__ratio">
-                    {check.ratio === null
-                      ? "color no válido"
-                      : `${check.ratio.toFixed(2)}:1${passing ? "" : ` — inferior a ${CONTRAST_THRESHOLD}:1`}`}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </fieldset>
-
-
-</> },
-{ id: "type", label: "Tipografía", content: <>
-        <fieldset>
-          <legend>
-            <TextT aria-hidden size={19} /> Tipografía
-          </legend>
-          <div className="fieldset-toolbar">
-            <Button
-              variant="quiet"
-              size="sm"
-              icon={ArrowCounterClockwise}
-              data-testid="ui-reset-typography"
-              onClick={() => resetGroup("typography")}
-            >
-              Restaurar tipografía
-            </Button>
-          </div>
-          <Field label="Familia de títulos">
-            <FontSelect
-              value={project.theme.typography.display}
-              testId="ui-font-display"
-              label="Familia de títulos"
-              onChange={(stack) => commitFont("display", stack)}
-            />
-          </Field>
-          <Field label="Familia de texto">
-            <FontSelect
-              value={project.theme.typography.body}
-              testId="ui-font-body"
-              label="Familia de texto"
-              onChange={(stack) => commitFont("body", stack)}
-            />
-          </Field>
-          <Field label={`Escala ${project.theme.typography.scale.toFixed(2)}`}>
-            <input
-              type="range"
-              min={0.8}
-              max={1.4}
-              step={0.05}
-              value={project.theme.typography.scale}
-              onChange={(event) =>
-                updateTheme({
-                  ...project.theme,
-                  typography: { ...project.theme.typography, scale: Number(event.target.value) },
-                })
-              }
-            />
-          </Field>
-        </fieldset>
-
-
-</> },
-{ id: "surfaces", label: "Superficies y espacio", content: <>
-      <fieldset className="theme-background-panel">
-        <legend>
-          <ImageIcon aria-hidden size={19} /> Fondo decorativo
-        </legend>
-        <p className="inspector-note">
-          Opcional: elegí una imagen de Recursos para repetirla detrás del sitio. Las tiendas nuevas
-          comienzan sin fondo.
-        </p>
-        <div className="fieldset-toolbar">
-          <Button
-            variant="quiet"
-            size="sm"
-            icon={ArrowCounterClockwise}
-            data-testid="ui-reset-background"
-            onClick={() => resetGroup("background")}
-          >
-            Restaurar fondo
-          </Button>
-        </div>
-        <div className="theme-background-grid">
-          <Field
-            label="Imagen del patrón"
-            hint="Podés elegir un asset existente o subir uno nuevo."
-          >
-            <ImageAssetPicker
-              value={background?.imageAssetId ?? ""}
-              assets={project.assets}
-              knownAssets={project.assets}
-              noneLabel="Sin fondo decorativo"
-              ariaLabel="Imagen del fondo decorativo"
-              onChange={setBackgroundImage}
-              onUpload={applyUploadedBackground}
-            />
-          </Field>
-          <Field label="Repetición">
-            <select
-              value={background?.repeat ?? "repeat"}
-              disabled={!background}
-              data-testid="ui-theme-background-repeat"
-              aria-label="Repetición del fondo decorativo"
-              onChange={(event) =>
-                updateBackground({ repeat: event.target.value as ThemeBackground["repeat"] })
-              }
-            >
-              {BACKGROUND_REPEAT_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option === "repeat"
-                    ? "En ambas direcciones"
-                    : option === "repeat-x"
-                      ? "Horizontal"
-                      : option === "repeat-y"
-                        ? "Vertical"
-                        : "Una sola vez"}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Tamaño">
-            <select
-              value={background?.size ?? "480px"}
-              disabled={!background}
-              data-testid="ui-theme-background-size"
-              aria-label="Tamaño del fondo decorativo"
-              onChange={(event) => updateBackground({ size: event.target.value })}
-            >
-              {backgroundSizeIsCustom ? (
-                <option value={background.size}>{background.size}</option>
-              ) : null}
-              {BACKGROUND_SIZE_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field
-            label={`Presencia ${Math.round((background?.opacity ?? 1) * 100)}%`}
-            hint="Menor presencia deja ver más el color de fondo."
-          >
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.05}
-              value={background?.opacity ?? 1}
-              disabled={!background}
-              data-testid="ui-theme-background-opacity"
-              aria-label="Presencia del fondo decorativo"
-              onChange={(event) => updateBackground({ opacity: Number(event.target.value) })}
-            />
-          </Field>
-        </div>
-      </fieldset>
-
-        <fieldset>
-          <legend>
-            <Wrench aria-hidden size={19} /> Geometría
-          </legend>
-          <div className="fieldset-toolbar">
-            <Button
-              variant="quiet"
-              size="sm"
-              icon={ArrowCounterClockwise}
-              data-testid="ui-reset-geometry"
-              onClick={() => resetGroup("geometry")}
-            >
-              Restaurar geometría
-            </Button>
-          </div>
-          <Field label={`Espaciado ${project.theme.spacingScale.toFixed(2)}`}>
-            <input
-              type="range"
-              min={0.75}
-              max={1.5}
-              step={0.05}
-              value={project.theme.spacingScale}
-              onChange={(event) =>
-                updateTheme({ ...project.theme, spacingScale: Number(event.target.value) })
-              }
-            />
-          </Field>
-          <Field label={`Radio ${project.theme.radius}px`}>
-            <input
-              type="range"
-              min={0}
-              max={40}
-              value={project.theme.radius}
-              onChange={(event) =>
-                updateTheme({ ...project.theme, radius: Number(event.target.value) })
-              }
-            />
-          </Field>
-          <Field
-            label="Ancho del contenedor"
-            {...(containerError ? { error: CONTAINER_ERROR } : {})}
-          >
-            <input
-              type="number"
-              min={CONTAINER_MIN}
-              max={CONTAINER_MAX}
-              value={containerDraft ?? String(project.theme.container)}
-              aria-invalid={containerError ? true : undefined}
-              onChange={(event) => commitContainer(event.target.value)}
-            />
-          </Field>
-        </fieldset>
-      <fieldset className="theme-text-shadow-panel">
-        <legend>
-          <TextT aria-hidden size={19} /> Sombra del hero mobile
-        </legend>
-        <p className="theme-text-shadow-meta">
-          Sólo aparece hasta 767 px, 1 px a la derecha y abajo. El color se deriva automáticamente
-          del token de mayor contraste de la paleta y no afecta el botón.
-        </p>
-        <label className="theme-text-shadow-toggle">
-          <input
-            type="checkbox"
-            checked={textShadowEnabled}
-            data-testid="ui-text-shadow-enabled"
-            onChange={(event) => updateTextShadow({ enabled: event.target.checked })}
-          />
-          <span>Activar sombra en el texto del hero</span>
-        </label>
-        <Field label={`Intensidad ${Math.round(textShadowOpacity * 100)}%`}>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.05}
-            value={textShadowOpacity}
-            disabled={!textShadowEnabled}
-            aria-label="Intensidad de la sombra del hero mobile"
-            data-testid="ui-text-shadow-opacity"
-            onChange={(event) => updateTextShadow({ opacity: Number(event.target.value) })}
-          />
-        </Field>
-        <div
-          className="theme-text-shadow-preview"
-          data-testid="ui-text-shadow-preview"
-          style={{
-            backgroundColor: project.theme.colors.background,
-            color: heroPreviewTextColor,
-            textShadow: previewTextShadow,
-          }}
-        >
-          <small>VISTA PREVIA DEL HERO MOBILE</small>
-          <strong>Texto del hero</strong>
-          <span>La sombra no se aplica al botón.</span>
-          <i style={{ background: textShadowColor }} aria-hidden />
-        </div>
-        <div className="fieldset-toolbar">
-          <Button
-            variant="quiet"
-            size="sm"
-            icon={ArrowCounterClockwise}
-            data-testid="ui-reset-text-shadow"
-            onClick={() => resetGroup("textShadow")}
-          >
-            Restaurar sombra
-          </Button>
-        </div>
-      </fieldset>
-
-</> }
-]} />
+                <fieldset>
+                  <legend>
+                    <Wrench aria-hidden size={19} /> Geometría
+                  </legend>
+                  <div className="fieldset-toolbar">
+                    <Button
+                      variant="quiet"
+                      size="sm"
+                      icon={ArrowCounterClockwise}
+                      data-testid="ui-reset-geometry"
+                      onClick={() => resetGroup("geometry")}
+                    >
+                      Restaurar geometría
+                    </Button>
+                  </div>
+                  <Field label={`Espaciado ${project.theme.spacingScale.toFixed(2)}`}>
+                    <input
+                      type="range"
+                      min={0.75}
+                      max={1.5}
+                      step={0.05}
+                      value={project.theme.spacingScale}
+                      onChange={(event) =>
+                        updateTheme({ ...project.theme, spacingScale: Number(event.target.value) })
+                      }
+                    />
+                  </Field>
+                  <Field label={`Radio ${project.theme.radius}px`}>
+                    <input
+                      type="range"
+                      min={0}
+                      max={40}
+                      value={project.theme.radius}
+                      onChange={(event) =>
+                        updateTheme({ ...project.theme, radius: Number(event.target.value) })
+                      }
+                    />
+                  </Field>
+                  <Field
+                    label="Ancho del contenedor"
+                    {...(containerError ? { error: CONTAINER_ERROR } : {})}
+                  >
+                    <input
+                      type="number"
+                      min={CONTAINER_MIN}
+                      max={CONTAINER_MAX}
+                      value={containerDraft ?? String(project.theme.container)}
+                      aria-invalid={containerError ? true : undefined}
+                      onChange={(event) => commitContainer(event.target.value)}
+                    />
+                  </Field>
+                </fieldset>
+                <fieldset className="theme-text-shadow-panel">
+                  <legend>
+                    <TextT aria-hidden size={19} /> Sombra del hero mobile
+                  </legend>
+                  <p className="theme-text-shadow-meta">
+                    Sólo aparece hasta 767 px, 1 px a la derecha y abajo. El color se deriva
+                    automáticamente del token de mayor contraste de la paleta y no afecta el botón.
+                  </p>
+                  <label className="theme-text-shadow-toggle">
+                    <input
+                      type="checkbox"
+                      checked={textShadowEnabled}
+                      data-testid="ui-text-shadow-enabled"
+                      onChange={(event) => updateTextShadow({ enabled: event.target.checked })}
+                    />
+                    <span>Activar sombra en el texto del hero</span>
+                  </label>
+                  <Field label={`Intensidad ${Math.round(textShadowOpacity * 100)}%`}>
+                    <input
+                      type="range"
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      value={textShadowOpacity}
+                      disabled={!textShadowEnabled}
+                      aria-label="Intensidad de la sombra del hero mobile"
+                      data-testid="ui-text-shadow-opacity"
+                      onChange={(event) =>
+                        updateTextShadow({ opacity: Number(event.target.value) })
+                      }
+                    />
+                  </Field>
+                  <div
+                    className="theme-text-shadow-preview"
+                    data-testid="ui-text-shadow-preview"
+                    style={{
+                      backgroundColor: isCatalogModernV2
+                        ? project.theme.colors.text
+                        : project.theme.colors.background,
+                      color: heroPreviewTextColor,
+                      textShadow: previewTextShadow,
+                    }}
+                  >
+                    <small>VISTA PREVIA DEL HERO MOBILE</small>
+                    <strong>Texto del hero</strong>
+                    <span>La sombra no se aplica al botón.</span>
+                    <i style={{ background: textShadowColor }} aria-hidden />
+                  </div>
+                  <div className="fieldset-toolbar">
+                    <Button
+                      variant="quiet"
+                      size="sm"
+                      icon={ArrowCounterClockwise}
+                      data-testid="ui-reset-text-shadow"
+                      onClick={() => resetGroup("textShadow")}
+                    >
+                      Restaurar sombra
+                    </Button>
+                  </div>
+                </fieldset>
+              </>
+            ),
+          },
+        ]}
+      />
       <p className="inspector-note">
         Los resets vuelven cada grupo al tema que tenía la tienda al abrir esta pestaña (
         {groupLabels.colors}, {groupLabels.typography}, {groupLabels.geometry},

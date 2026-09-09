@@ -229,6 +229,7 @@ export function PreviewToolbar({
   route,
   size,
   zoom,
+  desktopDisabled = false,
   onRouteChange,
   onSizeChange,
   onZoomChange,
@@ -238,6 +239,7 @@ export function PreviewToolbar({
   route: string;
   size: PreviewSize;
   zoom: PreviewZoom;
+  desktopDisabled?: boolean;
   onRouteChange(route: string): void;
   onSizeChange(size: PreviewSize): void;
   onZoomChange(zoom: PreviewZoom): void;
@@ -319,11 +321,19 @@ export function PreviewToolbar({
       </fieldset>
       <fieldset className="preview-sizes">
         <legend className="visually-hidden">{"Tama\u00f1o de vista previa"}</legend>
-        <Tooltip tip="Vista de escritorio" position="bottom">
+        <Tooltip
+          tip={
+            desktopDisabled
+              ? "Vista de escritorio no disponible mientras el panel está abierto"
+              : "Vista de escritorio"
+          }
+          position="bottom"
+        >
           <IconButton
             icon={Desktop}
             label="Vista de escritorio"
             aria-pressed={size === "desktop"}
+            disabled={desktopDisabled}
             onClick={() => onSizeChange("desktop")}
           />
         </Tooltip>
@@ -387,6 +397,22 @@ export function Preview({
   ): void;
 }) {
   const [html, setHtml] = useState("");
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [availableWidth, setAvailableWidth] = useState(0);
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const observer = new ResizeObserver(() => setAvailableWidth(stage.clientWidth));
+    observer.observe(stage);
+    setAvailableWidth(stage.clientWidth);
+    return () => observer.disconnect();
+  }, []);
+  const deviceWidth = size === "tablet" ? 768 : size === "mobile" ? 390 : null;
+  // Fit the actual device viewport instead of shrinking Tablet into a mobile layout.
+  const deviceZoom =
+    deviceWidth && availableWidth > 0
+      ? Math.min(zoom / 100, availableWidth / deviceWidth)
+      : zoom / 100;
   const [error, setError] = useState("");
   const [renderToken, setRenderToken] = useState(0);
   const [iframeReady, setIframeReady] = useState(false);
@@ -777,7 +803,7 @@ export function Preview({
 
   return (
     <aside className="preview-pane" aria-label="Vista previa de la tienda">
-      <div className={`preview-stage preview-stage--${size}`}>
+      <div ref={stageRef} className={`preview-stage preview-stage--${size}`}>
         {error ? (
           <div className="preview-error">
             <EyeSlash aria-hidden size={28} />
@@ -802,7 +828,18 @@ export function Preview({
               // El preview local usa srcdoc dentro del servidor HTTP; mantiene
               // el sandbox restrictivo para aislar el documento renderizado.
               sandbox={previewSandbox}
-              style={zoom !== 100 ? { zoom: zoom / 100 } : undefined}
+              style={
+                deviceWidth
+                  ? {
+                      width: deviceWidth,
+                      maxWidth: "none",
+                      zoom: deviceZoom,
+                      height: `${100 / deviceZoom}%`,
+                    }
+                  : zoom !== 100
+                    ? { zoom: zoom / 100 }
+                    : undefined
+              }
               onLoad={(event) => {
                 if (event.currentTarget.contentWindow) {
                   previewFrameWindows.current = [

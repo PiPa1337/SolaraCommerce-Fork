@@ -75,6 +75,7 @@ test("el logo se configura desde Identidad y no desde el Constructor", async ({ 
 test("la sección seleccionada y sus acciones exponen el contexto accesible", async ({ page }) => {
   await openBuilder(page);
   await selectHero(page);
+  await page.getByRole("button", { name: "Volver a Constructor", exact: true }).click();
 
   const hero = page.getByRole("listitem").filter({ hasText: "Hero de catálogo" });
   const selector = hero.getByRole("button").first();
@@ -104,6 +105,7 @@ test("el picker de módulos filtra por nombre y agrega el módulo elegido", asyn
 
   await picker.getByRole("button", { name: /Testimonios/ }).click();
   await expect(picker).toBeHidden();
+  await page.getByRole("button", { name: "Volver a Constructor", exact: true }).click();
   await expect(sections.getByRole("listitem")).toHaveCount(initialCount + 1);
   await expect(sections.getByRole("listitem").last()).toContainText("Testimonios");
 });
@@ -207,6 +209,8 @@ test("el radio de los iconos mobile del hero se configura desde el inspector", a
   const radius = page.getByRole("spinbutton", { name: "Radio de íconos mobile (px)" });
   await expect(radius).toHaveValue("8");
   await radius.fill("18");
+  await page.getByRole("button", { name: "Volver a Constructor", exact: true }).click();
+  await page.getByRole("button", { name: "Vista móvil", exact: true }).click();
   await expect(
     page
       .frameLocator("iframe")
@@ -477,7 +481,8 @@ test("agregar un testimonio genera un ítem válido que commitea y persiste en e
     .getByTestId("ui-module-picker")
     .getByRole("button", { name: /Testimonios/ })
     .click();
-  await expect(sections.getByRole("listitem")).toHaveCount(initialCount + 1);
+  // The list stays mounted while its detail occupies the single editor panel.
+  await expect(page.locator(".editor-pane .section-row")).toHaveCount(initialCount + 1);
 
   await page.getByRole("button", { name: "Agregar elemento" }).click();
   await expect(page.getByRole("checkbox", { name: "Contenido de ejemplo" })).toHaveCount(0);
@@ -598,6 +603,7 @@ test("P6-B6: el picker de módulos se opera con teclado y trampa de Tab", async 
   await option.focus();
   await page.keyboard.press("Enter");
   await expect(picker).toBeHidden();
+  await page.getByRole("button", { name: "Volver a Constructor", exact: true }).click();
   await expect(sections.getByRole("listitem")).toHaveCount(initialCount + 1);
   console.log("P6-B6 módulo agregado por teclado");
 

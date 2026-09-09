@@ -1,4 +1,3 @@
-import { DockedInspector } from "./workbench/InspectorDock";
 /**
  * Constructor por secciones. Usa metadata declarada por ModuleDefinition para
  * generar el inspector y conserva compatibilidad entre módulos al reemplazar
@@ -48,6 +47,7 @@ import {
   SectionHeader,
 } from "../components/Ui";
 import { SettingsInspector } from "./builder/SettingsInspector";
+import { DockedInspector } from "./workbench/InspectorDock";
 
 const slotLabels: Record<StoreSection["slot"], string> = {
   announcement: "Aviso",
@@ -628,203 +628,210 @@ export function Builder({
           })}
         </ul>
 
-        {inspectorOpen ? <DockedInspector><aside className="inspector" aria-label="Inspector de sección">
-          <div className="workbench-inspector-heading"><h2>Editar sección</h2>
-            <Button variant="quiet" onClick={() => setInspectorOpen(false)}>Cerrar inspector</Button>
-          </div>
-          {!selected ? (
-            <EmptyState
-              icon={Swap}
-              title="Seleccioná una sección"
-              body="El inspector muestra contenido, módulo y movimiento de la sección activa."
-              action={
-                pageSections.length > 0 ? (
-                  <Button
-                    variant="primary"
-                    icon={ArrowDown}
-                    onClick={() => setSelectedId(pageSections[0]?.id ?? "")}
-                  >
-                    Seleccionar la primera sección
-                  </Button>
-                ) : undefined
-              }
-            />
-          ) : (
-            <>
-              <header>
-                <span>{slotLabels[selected.slot]}</span>
-                <h3>{selectedModule?.manifest.name ?? selected.moduleId}</h3>
-                <p>{selectedModule?.manifest.description}</p>
-              </header>
-
-              {savedSettingsError ? (
-                <div data-testid="ui-section-schema-error">
-                  <InlineError>
-                    La configuración guardada de esta sección no es válida ({savedSettingsError}).
-                    Corregí los campos marcados en el inspector para volver a guardar con valores
-                    válidos.
-                  </InlineError>
-                </div>
-              ) : null}
-
-              <Field label="Módulo">
-                <select
-                  value={selected.moduleId}
-                  disabled={isProtected(selected)}
-                  onChange={(event) => {
-                    if (event.target.value === selected.moduleId) return;
-                    const target = replacementModules.find(
-                      (module) => module.manifest.id === event.target.value,
-                    );
-                    if (!target) return;
-                    setPendingModuleReplace({
-                      id: selected.id,
-                      currentLabel: selectedModule?.manifest.name ?? selected.moduleId,
-                      nextLabel: target.manifest.name,
-                      moduleId: target.manifest.id,
-                    });
-                  }}
-                >
-                  {replacementModules.map((module, index) => (
-                    <option key={module.manifest.id} value={module.manifest.id}>
-                      {module.manifest.name}
-                      {index === 0 && !isAddableModule(module) ? " (compatibilidad)" : ""}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-
-              <Button
-                variant="quiet"
-                size="sm"
-                icon={ArrowCounterClockwise}
-                disabled={isProtected(selected)}
-                data-testid="ui-restore-defaults"
-                onClick={() =>
-                  setPendingRestore({
-                    id: selected.id,
-                    label: selectedModule?.manifest.name ?? selected.moduleId,
-                  })
-                }
-              >
-                Restaurar valores por defecto
-              </Button>
-
-              <fieldset>
-                <legend>Contenido</legend>
-                {selected.enabled === false ? (
-                  <output className="builder-section-hidden-note">
-                    Esta sección está oculta: activala con «Mostrar sección» para verla en el
-                    preview y en el sitio.
-                  </output>
-                ) : null}
-                <SettingsInspector
-                  key={`${selected.id}:${selected.moduleId}`}
-                  values={selected.settings}
-                  fields={selectedModule?.settingsFields ?? []}
-                  schema={selectedModule?.settingsSchema}
-                  project={project}
-                  onChange={(settings) => updateSectionSettings(selected.id, settings)}
-                  onProjectChange={onChange}
-                  sectionId={selected.id}
-                  moduleId={selectedModule?.manifest.id}
+        {inspectorOpen ? (
+          <DockedInspector onClose={() => setInspectorOpen(false)}>
+            <aside className="inspector" aria-label="Inspector de sección">
+              <div className="workbench-inspector-heading">
+                <h2>Editar sección</h2>
+                <Button variant="quiet" onClick={() => setInspectorOpen(false)}>
+                  Volver a Constructor
+                </Button>
+              </div>
+              {!selected ? (
+                <EmptyState
+                  icon={Swap}
+                  title="Seleccioná una sección"
+                  body="El inspector muestra contenido, módulo y movimiento de la sección activa."
+                  action={
+                    pageSections.length > 0 ? (
+                      <Button
+                        variant="primary"
+                        icon={ArrowDown}
+                        onClick={() => setSelectedId(pageSections[0]?.id ?? "")}
+                      >
+                        Seleccionar la primera sección
+                      </Button>
+                    ) : undefined
+                  }
                 />
-              </fieldset>
+              ) : (
+                <>
+                  <header>
+                    <span>{slotLabels[selected.slot]}</span>
+                    <h3>{selectedModule?.manifest.name ?? selected.moduleId}</h3>
+                    <p>{selectedModule?.manifest.description}</p>
+                  </header>
 
-              <fieldset>
-                <legend>Movimiento</legend>
-                <Field label="Preset">
-                  <select
-                    value={selected.motion.preset}
-                    onChange={(event) =>
-                      updateSection(selected.id, (section) => ({
-                        ...section,
-                        motion: {
-                          ...section.motion,
-                          preset: event.target.value as StoreSection["motion"]["preset"],
-                        },
-                      }))
+                  {savedSettingsError ? (
+                    <div data-testid="ui-section-schema-error">
+                      <InlineError>
+                        La configuración guardada de esta sección no es válida ({savedSettingsError}
+                        ). Corregí los campos marcados en el inspector para volver a guardar con
+                        valores válidos.
+                      </InlineError>
+                    </div>
+                  ) : null}
+
+                  <Field label="Módulo">
+                    <select
+                      value={selected.moduleId}
+                      disabled={isProtected(selected)}
+                      onChange={(event) => {
+                        if (event.target.value === selected.moduleId) return;
+                        const target = replacementModules.find(
+                          (module) => module.manifest.id === event.target.value,
+                        );
+                        if (!target) return;
+                        setPendingModuleReplace({
+                          id: selected.id,
+                          currentLabel: selectedModule?.manifest.name ?? selected.moduleId,
+                          nextLabel: target.manifest.name,
+                          moduleId: target.manifest.id,
+                        });
+                      }}
+                    >
+                      {replacementModules.map((module, index) => (
+                        <option key={module.manifest.id} value={module.manifest.id}>
+                          {module.manifest.name}
+                          {index === 0 && !isAddableModule(module) ? " (compatibilidad)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+
+                  <Button
+                    variant="quiet"
+                    size="sm"
+                    icon={ArrowCounterClockwise}
+                    disabled={isProtected(selected)}
+                    data-testid="ui-restore-defaults"
+                    onClick={() =>
+                      setPendingRestore({
+                        id: selected.id,
+                        label: selectedModule?.manifest.name ?? selected.moduleId,
+                      })
                     }
                   >
-                    {[
-                      "none",
-                      "fade",
-                      "fade-up",
-                      "slide",
-                      "scale",
-                      "stagger",
-                      "parallax",
-                      "scroll-progress",
-                      "layer-stack",
-                    ].map((preset) => (
-                      <option key={preset} value={preset}>
-                        {preset}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label={`Intensidad ${selected.motion.intensity}`}>
-                  <input
-                    type="range"
-                    min={0}
-                    max={10}
-                    value={selected.motion.intensity}
-                    onChange={(event) =>
-                      updateSection(selected.id, (section) => ({
-                        ...section,
-                        motion: { ...section.motion, intensity: Number(event.target.value) },
-                      }))
-                    }
-                  />
-                </Field>
-                <div className="inspector-split">
-                  <Field label="Duración">
-                    <input
-                      type="number"
-                      min={0}
-                      max={5}
-                      step={0.05}
-                      value={selected.motion.duration}
-                      onChange={(event) =>
-                        updateSection(selected.id, (section) => ({
-                          ...section,
-                          motion: { ...section.motion, duration: Number(event.target.value) },
-                        }))
-                      }
+                    Restaurar valores por defecto
+                  </Button>
+
+                  <fieldset>
+                    <legend>Contenido</legend>
+                    {selected.enabled === false ? (
+                      <output className="builder-section-hidden-note">
+                        Esta sección está oculta: activala con «Mostrar sección» para verla en el
+                        preview y en el sitio.
+                      </output>
+                    ) : null}
+                    <SettingsInspector
+                      key={`${selected.id}:${selected.moduleId}`}
+                      values={selected.settings}
+                      fields={selectedModule?.settingsFields ?? []}
+                      schema={selectedModule?.settingsSchema}
+                      project={project}
+                      onChange={(settings) => updateSectionSettings(selected.id, settings)}
+                      onProjectChange={onChange}
+                      sectionId={selected.id}
+                      moduleId={selectedModule?.manifest.id}
                     />
-                  </Field>
-                  <Field label="Distancia">
-                    <input
-                      type="number"
-                      min={0}
-                      max={160}
-                      value={selected.motion.distance}
-                      onChange={(event) =>
-                        updateSection(selected.id, (section) => ({
-                          ...section,
-                          motion: { ...section.motion, distance: Number(event.target.value) },
-                        }))
-                      }
-                    />
-                  </Field>
-                </div>
-                <label className="check-field">
-                  <input
-                    type="checkbox"
-                    checked={selected.motion.once}
-                    onChange={(event) =>
-                      updateSection(selected.id, (section) => ({
-                        ...section,
-                        motion: { ...section.motion, once: event.target.checked },
-                      }))
-                    }
-                  />
-                  Ejecutar una vez
-                </label>
-              </fieldset>
-            </>
-          )}
-        </aside></DockedInspector> : null}
+                  </fieldset>
+
+                  <fieldset>
+                    <legend>Movimiento</legend>
+                    <Field label="Preset">
+                      <select
+                        value={selected.motion.preset}
+                        onChange={(event) =>
+                          updateSection(selected.id, (section) => ({
+                            ...section,
+                            motion: {
+                              ...section.motion,
+                              preset: event.target.value as StoreSection["motion"]["preset"],
+                            },
+                          }))
+                        }
+                      >
+                        {[
+                          "none",
+                          "fade",
+                          "fade-up",
+                          "slide",
+                          "scale",
+                          "stagger",
+                          "parallax",
+                          "scroll-progress",
+                          "layer-stack",
+                        ].map((preset) => (
+                          <option key={preset} value={preset}>
+                            {preset}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label={`Intensidad ${selected.motion.intensity}`}>
+                      <input
+                        type="range"
+                        min={0}
+                        max={10}
+                        value={selected.motion.intensity}
+                        onChange={(event) =>
+                          updateSection(selected.id, (section) => ({
+                            ...section,
+                            motion: { ...section.motion, intensity: Number(event.target.value) },
+                          }))
+                        }
+                      />
+                    </Field>
+                    <div className="inspector-split">
+                      <Field label="Duración">
+                        <input
+                          type="number"
+                          min={0}
+                          max={5}
+                          step={0.05}
+                          value={selected.motion.duration}
+                          onChange={(event) =>
+                            updateSection(selected.id, (section) => ({
+                              ...section,
+                              motion: { ...section.motion, duration: Number(event.target.value) },
+                            }))
+                          }
+                        />
+                      </Field>
+                      <Field label="Distancia">
+                        <input
+                          type="number"
+                          min={0}
+                          max={160}
+                          value={selected.motion.distance}
+                          onChange={(event) =>
+                            updateSection(selected.id, (section) => ({
+                              ...section,
+                              motion: { ...section.motion, distance: Number(event.target.value) },
+                            }))
+                          }
+                        />
+                      </Field>
+                    </div>
+                    <label className="check-field">
+                      <input
+                        type="checkbox"
+                        checked={selected.motion.once}
+                        onChange={(event) =>
+                          updateSection(selected.id, (section) => ({
+                            ...section,
+                            motion: { ...section.motion, once: event.target.checked },
+                          }))
+                        }
+                      />
+                      Ejecutar una vez
+                    </label>
+                  </fieldset>
+                </>
+              )}
+            </aside>
+          </DockedInspector>
+        ) : null}
       </div>
       {pendingDelete ? (
         <ConfirmDialog

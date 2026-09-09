@@ -1,4 +1,3 @@
-import { WorkspaceGroups } from "./workbench/WorkspaceNav";
 /** Auditoría previa a exportación para metadata, JSON-LD, sitemap, Merchant y contexto IA. */
 import {
   ArrowClockwise,
@@ -22,6 +21,7 @@ import { assertImageAssetOptimized } from "../lib/imageAsset";
 import { loadExporter } from "../lib/loadExporter";
 import { downloadBlob } from "../lib/projectArchive";
 import { createFaviconAsset, createSiteCoverAsset, SEO_IMAGE_ACCEPT } from "../lib/seoMedia";
+import { WorkspaceGroups } from "./workbench/WorkspaceNav";
 
 interface AuditIssue {
   id: string;
@@ -382,643 +382,682 @@ export function Seo({
           </div>
         }
       />
-<WorkspaceGroups label="Herramientas SEO" groups={[
-{ id: "appearance", label: "Apariencia en buscadores", content: <>
-
-        <fieldset className="seo-fieldset seo-fieldset--appearance">
-          <legend>
-            <MagnifyingGlass aria-hidden size={19} /> Apariencia
-          </legend>
-          <Field
-            label="Título SEO"
-            hint={`${seoDraft.title.length}/70 caracteres`}
-            {...(titleError ? { error: titleError } : {})}
-          >
-            <input
-              maxLength={70}
-              aria-label="Título SEO"
-              value={seoDraft.title}
-              onChange={(event) => commit({ ...seoDraft, title: event.target.value })}
-            />
-          </Field>
-          <Field
-            label="Descripción SEO"
-            hint={`${seoDraft.description.length}/180 caracteres`}
-            {...(descriptionError ? { error: descriptionError } : {})}
-          >
-            <textarea
-              rows={4}
-              maxLength={180}
-              aria-label="Descripción SEO"
-              value={seoDraft.description}
-              onChange={(event) => commit({ ...seoDraft, description: event.target.value })}
-            />
-          </Field>
-          <Field label="Verificación de Search Console">
-            <input
-              value={seoDraft.searchConsoleVerification}
-              onChange={(event) =>
-                commit({ ...seoDraft, searchConsoleVerification: event.target.value })
-              }
-            />
-          </Field>
-          <Field label="Verificación de Merchant Center">
-            <input
-              value={seoDraft.merchantVerification}
-              onChange={(event) =>
-                commit({ ...seoDraft, merchantVerification: event.target.value })
-              }
-            />
-          </Field>
-        </fieldset>
-
-        <fieldset className="seo-fieldset seo-fieldset--social">
-          <legend>Identidad y portada</legend>
-          <div className="seo-media-control" data-testid="ui-seo-favicon">
-            <div>
-              <strong>Favicon del sitio</strong>
-              <p>
-                Subí una foto y la convertimos automáticamente a un ICO multirresolución, con
-                fallback para iPhone.
-              </p>
-            </div>
-            <div className="seo-media-control__actions">
-              <Button
-                variant="secondary"
-                size="sm"
-                icon={UploadSimple}
-                loading={seoMediaBusy === "favicon"}
-                onClick={() => faviconInputRef.current?.click()}
-              >
-                Subir favicon
-              </Button>
-              <input
-                ref={faviconInputRef}
-                className="seo-upload-input"
-                type="file"
-                accept={SEO_IMAGE_ACCEPT}
-                aria-label="Subir imagen para favicon"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  event.currentTarget.value = "";
-                  if (file) void uploadSeoImage(file, "favicon");
-                }}
-              />
-              {faviconAsset ? (
-                <ResponsiveAssetImage
-                  asset={faviconAsset}
-                  className="seo-media-control__icon"
-                  alt="Vista previa del favicon"
-                  sizes="64px"
-                />
-              ) : null}
-            </div>
-            {faviconAsset ? (
-              <small>ICO 16–256 px · listo para buscadores y navegadores</small>
-            ) : (
-              <small>No hay favicon configurado.</small>
-            )}
-            {faviconImageError ? <small className="field-error">{faviconImageError}</small> : null}
-          </div>
-          <Field
-            label="Portada del sitio"
-            hint="La imagen se recorta sin deformarse a 1200 × 630 px para Open Graph y redes sociales."
-            {...(socialImageError ? { error: socialImageError } : {})}
-          >
-            <select
-              aria-label="Portada del sitio"
-              value={seoDraft.socialImageId ?? ""}
-              onChange={(event) =>
-                commit({
-                  ...seoDraft,
-                  socialImageId: event.target.value
-                    ? (event.target.value as StoreProjectV1["assets"][number]["id"])
-                    : undefined,
-                })
-              }
-            >
-              <option value="">Usar la primera imagen disponible</option>
-              {project.assets.map((asset) => (
-                <option key={asset.id} value={asset.id}>
-                  {asset.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <div className="seo-media-control seo-media-control--cover" data-testid="ui-seo-cover">
-            <div>
-              <strong>Subir una portada nueva</strong>
-              <p>Se usará para la etiqueta `og:image` y las tarjetas de compartir.</p>
-            </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={UploadSimple}
-              loading={seoMediaBusy === "cover"}
-              onClick={() => siteCoverInputRef.current?.click()}
-            >
-              Subir portada
-            </Button>
-            <input
-              ref={siteCoverInputRef}
-              className="seo-upload-input"
-              type="file"
-              accept={SEO_IMAGE_ACCEPT}
-              aria-label="Subir portada del sitio"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                event.currentTarget.value = "";
-                if (file) void uploadSeoImage(file, "cover");
-              }}
-            />
-          </div>
-          {seoMediaStatus ? (
-            <output className="seo-media-status" aria-live="polite">
-              {seoMediaStatus}
-            </output>
-          ) : null}
-        </fieldset>
-
-        <fieldset className="seo-fieldset seo-fieldset--derived" data-testid="ui-seo-derived">
-          <legend>Metadata publicada</legend>
-          <dl className="seo-derived-meta">
-            <div>
-              <dt>Autor</dt>
-              <dd>{project.identity.brandName}</dd>
-            </div>
-            <div>
-              <dt>Publisher</dt>
-              <dd>{project.identity.legalName}</dd>
-            </div>
-            <div>
-              <dt>Keywords</dt>
-              <dd>{seoKeywords || "Se generan desde el contenido de la tienda."}</dd>
-            </div>
-            <div>
-              <dt>Robots</dt>
-              <dd>Borrador: noindex,nofollow · Producción: index,follow</dd>
-            </div>
-            <div>
-              <dt>Canonical</dt>
-              <dd>{homepage}</dd>
-            </div>
-            <div>
-              <dt>OG description</dt>
-              <dd>{previewSeo.description}</dd>
-            </div>
-          </dl>
-        </fieldset>
-
-        <div className="seo-previews">
-          <article className="asset-item" data-testid="ui-seo-preview-google">
-            <div>
-              <span
-                style={{
-                  color: "var(--muted)",
-                  fontSize: 10,
-                  letterSpacing: "0.12em",
-                  textTransform: "uppercase",
-                }}
-              >
-                Google
-              </span>
-              <a
-                href={homepage}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  color: "var(--accent)",
-                  fontSize: 15,
-                  fontWeight: 650,
-                  lineHeight: 1.3,
-                  overflowWrap: "anywhere",
-                  textDecoration: "none",
-                }}
-              >
-                {previewSeo.title}
-              </a>
-              <span style={{ overflowWrap: "anywhere" }}>{homepage}</span>
-              <p
-                style={{
-                  color: "var(--ink)",
-                  fontSize: 11.5,
-                  lineHeight: 1.45,
-                  margin: 0,
-                  overflowWrap: "anywhere",
-                }}
-              >
-                {previewSeo.description || "Sin descripción: completá la descripción SEO."}
-              </p>
-            </div>
-          </article>
-
-          <article className="asset-item" data-testid="ui-seo-preview-og">
-            {socialAsset ? (
-              <ResponsiveAssetImage
-                asset={socialAsset}
-                alt=""
-                sizes="(min-width: 900px) 360px, 100vw"
-              />
-            ) : (
-              <div
-                style={{
-                  display: "grid",
-                  height: 150,
-                  placeItems: "center",
-                  background: "var(--surface-strong)",
-                  color: "var(--muted)",
-                  fontSize: 11,
-                }}
-              >
-                Sin imagen social
-              </div>
-            )}
-            <div>
-              <span
-                style={{
-                  color: "var(--muted)",
-                  fontSize: 10,
-                  letterSpacing: "0.12em",
-                  textTransform: "uppercase",
-                }}
-              >
-                Open Graph
-              </span>
-              <strong
-                style={{
-                  display: "block",
-                  fontSize: 13,
-                  lineHeight: 1.35,
-                  overflowWrap: "anywhere",
-                }}
-              >
-                {previewSeo.title}
-              </strong>
-              <span style={{ overflowWrap: "anywhere" }}>{homepage}</span>
-            </div>
-          </article>
-
-          <article className="asset-item" data-testid="ui-seo-preview-whatsapp">
-            <div>
-              <span
-                style={{
-                  color: "var(--muted)",
-                  fontSize: 10,
-                  letterSpacing: "0.12em",
-                  textTransform: "uppercase",
-                }}
-              >
-                WhatsApp
-              </span>
-              <strong
-                style={{
-                  display: "block",
-                  fontSize: 13,
-                  lineHeight: 1.35,
-                  overflowWrap: "anywhere",
-                }}
-              >
-                {project.identity.brandName}
-              </strong>
-              <p
-                style={{
-                  color: "var(--ink)",
-                  fontSize: 11.5,
-                  lineHeight: 1.45,
-                  margin: 0,
-                  overflowWrap: "anywhere",
-                }}
-              >
-                {previewSeo.title} — {previewSeo.description || "Sin descripción"}
-              </p>
-              <span style={{ overflowWrap: "anywhere" }}>{homepage}</span>
-            </div>
-          </article>
-        </div>
-
-
-</> },
-{ id: "audit", label: "Diagnóstico", content: <>
-        <div className="audit-panel" data-testid="ui-seo-audit-panel">
-          <header>
-            <div>
-              <h3>Auditoría</h3>
-              <p>
-                {auditStatus === "loading"
-                  ? "Analizando metadata, rutas y datos estructurados…"
-                  : auditStatus === "error"
-                    ? auditError
-                    : `${errors} errores críticos, ${warnings} advertencias.`}
-              </p>
-              {auditStatus === "ready" && report.merchantMode === "experimental-whatsapp" ? (
-                <p className="audit-note">
-                  Merchant en modo experimental: el checkout final por WhatsApp puede no cumplir los
-                  requisitos de Google.
-                </p>
-              ) : null}
-            </div>
-            {auditStatus === "ready" && errors === 0 ? (
-              <span className={`audit-ready${warnings > 0 ? " audit-ready--warning" : ""}`}>
-                {warnings > 0 ? (
-                  <WarningCircle aria-hidden size={18} weight="fill" />
-                ) : (
-                  <CheckCircle aria-hidden size={18} weight="fill" />
-                )}
-                {warnings > 0 ? "Requiere revisión" : "Sin observaciones"}
-              </span>
-            ) : null}
-          </header>
-          {auditStatus === "loading" ? (
-            <output
-              className="audit-state audit-state--loading"
-              data-testid="ui-seo-audit-loading"
-              aria-live="polite"
-            >
-              <span className="spinner" aria-hidden />
-              <p>Ejecutando la auditoría local…</p>
-            </output>
-          ) : auditStatus === "error" ? (
-            <div
-              className="audit-state audit-state--error"
-              data-testid="ui-seo-audit-error"
-              role="alert"
-            >
-              <WarningCircle aria-hidden size={22} />
-              <p>{auditError}</p>
-              <Button
-                variant="quiet"
-                size="sm"
-                icon={ArrowClockwise}
-                onClick={() => setAuditAttempt((attempt) => attempt + 1)}
-              >
-                Reintentar
-              </Button>
-            </div>
-          ) : issues.length === 0 ? (
-            <div className="audit-empty">
-              <CheckCircle aria-hidden size={26} />
-              <p>No se detectaron problemas con el proyecto actual.</p>
-            </div>
-          ) : (
-            <div className="audit-list">
-              {issues.map((issue) => {
-                const Icon = iconFor(issue);
-                return (
-                  <article className={`audit-item audit-item--${issue.severity}`} key={issue.id}>
-                    <Icon
-                      aria-hidden
-                      size={19}
-                      weight={issue.severity === "info" ? "regular" : "fill"}
+      <WorkspaceGroups
+        label="Herramientas SEO"
+        groups={[
+          {
+            id: "appearance",
+            label: "Apariencia en buscadores",
+            content: (
+              <>
+                <fieldset className="seo-fieldset seo-fieldset--appearance">
+                  <legend>
+                    <MagnifyingGlass aria-hidden size={19} /> Apariencia
+                  </legend>
+                  <Field
+                    label="Título SEO"
+                    hint={`${seoDraft.title.length}/70 caracteres`}
+                    {...(titleError ? { error: titleError } : {})}
+                  >
+                    <input
+                      maxLength={70}
+                      aria-label="Título SEO"
+                      value={seoDraft.title}
+                      onChange={(event) => commit({ ...seoDraft, title: event.target.value })}
                     />
+                  </Field>
+                  <Field
+                    label="Descripción SEO"
+                    hint={`${seoDraft.description.length}/180 caracteres`}
+                    {...(descriptionError ? { error: descriptionError } : {})}
+                  >
+                    <textarea
+                      rows={4}
+                      maxLength={180}
+                      aria-label="Descripción SEO"
+                      value={seoDraft.description}
+                      onChange={(event) => commit({ ...seoDraft, description: event.target.value })}
+                    />
+                  </Field>
+                  <Field label="Verificación de Search Console">
+                    <input
+                      value={seoDraft.searchConsoleVerification}
+                      onChange={(event) =>
+                        commit({ ...seoDraft, searchConsoleVerification: event.target.value })
+                      }
+                    />
+                  </Field>
+                  <Field label="Verificación de Merchant Center">
+                    <input
+                      value={seoDraft.merchantVerification}
+                      onChange={(event) =>
+                        commit({ ...seoDraft, merchantVerification: event.target.value })
+                      }
+                    />
+                  </Field>
+                </fieldset>
+
+                <fieldset className="seo-fieldset seo-fieldset--social">
+                  <legend>Identidad y portada</legend>
+                  <div className="seo-media-control" data-testid="ui-seo-favicon">
                     <div>
-                      <strong title={issue.title}>{issue.title}</strong>
-                      {issue.message ? <p>{issue.message}</p> : null}
-                      {issue.area || issue.fixTarget ? (
-                        <small className="audit-item__meta">
-                          <Badge
-                            tone={
-                              issue.severity === "error"
-                                ? "danger"
-                                : issue.severity === "warning"
-                                  ? "warning"
-                                  : "info"
-                            }
-                            className="audit-item__severity"
-                          >
-                            {SEVERITY_LABELS[issue.severity]}
-                          </Badge>
-                          {issue.area ? (
-                            <span> · {AREA_LABELS[issue.area] ?? issue.area}</span>
-                          ) : null}
-                          {issue.fixTarget ? (
-                            <span>
-                              {" · Corregir en "}
-                              {FIX_LABELS[issue.fixTarget] ?? issue.fixTarget}
-                            </span>
-                          ) : null}
-                        </small>
+                      <strong>Favicon del sitio</strong>
+                      <p>
+                        Subí una foto y la convertimos automáticamente a un ICO multirresolución,
+                        con fallback para iPhone.
+                      </p>
+                    </div>
+                    <div className="seo-media-control__actions">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        icon={UploadSimple}
+                        loading={seoMediaBusy === "favicon"}
+                        onClick={() => faviconInputRef.current?.click()}
+                      >
+                        Subir favicon
+                      </Button>
+                      <input
+                        ref={faviconInputRef}
+                        className="seo-upload-input"
+                        type="file"
+                        accept={SEO_IMAGE_ACCEPT}
+                        aria-label="Subir imagen para favicon"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          event.currentTarget.value = "";
+                          if (file) void uploadSeoImage(file, "favicon");
+                        }}
+                      />
+                      {faviconAsset ? (
+                        <ResponsiveAssetImage
+                          asset={faviconAsset}
+                          className="seo-media-control__icon"
+                          alt="Vista previa del favicon"
+                          sizes="64px"
+                        />
                       ) : null}
                     </div>
-                    {issue.fixTarget && issue.fixTarget !== "seo" ? (
-                      <Button
-                        variant="quiet"
-                        size="sm"
-                        icon={ArrowRight}
-                        aria-label={`Ir a ${FIX_LABELS[issue.fixTarget] ?? "corregir"} para resolver: ${issueContext(issue)}`}
-                        data-testid="ui-seo-audit-fix"
-                        onClick={() => navigateToFix(issue.fixTarget ?? "", onNavigate)}
-                      >
-                        Ir a {FIX_LABELS[issue.fixTarget] ?? "corregir"}
-                      </Button>
-                    ) : null}
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-
-</> },
-{ id: "publish", label: "Publicación y rastreo", content: <>
-        <section className="guided-checklist" data-testid="ui-seo-checklist">
-          <div className="guided-checklist__header">
-            <div>
-              <span className="guided-kicker">Revisión manual</span>
-              <h3>Checklist de publicación</h3>
-            </div>
-            <span className="guided-checklist__more" data-testid="ui-seo-check-count">
-              {checkedCount}/{issues.length} revisados
-            </span>
-          </div>
-          {issues.length === 0 ? (
-            <p className="guided-checklist__more" style={{ padding: "0 20px 18px" }}>
-              Sin pendientes por revisar: la auditoría no detectó problemas.
-            </p>
-          ) : (
-            <ul>
-              {groupedIssues.map(([area, areaIssues]) => (
-                <li key={area} data-testid="ui-seo-check-group" data-area={area}>
-                  <span
-                    className="guided-checklist__status"
-                    style={{ color: "var(--muted)" }}
-                    aria-hidden
-                  />
-                  <span className="guided-checklist__text">
-                    <strong
-                      style={{
-                        color: "var(--muted)",
-                        fontSize: 11,
-                        letterSpacing: "0.08em",
-                        textTransform: "uppercase",
-                        whiteSpace: "normal",
-                      }}
-                    >
-                      {AREA_LABELS[area] ?? area}
-                    </strong>
-                    <small>
-                      {areaIssues.length} {areaIssues.length === 1 ? "hallazgo" : "hallazgos"}
-                    </small>
-                  </span>
-                </li>
-              ))}
-              {issues.map((issue) => {
-                const done = checkedIssues.has(issue.id);
-                const Icon = iconFor(issue);
-                return (
-                  <li
-                    key={issue.id}
-                    data-testid="ui-seo-check-item"
-                    data-issue-id={issue.id}
-                    data-done={done}
-                  >
-                    <span
-                      className="guided-checklist__status"
-                      data-status={
-                        done ? undefined : issue.severity === "error" ? "invalid" : undefined
-                      }
-                      style={done ? { color: "var(--accent)" } : undefined}
-                      aria-hidden
-                    >
-                      {done ? <CheckCircle size={18} weight="fill" /> : <Icon size={19} />}
-                    </span>
-                    <span className="guided-checklist__text">
-                      <strong title={issue.title}>{issue.title}</strong>
-                      <small>{issue.message}</small>
-                    </span>
-                    {issue.fixTarget && issue.fixTarget !== "seo" ? (
-                      <Button
-                        variant="quiet"
-                        size="sm"
-                        icon={ArrowRight}
-                        aria-label={`Ir a ${FIX_LABELS[issue.fixTarget] ?? "corregir"} para resolver: ${issueContext(issue)}`}
-                        data-testid="ui-seo-check-fix"
-                        onClick={() => navigateToFix(issue.fixTarget ?? "", onNavigate)}
-                      >
-                        Ir a {FIX_LABELS[issue.fixTarget] ?? "corregir"}
-                      </Button>
+                    {faviconAsset ? (
+                      <small>ICO 16–256 px · listo para buscadores y navegadores</small>
                     ) : (
+                      <small>No hay favicon configurado.</small>
+                    )}
+                    {faviconImageError ? (
+                      <small className="field-error">{faviconImageError}</small>
+                    ) : null}
+                  </div>
+                  <Field
+                    label="Portada del sitio"
+                    hint="La imagen se recorta sin deformarse a 1200 × 630 px para Open Graph y redes sociales."
+                    {...(socialImageError ? { error: socialImageError } : {})}
+                  >
+                    <select
+                      aria-label="Portada del sitio"
+                      value={seoDraft.socialImageId ?? ""}
+                      onChange={(event) =>
+                        commit({
+                          ...seoDraft,
+                          socialImageId: event.target.value
+                            ? (event.target.value as StoreProjectV1["assets"][number]["id"])
+                            : undefined,
+                        })
+                      }
+                    >
+                      <option value="">Usar la primera imagen disponible</option>
+                      {project.assets.map((asset) => (
+                        <option key={asset.id} value={asset.id}>
+                          {asset.name}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <div
+                    className="seo-media-control seo-media-control--cover"
+                    data-testid="ui-seo-cover"
+                  >
+                    <div>
+                      <strong>Subir una portada nueva</strong>
+                      <p>Se usará para la etiqueta `og:image` y las tarjetas de compartir.</p>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={UploadSimple}
+                      loading={seoMediaBusy === "cover"}
+                      onClick={() => siteCoverInputRef.current?.click()}
+                    >
+                      Subir portada
+                    </Button>
+                    <input
+                      ref={siteCoverInputRef}
+                      className="seo-upload-input"
+                      type="file"
+                      accept={SEO_IMAGE_ACCEPT}
+                      aria-label="Subir portada del sitio"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        event.currentTarget.value = "";
+                        if (file) void uploadSeoImage(file, "cover");
+                      }}
+                    />
+                  </div>
+                  {seoMediaStatus ? (
+                    <output className="seo-media-status" aria-live="polite">
+                      {seoMediaStatus}
+                    </output>
+                  ) : null}
+                </fieldset>
+
+                <fieldset
+                  className="seo-fieldset seo-fieldset--derived"
+                  data-testid="ui-seo-derived"
+                >
+                  <legend>Metadata publicada</legend>
+                  <dl className="seo-derived-meta">
+                    <div>
+                      <dt>Autor</dt>
+                      <dd>{project.identity.brandName}</dd>
+                    </div>
+                    <div>
+                      <dt>Publisher</dt>
+                      <dd>{project.identity.legalName}</dd>
+                    </div>
+                    <div>
+                      <dt>Keywords</dt>
+                      <dd>{seoKeywords || "Se generan desde el contenido de la tienda."}</dd>
+                    </div>
+                    <div>
+                      <dt>Robots</dt>
+                      <dd>Borrador: noindex,nofollow · Producción: index,follow</dd>
+                    </div>
+                    <div>
+                      <dt>Canonical</dt>
+                      <dd>{homepage}</dd>
+                    </div>
+                    <div>
+                      <dt>OG description</dt>
+                      <dd>{previewSeo.description}</dd>
+                    </div>
+                  </dl>
+                </fieldset>
+
+                <div className="seo-previews">
+                  <article className="asset-item" data-testid="ui-seo-preview-google">
+                    <div>
+                      <span
+                        style={{
+                          color: "var(--muted)",
+                          fontSize: 10,
+                          letterSpacing: "0.12em",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        Google
+                      </span>
+                      <a
+                        href={homepage}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{
+                          color: "var(--accent)",
+                          fontSize: 15,
+                          fontWeight: 650,
+                          lineHeight: 1.3,
+                          overflowWrap: "anywhere",
+                          textDecoration: "none",
+                        }}
+                      >
+                        {previewSeo.title}
+                      </a>
+                      <span style={{ overflowWrap: "anywhere" }}>{homepage}</span>
+                      <p
+                        style={{
+                          color: "var(--ink)",
+                          fontSize: 11.5,
+                          lineHeight: 1.45,
+                          margin: 0,
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        {previewSeo.description || "Sin descripción: completá la descripción SEO."}
+                      </p>
+                    </div>
+                  </article>
+
+                  <article className="asset-item" data-testid="ui-seo-preview-og">
+                    {socialAsset ? (
+                      <ResponsiveAssetImage
+                        asset={socialAsset}
+                        alt=""
+                        sizes="(min-width: 900px) 360px, 100vw"
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          display: "grid",
+                          height: 150,
+                          placeItems: "center",
+                          background: "var(--surface-strong)",
+                          color: "var(--muted)",
+                          fontSize: 11,
+                        }}
+                      >
+                        Sin imagen social
+                      </div>
+                    )}
+                    <div>
+                      <span
+                        style={{
+                          color: "var(--muted)",
+                          fontSize: 10,
+                          letterSpacing: "0.12em",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        Open Graph
+                      </span>
+                      <strong
+                        style={{
+                          display: "block",
+                          fontSize: 13,
+                          lineHeight: 1.35,
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        {previewSeo.title}
+                      </strong>
+                      <span style={{ overflowWrap: "anywhere" }}>{homepage}</span>
+                    </div>
+                  </article>
+
+                  <article className="asset-item" data-testid="ui-seo-preview-whatsapp">
+                    <div>
+                      <span
+                        style={{
+                          color: "var(--muted)",
+                          fontSize: 10,
+                          letterSpacing: "0.12em",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        WhatsApp
+                      </span>
+                      <strong
+                        style={{
+                          display: "block",
+                          fontSize: 13,
+                          lineHeight: 1.35,
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        {project.identity.brandName}
+                      </strong>
+                      <p
+                        style={{
+                          color: "var(--ink)",
+                          fontSize: 11.5,
+                          lineHeight: 1.45,
+                          margin: 0,
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        {previewSeo.title} — {previewSeo.description || "Sin descripción"}
+                      </p>
+                      <span style={{ overflowWrap: "anywhere" }}>{homepage}</span>
+                    </div>
+                  </article>
+                </div>
+              </>
+            ),
+          },
+          {
+            id: "audit",
+            label: "Diagnóstico",
+            content: (
+              <>
+                <div className="audit-panel" data-testid="ui-seo-audit-panel">
+                  <header>
+                    <div>
+                      <h3>Auditoría</h3>
+                      <p>
+                        {auditStatus === "loading"
+                          ? "Analizando metadata, rutas y datos estructurados…"
+                          : auditStatus === "error"
+                            ? auditError
+                            : `${errors} errores críticos, ${warnings} advertencias.`}
+                      </p>
+                      {auditStatus === "ready" &&
+                      report.merchantMode === "experimental-whatsapp" ? (
+                        <p className="audit-note">
+                          Merchant en modo experimental: el checkout final por WhatsApp puede no
+                          cumplir los requisitos de Google.
+                        </p>
+                      ) : null}
+                    </div>
+                    {auditStatus === "ready" && errors === 0 ? (
+                      <span className={`audit-ready${warnings > 0 ? " audit-ready--warning" : ""}`}>
+                        {warnings > 0 ? (
+                          <WarningCircle aria-hidden size={18} weight="fill" />
+                        ) : (
+                          <CheckCircle aria-hidden size={18} weight="fill" />
+                        )}
+                        {warnings > 0 ? "Requiere revisión" : "Sin observaciones"}
+                      </span>
+                    ) : null}
+                  </header>
+                  {auditStatus === "loading" ? (
+                    <output
+                      className="audit-state audit-state--loading"
+                      data-testid="ui-seo-audit-loading"
+                      aria-live="polite"
+                    >
+                      <span className="spinner" aria-hidden />
+                      <p>Ejecutando la auditoría local…</p>
+                    </output>
+                  ) : auditStatus === "error" ? (
+                    <div
+                      className="audit-state audit-state--error"
+                      data-testid="ui-seo-audit-error"
+                      role="alert"
+                    >
+                      <WarningCircle aria-hidden size={22} />
+                      <p>{auditError}</p>
                       <Button
                         variant="quiet"
                         size="sm"
-                        icon={done ? CheckCircle : Circle}
-                        aria-label={
-                          done
-                            ? `Marcar como pendiente: ${issueContext(issue)}`
-                            : `Marcar como revisado: ${issueContext(issue)}`
-                        }
-                        aria-pressed={done}
-                        data-testid="ui-seo-check-toggle"
-                        onClick={() => toggleIssue(issue.id)}
+                        icon={ArrowClockwise}
+                        onClick={() => setAuditAttempt((attempt) => attempt + 1)}
                       >
-                        {done ? "Revisado" : "Marcar revisado"}
+                        Reintentar
                       </Button>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
-
-        {optimization ? (
-          <div
-            className="optimization-panel optimization-panel--crawler"
-            data-testid="ui-seo-crawler"
-          >
-            <header>
-              <div>
-                <h3>Cómo nos ve un crawler</h3>
-                <p>Rutas detectadas por la optimización; el borrador agrega noindex/nofollow.</p>
-              </div>
-              <span className="guided-checklist__more">
-                {optimization.counts.indexable} indexables ·{" "}
-                {optimization.routes.length - optimization.counts.indexable} noindex
-                {optimization.routes.length > routeLimit
-                  ? ` · ${optimization.routes.length} rutas en total`
-                  : ""}
-              </span>
-            </header>
-            <div className="audit-list">
-              {optimization.routes.slice(0, routeLimit).map((route) => (
-                <article
-                  className="audit-item"
-                  data-testid="ui-seo-route"
-                  data-indexable={route.indexable}
-                  key={route.path}
-                >
-                  <MagnifyingGlass aria-hidden size={18} />
-                  <div>
-                    <strong>{route.path}</strong>
-                    <p>
-                      {route.title || "Sin título"}
-                      <span style={{ marginLeft: 8 }}>
-                        <Badge tone={route.indexable ? "success" : "neutral"}>
-                          {route.indexable ? "indexable" : "noindex"}
-                        </Badge>
-                      </span>
-                    </p>
+                    </div>
+                  ) : issues.length === 0 ? (
+                    <div className="audit-empty">
+                      <CheckCircle aria-hidden size={26} />
+                      <p>No se detectaron problemas con el proyecto actual.</p>
+                    </div>
+                  ) : (
+                    <div className="audit-list">
+                      {issues.map((issue) => {
+                        const Icon = iconFor(issue);
+                        return (
+                          <article
+                            className={`audit-item audit-item--${issue.severity}`}
+                            key={issue.id}
+                          >
+                            <Icon
+                              aria-hidden
+                              size={19}
+                              weight={issue.severity === "info" ? "regular" : "fill"}
+                            />
+                            <div>
+                              <strong title={issue.title}>{issue.title}</strong>
+                              {issue.message ? <p>{issue.message}</p> : null}
+                              {issue.area || issue.fixTarget ? (
+                                <small className="audit-item__meta">
+                                  <Badge
+                                    tone={
+                                      issue.severity === "error"
+                                        ? "danger"
+                                        : issue.severity === "warning"
+                                          ? "warning"
+                                          : "info"
+                                    }
+                                    className="audit-item__severity"
+                                  >
+                                    {SEVERITY_LABELS[issue.severity]}
+                                  </Badge>
+                                  {issue.area ? (
+                                    <span> · {AREA_LABELS[issue.area] ?? issue.area}</span>
+                                  ) : null}
+                                  {issue.fixTarget ? (
+                                    <span>
+                                      {" · Corregir en "}
+                                      {FIX_LABELS[issue.fixTarget] ?? issue.fixTarget}
+                                    </span>
+                                  ) : null}
+                                </small>
+                              ) : null}
+                            </div>
+                            {issue.fixTarget && issue.fixTarget !== "seo" ? (
+                              <Button
+                                variant="quiet"
+                                size="sm"
+                                icon={ArrowRight}
+                                aria-label={`Ir a ${FIX_LABELS[issue.fixTarget] ?? "corregir"} para resolver: ${issueContext(issue)}`}
+                                data-testid="ui-seo-audit-fix"
+                                onClick={() => navigateToFix(issue.fixTarget ?? "", onNavigate)}
+                              >
+                                Ir a {FIX_LABELS[issue.fixTarget] ?? "corregir"}
+                              </Button>
+                            ) : null}
+                          </article>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </>
+            ),
+          },
+          {
+            id: "publish",
+            label: "Publicación y rastreo",
+            content: (
+              <>
+                <section className="guided-checklist" data-testid="ui-seo-checklist">
+                  <div className="guided-checklist__header">
+                    <div>
+                      <span className="guided-kicker">Revisión manual</span>
+                      <h3>Checklist de publicación</h3>
+                    </div>
+                    <span className="guided-checklist__more" data-testid="ui-seo-check-count">
+                      {checkedCount}/{issues.length} revisados
+                    </span>
                   </div>
-                </article>
-              ))}
-            </div>
-          </div>
-        ) : null}
+                  {issues.length === 0 ? (
+                    <p className="guided-checklist__more" style={{ padding: "0 20px 18px" }}>
+                      Sin pendientes por revisar: la auditoría no detectó problemas.
+                    </p>
+                  ) : (
+                    <ul>
+                      {groupedIssues.map(([area, areaIssues]) => (
+                        <li key={area} data-testid="ui-seo-check-group" data-area={area}>
+                          <span
+                            className="guided-checklist__status"
+                            style={{ color: "var(--muted)" }}
+                            aria-hidden
+                          />
+                          <span className="guided-checklist__text">
+                            <strong
+                              style={{
+                                color: "var(--muted)",
+                                fontSize: 11,
+                                letterSpacing: "0.08em",
+                                textTransform: "uppercase",
+                                whiteSpace: "normal",
+                              }}
+                            >
+                              {AREA_LABELS[area] ?? area}
+                            </strong>
+                            <small>
+                              {areaIssues.length}{" "}
+                              {areaIssues.length === 1 ? "hallazgo" : "hallazgos"}
+                            </small>
+                          </span>
+                        </li>
+                      ))}
+                      {issues.map((issue) => {
+                        const done = checkedIssues.has(issue.id);
+                        const Icon = iconFor(issue);
+                        return (
+                          <li
+                            key={issue.id}
+                            data-testid="ui-seo-check-item"
+                            data-issue-id={issue.id}
+                            data-done={done}
+                          >
+                            <span
+                              className="guided-checklist__status"
+                              data-status={
+                                done
+                                  ? undefined
+                                  : issue.severity === "error"
+                                    ? "invalid"
+                                    : undefined
+                              }
+                              style={done ? { color: "var(--accent)" } : undefined}
+                              aria-hidden
+                            >
+                              {done ? <CheckCircle size={18} weight="fill" /> : <Icon size={19} />}
+                            </span>
+                            <span className="guided-checklist__text">
+                              <strong title={issue.title}>{issue.title}</strong>
+                              <small>{issue.message}</small>
+                            </span>
+                            {issue.fixTarget && issue.fixTarget !== "seo" ? (
+                              <Button
+                                variant="quiet"
+                                size="sm"
+                                icon={ArrowRight}
+                                aria-label={`Ir a ${FIX_LABELS[issue.fixTarget] ?? "corregir"} para resolver: ${issueContext(issue)}`}
+                                data-testid="ui-seo-check-fix"
+                                onClick={() => navigateToFix(issue.fixTarget ?? "", onNavigate)}
+                              >
+                                Ir a {FIX_LABELS[issue.fixTarget] ?? "corregir"}
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="quiet"
+                                size="sm"
+                                icon={done ? CheckCircle : Circle}
+                                aria-label={
+                                  done
+                                    ? `Marcar como pendiente: ${issueContext(issue)}`
+                                    : `Marcar como revisado: ${issueContext(issue)}`
+                                }
+                                aria-pressed={done}
+                                data-testid="ui-seo-check-toggle"
+                                onClick={() => toggleIssue(issue.id)}
+                              >
+                                {done ? "Revisado" : "Marcar revisado"}
+                              </Button>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </section>
 
-        {optimization ? (
-          <div className="optimization-panel optimization-panel--score">
-            <header>
-              <div>
-                <h3>Optimización automática</h3>
-                <p>Snapshot {optimization.snapshotHash}. Las correcciones no inventan contenido.</p>
-              </div>
-              <div className="optimization-actions">
-                <strong
-                  className={
-                    optimization.counts.critical === 0
-                      ? "optimization-score optimization-score--ready"
-                      : "optimization-score"
-                  }
-                >
-                  {optimization.score}/100
-                </strong>
-                <Button
-                  icon={DownloadSimple}
-                  onClick={() =>
-                    downloadBlob(
-                      `${JSON.stringify(optimization, null, 2)}\n`,
-                      `${project.slug}-optimization.json`,
-                      "application/json",
-                    )
-                  }
-                >
-                  Descargar informe
-                </Button>
-              </div>
-            </header>
-            <section className="optimization-metrics" aria-label="Resumen de optimización">
-              <span>
-                <strong>{optimization.counts.indexable}</strong> rutas indexables
-              </span>
-              <span>
-                <strong>
-                  {Math.round(optimization.aiReadiness.factualProductCoverage * 100)}%
-                </strong>{" "}
-                productos con contexto
-              </span>
-              <span>
-                <strong>{optimization.performance.largeImages}</strong> imágenes grandes
-              </span>
-              <span>
-                <strong>{optimization.aiReadiness.publicContextAvailable ? "Sí" : "No"}</strong>{" "}
-                contexto IA público
-              </span>
-            </section>
-          </div>
-        ) : null}
+                {optimization ? (
+                  <div
+                    className="optimization-panel optimization-panel--crawler"
+                    data-testid="ui-seo-crawler"
+                  >
+                    <header>
+                      <div>
+                        <h3>Cómo nos ve un crawler</h3>
+                        <p>
+                          Rutas detectadas por la optimización; el borrador agrega noindex/nofollow.
+                        </p>
+                      </div>
+                      <span className="guided-checklist__more">
+                        {optimization.counts.indexable} indexables ·{" "}
+                        {optimization.routes.length - optimization.counts.indexable} noindex
+                        {optimization.routes.length > routeLimit
+                          ? ` · ${optimization.routes.length} rutas en total`
+                          : ""}
+                      </span>
+                    </header>
+                    <div className="audit-list">
+                      {optimization.routes.slice(0, routeLimit).map((route) => (
+                        <article
+                          className="audit-item"
+                          data-testid="ui-seo-route"
+                          data-indexable={route.indexable}
+                          key={route.path}
+                        >
+                          <MagnifyingGlass aria-hidden size={18} />
+                          <div>
+                            <strong>{route.path}</strong>
+                            <p>
+                              {route.title || "Sin título"}
+                              <span style={{ marginLeft: 8 }}>
+                                <Badge tone={route.indexable ? "success" : "neutral"}>
+                                  {route.indexable ? "indexable" : "noindex"}
+                                </Badge>
+                              </span>
+                            </p>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
 
-</> }
-]} />
+                {optimization ? (
+                  <div className="optimization-panel optimization-panel--score">
+                    <header>
+                      <div>
+                        <h3>Optimización automática</h3>
+                        <p>
+                          Snapshot {optimization.snapshotHash}. Las correcciones no inventan
+                          contenido.
+                        </p>
+                      </div>
+                      <div className="optimization-actions">
+                        <strong
+                          className={
+                            optimization.counts.critical === 0
+                              ? "optimization-score optimization-score--ready"
+                              : "optimization-score"
+                          }
+                        >
+                          {optimization.score}/100
+                        </strong>
+                        <Button
+                          icon={DownloadSimple}
+                          onClick={() =>
+                            downloadBlob(
+                              `${JSON.stringify(optimization, null, 2)}\n`,
+                              `${project.slug}-optimization.json`,
+                              "application/json",
+                            )
+                          }
+                        >
+                          Descargar informe
+                        </Button>
+                      </div>
+                    </header>
+                    <section className="optimization-metrics" aria-label="Resumen de optimización">
+                      <span>
+                        <strong>{optimization.counts.indexable}</strong> rutas indexables
+                      </span>
+                      <span>
+                        <strong>
+                          {Math.round(optimization.aiReadiness.factualProductCoverage * 100)}%
+                        </strong>{" "}
+                        productos con contexto
+                      </span>
+                      <span>
+                        <strong>{optimization.performance.largeImages}</strong> imágenes grandes
+                      </span>
+                      <span>
+                        <strong>
+                          {optimization.aiReadiness.publicContextAvailable ? "Sí" : "No"}
+                        </strong>{" "}
+                        contexto IA público
+                      </span>
+                    </section>
+                  </div>
+                ) : null}
+              </>
+            ),
+          },
+        ]}
+      />
     </section>
   );
 }

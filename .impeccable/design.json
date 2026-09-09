@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-08T06:03:48.9989308Z",
+  "generatedAt": "2026-09-09T03:20:35.5582107Z",
   "title": "Design System: SolaraCommerce",
   "extensions": {
     "colorMeta": {
@@ -35,6 +35,11 @@
     },
     "shadows": [
       {
+        "name": "workbench-panel",
+        "value": "0 18px 48px rgb(0 0 0 / 0.28), 0 1px 0 rgb(255 255 255 / 0.075) inset",
+        "purpose": "Cool glass workbench panels on a stationary desktop background."
+      },
+      {
         "name": "studio-panel",
         "value": "0 24px 60px rgba(0, 0, 0, 0.44)",
         "purpose": "Separate editor panels from the dark application shell."
@@ -58,11 +63,30 @@
       }
     ],
     "breakpoints": [
+      { "name": "workbench-compact-columns", "value": "1180px" },
+      { "name": "workbench-toolbar-container", "value": "460px" },
+      { "name": "workbench-fields-container", "value": "420px" },
       { "name": "mobile-boundary", "value": "768px" },
       { "name": "desktop-boundary", "value": "1200px" }
     ]
   },
   "components": [
+    {
+      "name": "Workbench field",
+      "kind": "input",
+      "refersTo": "workbench-field",
+      "description": "Stable dark field with the desktop workbench's amber keyboard focus.",
+      "html": "<label class=\"ds-workbench-label\">Nombre<input class=\"ds-workbench-field\" placeholder=\"Nombre de la tienda\"></label>",
+      "css": ".ds-workbench-label { display: grid; gap: 8px; color: #f2f5f7; font: 13px/1.5 Arial, sans-serif; } .ds-workbench-field { min-height: 38px; background: #0b141e; color: #f2f5f7; border: 1px solid rgb(232 242 255 / 0.16); border-radius: 8px; font: 13px Arial, sans-serif; box-shadow: 0 1px 0 rgb(255 255 255 / 0.03); caret-color: #e8b56f; } .ds-workbench-field::placeholder { color: #8c9cab; opacity: 1; } .ds-workbench-field:focus-visible { outline: 2px solid #e8b56f; outline-offset: 3px; }"
+    },
+    {
+      "name": "Workbench glass panel",
+      "kind": "card",
+      "refersTo": "workbench-panel",
+      "description": "One visible editing panel fills the remaining width without a 768px cap. Tablet/Mobile reserve up to 768px/390px at the right, separated by a 12px gutter. Details occupy the same panel as their lists, which remain mounted to preserve state and scroll. Preview and storefront retain their own styling.",
+      "html": "<section class=\"ds-workbench-panel\"><h2>Resumen</h2><p>Identidad y configuración de la tienda.</p></section>",
+      "css": ".ds-workbench-panel { padding: 0 22px 24px; border: 1px solid rgb(232 242 255 / 0.16); border-radius: 16px; background: linear-gradient(160deg, rgb(255 255 255 / 0.045), transparent 36%), rgb(13 22 36 / 0.78); color: #f2f5f7; box-shadow: 0 18px 48px rgb(0 0 0 / 0.28), 0 1px 0 rgb(255 255 255 / 0.075) inset; backdrop-filter: blur(16px); font-family: Arial, sans-serif; } .ds-workbench-panel h2 { padding-top: 20px; font-size: 25px; line-height: 1.15; letter-spacing: -0.03em; text-shadow: none; } .ds-workbench-panel p { color: #b1bdc8; font-size: 13px; line-height: 1.5; text-shadow: none; }"
+    },
     {
       "name": "Storefront primary action",
       "kind": "button",
@@ -90,6 +114,8 @@
       "Accessible, reduced-motion and no-JavaScript fallbacks"
     ],
     "rules": [
+      { "name": "The Preview Viewport Rule", "body": "Tablet (768px) and Mobile (390px) describe the iframe's internal viewport, not supported editor device classes. Scale the rendered frame to fit without changing that viewport. Opening the main panel temporarily selects Tablet; device changes while it is open remain temporary, and closing it restores the preset selected before opening. Opening or closing a detail within that panel leaves the preview device, route and zoom unchanged; the device selector remains available. The desktop editor must not be documented as a 320px mobile application.", "section": "layout" },
+      { "name": "The Stationary Workshop Rule", "body": "Inherit the dashboard's glass materials, not its animated background; the preview remains the store's own rendered document.", "section": "elevation" },
       { "name": "The Shared Renderer Rule", "body": "Preview and export must preserve the same semantic public tree.", "section": "overview" },
       { "name": "The Two Registers Rule", "body": "Studio tokens stay isolated from storefront tokens.", "section": "colors" },
       { "name": "The Useful Final State Rule", "body": "Motion and responsive states must remain useful when effects are removed.", "section": "elevation" }

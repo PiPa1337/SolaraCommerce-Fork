@@ -1,4 +1,3 @@
-import { InspectorDockProvider } from "./workbench/InspectorDock";
 /**
  * Shell del editor: coordina historial undo/redo, navegación entre herramientas,
  * preview y guardado. Los editores de cada pestaña modifican el proyecto a
@@ -68,6 +67,7 @@ import {
   PreviewToolbar,
   type PreviewZoom,
 } from "./Preview";
+import { InspectorDockProvider } from "./workbench/InspectorDock";
 
 // Las vistas del editor se cargan al abrir la pestaña: el shell y el preview
 // arrancan sin parsear Catalog/Builder/Export/etc.
@@ -366,9 +366,12 @@ export function Studio({
     } catch {}
   }, [previewRoute]);
   const [previewSize, setPreviewSize] = useState<PreviewSize>("desktop");
+  const [editorPreviewSize, setEditorPreviewSize] = useState<PreviewSize>("tablet");
   const [inspectorOpen, setInspectorOpen] = useState(false);
-  // Keep the user's device untouched; closing the last inspector restores it exactly.
-  const effectivePreviewSize = inspectorOpen ? "tablet" : previewSize;
+  const [inspectorBlocking, setInspectorBlocking] = useState(false);
+  // The main editor keeps its temporary device separate from the view it must restore.
+  const effectiveInspectorOpen = inspectorOpen && editorOpen;
+  const effectivePreviewSize = editorOpen ? editorPreviewSize : previewSize;
   const [previewZoom, setPreviewZoom] = useState<PreviewZoom>(() => {
     try {
       const stored = Number(window.sessionStorage.getItem("solara-preview-zoom"));
@@ -565,6 +568,7 @@ export function Studio({
 
   const setPaneOpen = useCallback(
     (open: boolean) => {
+      if (open && !editorOpen) setEditorPreviewSize("tablet");
       setEditorOpen(open);
       try {
         window.localStorage.setItem(paneStorageKey, open ? "open" : "closed");
@@ -572,7 +576,7 @@ export function Studio({
         // Almacenamiento bloqueado: el colapso se conserva sólo en memoria.
       }
     },
-    [paneStorageKey],
+    [paneStorageKey, editorOpen],
   );
 
   const changePreviewZoom = useCallback((zoom: PreviewZoom) => {
@@ -597,21 +601,14 @@ export function Studio({
 
   useEffect(() => {
     const handlePaneShortcut = (event: globalThis.KeyboardEvent) => {
+      if (inspectorBlocking) return;
       if (!(event.ctrlKey || event.metaKey) || event.key !== "\\") return;
       event.preventDefault();
-      setEditorOpen((current) => {
-        const next = !current;
-        try {
-          window.localStorage.setItem(paneStorageKey, next ? "open" : "closed");
-        } catch {
-          // Almacenamiento bloqueado: el colapso se conserva sólo en memoria.
-        }
-        return next;
-      });
+      setPaneOpen(!editorOpen);
     };
     window.addEventListener("keydown", handlePaneShortcut);
     return () => window.removeEventListener("keydown", handlePaneShortcut);
-  }, [paneStorageKey]);
+  }, [editorOpen, setPaneOpen, inspectorBlocking]);
 
   useEffect(() => {
     const bumpExportTick = () => {
@@ -897,6 +894,7 @@ export function Studio({
   // mientras el foco está en el preview (el sitio público no conoce atajos).
   useEffect(() => {
     const handleKey = (event: globalThis.KeyboardEvent) => {
+      if (inspectorBlocking) return;
       if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "f") {
         event.preventDefault();
         toggleFocusMode();
@@ -941,6 +939,7 @@ export function Studio({
     return () => window.removeEventListener("keydown", handleKey);
   }, [
     autosave,
+    inspectorBlocking,
     focusMode,
     focusToggleId,
     history.future.length,
@@ -973,7 +972,7 @@ export function Studio({
       <div
         className="studio-shell studio-workbench"
         data-preview-size={effectivePreviewSize}
-        data-inspector-open={inspectorOpen || undefined}
+        data-inspector-open={effectiveInspectorOpen || undefined}
         data-studio-focus={focusMode || undefined}
         inert={conflict ? true : undefined}
       >
@@ -986,7 +985,7 @@ export function Studio({
               <IconButton
                 icon={ArrowLeft}
                 label="Volver a tiendas"
-                disabled={leaving}
+                disabled={leaving || inspectorBlocking}
                 onClick={() => requestLeave()}
               />
             </Tooltip>
@@ -1005,7 +1004,7 @@ export function Studio({
                 <button
                   type="button"
                   className="studio-breadcrumb__link"
-                  disabled={leaving}
+                  disabled={leaving || inspectorBlocking}
                   onClick={() => requestLeave()}
                 >
                   Tiendas
@@ -1025,8 +1024,13 @@ export function Studio({
             route={previewRoute}
             size={effectivePreviewSize}
             zoom={previewZoom}
+            desktopDisabled={editorOpen}
             onRouteChange={setPreviewRoute}
-            onSizeChange={(size) => { if (!inspectorOpen) setPreviewSize(size); }}
+            onSizeChange={(size) => {
+              if (editorOpen && size === "desktop") return;
+              if (editorOpen) setEditorPreviewSize(size);
+              else setPreviewSize(size);
+            }}
             onZoomChange={changePreviewZoom}
             onOpenEditor={() => setPaneOpen(true)}
           />
@@ -1103,6 +1107,7 @@ export function Studio({
               <button
                 type="button"
                 className={`studio-canvas-toggle${canvasMode ? " is-active" : ""}`}
+                disabled={inspectorBlocking}
                 data-testid="ui-canvas-toggle"
                 aria-pressed={canvasMode}
                 onClick={() => setCanvasMode((active) => !active)}
@@ -1122,6 +1127,7 @@ export function Studio({
                 icon={focusMode ? ArrowsInSimple : ArrowsOutSimple}
                 label={focusMode ? "Salir del modo foco" : "Modo foco de la vista previa"}
                 aria-pressed={focusMode}
+                disabled={inspectorBlocking}
                 data-testid="ui-focus-toggle"
                 onClick={toggleFocusMode}
               />
@@ -1131,7 +1137,7 @@ export function Studio({
                 <IconButton
                   icon={ArrowUDownLeft}
                   label="Deshacer"
-                  disabled={immutableBase || history.past.length === 0}
+                  disabled={inspectorBlocking || immutableBase || history.past.length === 0}
                   onClick={() => setHistory((current) => moveHistory(current, undo))}
                 />
               </Tooltip>
@@ -1139,7 +1145,7 @@ export function Studio({
                 <IconButton
                   icon={ArrowUDownRight}
                   label="Rehacer"
-                  disabled={immutableBase || history.future.length === 0}
+                  disabled={inspectorBlocking || immutableBase || history.future.length === 0}
                   onClick={() => setHistory((current) => moveHistory(current, redo))}
                 />
               </Tooltip>
@@ -1147,7 +1153,11 @@ export function Studio({
           </div>
         </header>
 
-        <nav className="studio-nav" aria-label="Áreas de la tienda">
+        <nav
+          inert={inspectorBlocking || undefined}
+          className="studio-nav"
+          aria-label="Áreas de la tienda"
+        >
           <div
             role="tablist"
             aria-label="Áreas de la tienda"
@@ -1159,7 +1169,13 @@ export function Studio({
                 type="button"
                 key={id}
                 id={`studio-tab-${id}`}
-                data-nav-group={id === "guided" || id === "overview" ? "base" : id === "seo" || id === "export" ? "publish" : "design"}
+                data-nav-group={
+                  id === "guided" || id === "overview"
+                    ? "base"
+                    : id === "seo" || id === "export"
+                      ? "publish"
+                      : "design"
+                }
                 data-testid="ui-tab"
                 role="tab"
                 aria-selected={tab === id}
@@ -1202,199 +1218,209 @@ export function Studio({
         ) : null}
 
         <main className="studio-workspace">
-          <InspectorDockProvider onOpenChange={setInspectorOpen}>
-          <section
-            ref={paneRef}
-            id={editorPaneId}
-            data-studio-editor-pane
-            data-tab={tab}
-            role="tabpanel"
-            aria-labelledby={`studio-tab-${tab}`}
-            aria-hidden={!editorOpen}
-            tabIndex={-1}
-            className={`editor-pane${editorOpen ? " editor-pane--open" : " editor-pane--closed"}`}
-            onScroll={(event) => {
-              paneScrollPositionsRef.current[tab] = event.currentTarget.scrollTop;
-            }}
+          <InspectorDockProvider
+            onOpenChange={setInspectorOpen}
+            onBlockingChange={setInspectorBlocking}
           >
-            <Tooltip tip="Cerrar panel de edición" position="bottom" className="editor-pane-close">
-              <IconButton
-                icon={X}
-                label="Cerrar panel de edición"
-                onClick={() => setPaneOpen(false)}
+            <section
+              ref={paneRef}
+              id={editorPaneId}
+              inert={inspectorBlocking || undefined}
+              data-studio-editor-pane
+              data-tab={tab}
+              role="tabpanel"
+              aria-labelledby={`studio-tab-${tab}`}
+              aria-hidden={!editorOpen}
+              tabIndex={-1}
+              className={`editor-pane${editorOpen ? " editor-pane--open" : " editor-pane--closed"}`}
+              onScroll={(event) => {
+                paneScrollPositionsRef.current[tab] = event.currentTarget.scrollTop;
+              }}
+            >
+              <StudioTabContent
+                tab={tab}
+                project={project}
+                advancedMode={advancedMode}
+                replaceProject={replaceProject}
+                runCommand={runCommand}
+                onNavigate={navigateFromGuided}
+                onApplyUpgrade={applyGuidedUpgrade}
+                onToggleAdvancedMode={toggleAdvancedMode}
+                onEnableAdvanced={enableAdvancedMode}
+                onPreviewRouteChange={setPreviewRoute}
+                onImport={importFromExport}
+                onOpenSite={onOpenSite}
+                validationError={validationError}
               />
-            </Tooltip>
-            <StudioTabContent
-              tab={tab}
+            </section>
+            {editorOpen && !effectiveInspectorOpen ? (
+              <Tooltip
+                tip="Cerrar panel de edición"
+                position="bottom"
+                className="editor-pane-close"
+              >
+                <IconButton
+                  icon={X}
+                  label="Cerrar panel de edición"
+                  onClick={() => setPaneOpen(false)}
+                />
+              </Tooltip>
+            ) : null}
+            <MemoizedPreview
               project={project}
-              advancedMode={advancedMode}
-              replaceProject={replaceProject}
-              runCommand={runCommand}
-              onNavigate={navigateFromGuided}
-              onApplyUpgrade={applyGuidedUpgrade}
-              onToggleAdvancedMode={toggleAdvancedMode}
-              onEnableAdvanced={enableAdvancedMode}
-              onPreviewRouteChange={setPreviewRoute}
-              onImport={importFromExport}
-              onOpenSite={onOpenSite}
-              validationError={validationError}
-            />
-          </section>
-          <MemoizedPreview
-            project={project}
-            route={previewRoute}
-            size={effectivePreviewSize}
-            zoom={previewZoom}
-            canvasMode={canvasMode}
-            onCanvasModeChange={setCanvasMode}
-            onRouteChange={setPreviewRoute}
-            onCanvasEdit={(sectionId, fieldKey, value) => {
-              const applied = applyMutation(project, createMutationRegistry(), {
-                type: "section.field.update",
-                sectionId,
-                fieldKey,
-                value,
-              });
-              replaceProject(applied.project);
-            }}
-            onCanvasItemEdit={(sectionId, fieldKey, itemId, value) => {
-              const applied = applyMutation(project, createMutationRegistry(), {
-                type: "section.repeater.item.update",
-                sectionId,
-                fieldKey,
-                itemId,
-                changes:
-                  typeof value === "object" && value !== null
-                    ? (value as Record<string, unknown>)
-                    : { title: value },
-              });
-              replaceProject(applied.project);
-            }}
-            onCanvasEntityEdit={(sourceKind, entityId, field, value) => {
-              const scalar = typeof value === "string" ? value : String(value ?? "");
-              const imageId = scalar || undefined;
-              let mutation: Parameters<typeof applyMutation>[2] | undefined;
-              if (sourceKind === "identity") {
-                mutation = {
-                  type: "identity.update",
-                  changes: { [field]: field === "logoAssetId" ? imageId : scalar },
-                } as Parameters<typeof applyMutation>[2];
-              } else if (sourceKind === "product") {
-                mutation = {
-                  type: "product.update",
-                  productId: entityId,
+              route={previewRoute}
+              size={effectivePreviewSize}
+              zoom={previewZoom}
+              canvasMode={canvasMode && !inspectorBlocking}
+              onCanvasModeChange={setCanvasMode}
+              onRouteChange={setPreviewRoute}
+              onCanvasEdit={(sectionId, fieldKey, value) => {
+                const applied = applyMutation(project, createMutationRegistry(), {
+                  type: "section.field.update",
+                  sectionId,
+                  fieldKey,
+                  value,
+                });
+                replaceProject(applied.project);
+              }}
+              onCanvasItemEdit={(sectionId, fieldKey, itemId, value) => {
+                const applied = applyMutation(project, createMutationRegistry(), {
+                  type: "section.repeater.item.update",
+                  sectionId,
+                  fieldKey,
+                  itemId,
                   changes:
-                    field === "imageIds"
-                      ? { imageIds: imageId ? [imageId] : [] }
-                      : field === "price"
-                        ? { price: Number(scalar) }
-                        : { [field]: scalar },
-                } as Parameters<typeof applyMutation>[2];
-              } else if (sourceKind === "category") {
-                mutation = {
-                  type: "category.update",
-                  categoryId: entityId,
-                  changes: field === "imageId" ? { imageId } : { [field]: scalar },
-                } as Parameters<typeof applyMutation>[2];
-              } else if (sourceKind === "collection") {
-                mutation = {
-                  type: "collection.update",
-                  collectionId: entityId,
-                  changes: field === "imageId" ? { imageId } : { [field]: scalar },
-                } as Parameters<typeof applyMutation>[2];
-              } else if (sourceKind === "asset") {
-                mutation = {
-                  type: "asset.update",
-                  assetId: entityId,
-                  changes: { [field]: scalar },
-                } as Parameters<typeof applyMutation>[2];
-              } else if (sourceKind === "public-copy") {
-                mutation = {
-                  type: "publicCopy.update",
-                  group: entityId,
-                  field,
-                  value: scalar,
-                } as Parameters<typeof applyMutation>[2];
-              }
-              if (!mutation) return;
-              const applied = applyMutation(project, createMutationRegistry(), mutation, {
-                kind: "canvas",
-                sessionId: "studio",
-              });
-              replaceProject(applied.project);
-            }}
-            onCanvasImageUpload={(asset, target) => {
-              const existing = project.assets.find((candidate) => candidate.hash === asset.hash);
-              const assetToUse = existing ?? asset;
-              const withAsset = existing
-                ? project
-                : StoreProjectV1Schema.parse({
-                    ...project,
-                    assets: [...project.assets, asset],
-                  });
-              let applied = withAsset;
-              if (target.itemId !== undefined) {
-                applied = applyMutation(
-                  withAsset,
-                  createMutationRegistry(),
-                  {
-                    type: "section.repeater.item.update",
-                    sectionId: target.sectionId,
-                    fieldKey: target.fieldKey,
-                    itemId: target.itemId,
-                    changes: { [target.entityField ?? "imageId"]: assetToUse.id },
-                  },
-                  { kind: "canvas", sessionId: "studio" },
-                ).project;
-              } else if (target.sourceKind && target.entityId && target.entityField) {
+                    typeof value === "object" && value !== null
+                      ? (value as Record<string, unknown>)
+                      : { title: value },
+                });
+                replaceProject(applied.project);
+              }}
+              onCanvasEntityEdit={(sourceKind, entityId, field, value) => {
+                const scalar = typeof value === "string" ? value : String(value ?? "");
+                const imageId = scalar || undefined;
                 let mutation: Parameters<typeof applyMutation>[2] | undefined;
-                if (target.sourceKind === "product") {
-                  mutation = {
-                    type: "product.update",
-                    productId: target.entityId,
-                    changes: { imageIds: [assetToUse.id] },
-                  } as Parameters<typeof applyMutation>[2];
-                } else if (target.sourceKind === "category") {
-                  mutation = {
-                    type: "category.update",
-                    categoryId: target.entityId,
-                    changes: { imageId: assetToUse.id },
-                  } as Parameters<typeof applyMutation>[2];
-                } else if (target.sourceKind === "collection") {
-                  mutation = {
-                    type: "collection.update",
-                    collectionId: target.entityId,
-                    changes: { imageId: assetToUse.id },
-                  } as Parameters<typeof applyMutation>[2];
-                } else if (target.sourceKind === "identity") {
+                if (sourceKind === "identity") {
                   mutation = {
                     type: "identity.update",
-                    changes: { logoAssetId: assetToUse.id },
+                    changes: { [field]: field === "logoAssetId" ? imageId : scalar },
+                  } as Parameters<typeof applyMutation>[2];
+                } else if (sourceKind === "product") {
+                  mutation = {
+                    type: "product.update",
+                    productId: entityId,
+                    changes:
+                      field === "imageIds"
+                        ? { imageIds: imageId ? [imageId] : [] }
+                        : field === "price"
+                          ? { price: Number(scalar) }
+                          : { [field]: scalar },
+                  } as Parameters<typeof applyMutation>[2];
+                } else if (sourceKind === "category") {
+                  mutation = {
+                    type: "category.update",
+                    categoryId: entityId,
+                    changes: field === "imageId" ? { imageId } : { [field]: scalar },
+                  } as Parameters<typeof applyMutation>[2];
+                } else if (sourceKind === "collection") {
+                  mutation = {
+                    type: "collection.update",
+                    collectionId: entityId,
+                    changes: field === "imageId" ? { imageId } : { [field]: scalar },
+                  } as Parameters<typeof applyMutation>[2];
+                } else if (sourceKind === "asset") {
+                  mutation = {
+                    type: "asset.update",
+                    assetId: entityId,
+                    changes: { [field]: scalar },
+                  } as Parameters<typeof applyMutation>[2];
+                } else if (sourceKind === "public-copy") {
+                  mutation = {
+                    type: "publicCopy.update",
+                    group: entityId,
+                    field,
+                    value: scalar,
                   } as Parameters<typeof applyMutation>[2];
                 }
-                if (mutation) {
-                  applied = applyMutation(withAsset, createMutationRegistry(), mutation, {
-                    kind: "canvas",
-                    sessionId: "studio",
-                  }).project;
+                if (!mutation) return;
+                const applied = applyMutation(project, createMutationRegistry(), mutation, {
+                  kind: "canvas",
+                  sessionId: "studio",
+                });
+                replaceProject(applied.project);
+              }}
+              onCanvasImageUpload={(asset, target) => {
+                const existing = project.assets.find((candidate) => candidate.hash === asset.hash);
+                const assetToUse = existing ?? asset;
+                const withAsset = existing
+                  ? project
+                  : StoreProjectV1Schema.parse({
+                      ...project,
+                      assets: [...project.assets, asset],
+                    });
+                let applied = withAsset;
+                if (target.itemId !== undefined) {
+                  applied = applyMutation(
+                    withAsset,
+                    createMutationRegistry(),
+                    {
+                      type: "section.repeater.item.update",
+                      sectionId: target.sectionId,
+                      fieldKey: target.fieldKey,
+                      itemId: target.itemId,
+                      changes: { [target.entityField ?? "imageId"]: assetToUse.id },
+                    },
+                    { kind: "canvas", sessionId: "studio" },
+                  ).project;
+                } else if (target.sourceKind && target.entityId && target.entityField) {
+                  let mutation: Parameters<typeof applyMutation>[2] | undefined;
+                  if (target.sourceKind === "product") {
+                    mutation = {
+                      type: "product.update",
+                      productId: target.entityId,
+                      changes: { imageIds: [assetToUse.id] },
+                    } as Parameters<typeof applyMutation>[2];
+                  } else if (target.sourceKind === "category") {
+                    mutation = {
+                      type: "category.update",
+                      categoryId: target.entityId,
+                      changes: { imageId: assetToUse.id },
+                    } as Parameters<typeof applyMutation>[2];
+                  } else if (target.sourceKind === "collection") {
+                    mutation = {
+                      type: "collection.update",
+                      collectionId: target.entityId,
+                      changes: { imageId: assetToUse.id },
+                    } as Parameters<typeof applyMutation>[2];
+                  } else if (target.sourceKind === "identity") {
+                    mutation = {
+                      type: "identity.update",
+                      changes: { logoAssetId: assetToUse.id },
+                    } as Parameters<typeof applyMutation>[2];
+                  }
+                  if (mutation) {
+                    applied = applyMutation(withAsset, createMutationRegistry(), mutation, {
+                      kind: "canvas",
+                      sessionId: "studio",
+                    }).project;
+                  }
+                } else {
+                  applied = applyMutation(
+                    withAsset,
+                    createMutationRegistry(),
+                    {
+                      type: "section.field.update",
+                      sectionId: target.sectionId,
+                      fieldKey: target.fieldKey,
+                      value: assetToUse.id,
+                    },
+                    { kind: "canvas", sessionId: "studio" },
+                  ).project;
                 }
-              } else {
-                applied = applyMutation(
-                  withAsset,
-                  createMutationRegistry(),
-                  {
-                    type: "section.field.update",
-                    sectionId: target.sectionId,
-                    fieldKey: target.fieldKey,
-                    value: assetToUse.id,
-                  },
-                  { kind: "canvas", sessionId: "studio" },
-                ).project;
-              }
-              replaceProject(applied);
-            }}
-          />
-        </InspectorDockProvider>
+                replaceProject(applied);
+              }}
+            />
+          </InspectorDockProvider>
         </main>
 
         {focusMode ? (

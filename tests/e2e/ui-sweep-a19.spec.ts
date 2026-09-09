@@ -319,6 +319,7 @@ test("re-auditar: el toggle de contexto público desactiva la producción mientr
   page,
 }) => {
   await openDemoStore(page);
+  await page.getByText("Opciones de contenido público", { exact: true }).click();
   await expect(page.locator(".optimization-export-summary")).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId("ui-export-production")).toBeEnabled();
 

@@ -297,6 +297,12 @@ test("el detalle seleccionado llega hasta el fondo de la fila de tiendas", async
   ]) {
     await page.setViewportSize(viewport);
     await page.goto(studioUrl);
+    await expect(page.getByTestId("solara-app-boot")).toHaveCount(0, { timeout: 10_000 });
+    await page
+      .locator(".dashboard-cosmic-store-groups .dashboard-store-card__button")
+      .first()
+      .click();
+    await page.waitForTimeout(400);
 
     const layout = await page.locator(".dashboard-cosmic-results").evaluate((element) => {
       const groups = element.querySelector<HTMLElement>(".dashboard-cosmic-store-groups");
@@ -309,8 +315,8 @@ test("el detalle seleccionado llega hasta el fondo de la fila de tiendas", async
       const actionItems = Array.from(actions.children).map((child) =>
         (child as HTMLElement).getBoundingClientRect(),
       );
-      const actionButtons = Array.from(actions.querySelectorAll<HTMLElement>(".button")).map((button) =>
-        button.getBoundingClientRect(),
+      const actionButtons = Array.from(actions.querySelectorAll<HTMLElement>(".button")).map(
+        (button) => button.getBoundingClientRect(),
       );
       if (actionItems.length < 2) throw new Error("Faltan grupos de acciones");
       if (actionButtons.length < 2) throw new Error("Faltan botones de acciones");
@@ -686,6 +692,7 @@ test("Exportar conserva separados la exposición pública y el verificador", asy
   await openProject(page);
   await page.getByRole("tab", { name: "Exportar", exact: true }).click();
 
+  await page.getByText("Opciones de contenido público", { exact: true }).click();
   const exposure = page.getByTestId("ui-export-public-exposure");
   const verifier = page.getByTestId("ui-cloudflare-verifier");
   await expect(exposure).toBeVisible();

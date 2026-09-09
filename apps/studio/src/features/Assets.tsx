@@ -8,14 +8,13 @@ import {
   MagnifyingGlass,
   UploadSimple,
   VideoCamera,
-  X,
 } from "@phosphor-icons/react";
 import type { ImageAsset, StoreProjectV1, VideoAsset } from "@solara/project-schema";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ProgressBar } from "../components/primitives";
 import { ResponsiveAssetImage } from "../components/ResponsiveAssetImage";
-import { Button, EmptyState, IconButton, InlineError, SectionHeader } from "../components/Ui";
+import { Button, EmptyState, InlineError, SectionHeader } from "../components/Ui";
 import { assetUses } from "../lib/assetUses";
 import { bytesToSize } from "../lib/format";
 import { processImageFile } from "../lib/imageUpload";
@@ -27,6 +26,7 @@ import {
   VIDEO_MAX_BYTES,
   VIDEO_MAX_DURATION_SECONDS,
 } from "./builder/videoUpload";
+import { DockedInspector } from "./workbench/InspectorDock";
 
 const ASSET_BATCH_SIZE = 24;
 
@@ -527,79 +527,82 @@ export function Assets({
           </output>
         ) : null}
         {selectedAsset ? (
-          <aside
-            className="audit-panel"
-            data-testid="ui-asset-detail"
-            aria-label={`Detalle de ${selectedAsset.name}`}
-          >
-            <header>
-              <div>
-                <h3>{selectedAsset.name}</h3>
-                <p>
-                  {selectedAsset.width} × {selectedAsset.height} ·{" "}
-                  {bytesToSize(Math.round(selectedAsset.source.length * 0.75))} · hash{" "}
-                  {selectedAsset.hash.slice(0, 8)}…
-                </p>
-                <p data-testid="ui-asset-id">
-                  ID: <code>{selectedAsset.id}</code>
-                </p>
-              </div>
-              <IconButton
-                icon={X}
-                label="Cerrar detalle"
-                data-testid="ui-asset-detail-close"
-                onClick={() => setSelectedAssetId(null)}
-              />
-            </header>
-            <div className="audit-list">
-              {selectedUses.length === 0 ? (
-                <div className="audit-item" data-testid="ui-asset-uses">
-                  <Check aria-hidden size={18} />
-                  <div>
-                    <strong>Sin usos</strong>
-                    <p>Esta imagen no está asignada a ningún producto, categoría ni sección.</p>
-                  </div>
+          <DockedInspector onClose={() => setSelectedAssetId(null)}>
+            <aside
+              className="audit-panel"
+              data-testid="ui-asset-detail"
+              aria-label={`Detalle de ${selectedAsset.name}`}
+            >
+              <header>
+                <div>
+                  <h3>{selectedAsset.name}</h3>
+                  <p>
+                    {selectedAsset.width} × {selectedAsset.height} ·{" "}
+                    {bytesToSize(Math.round(selectedAsset.source.length * 0.75))} · hash{" "}
+                    {selectedAsset.hash.slice(0, 8)}…
+                  </p>
+                  <p data-testid="ui-asset-id">
+                    ID: <code>{selectedAsset.id}</code>
+                  </p>
                 </div>
-              ) : (
-                selectedUses.map((use, index) => (
-                  <div
-                    className="audit-item"
-                    data-testid="ui-asset-use"
-                    key={`${use.label}-${index}`}
-                  >
-                    <Image aria-hidden size={18} />
+                <Button
+                  variant="quiet"
+                  data-testid="ui-asset-detail-close"
+                  onClick={() => setSelectedAssetId(null)}
+                >
+                  Volver a Recursos
+                </Button>
+              </header>
+              <div className="audit-list">
+                {selectedUses.length === 0 ? (
+                  <div className="audit-item" data-testid="ui-asset-uses">
+                    <Check aria-hidden size={18} />
                     <div>
-                      <strong>{use.label}</strong>
-                      <p>{use.detail}</p>
+                      <strong>Sin usos</strong>
+                      <p>Esta imagen no está asignada a ningún producto, categoría ni sección.</p>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
-            <div className="export-actions">
-              <Button
-                icon={ArrowsClockwise}
-                disabled={busy}
-                data-testid="ui-asset-replace"
-                onClick={() => openReplacePicker(selectedAsset)}
-              >
-                Reemplazar imagen
-              </Button>
-              <Button
-                variant="danger"
-                disabled={busy || selectedUses.length > 0}
-                title={
-                  selectedUses.length > 0
-                    ? "Sólo se puede eliminar una imagen que no esté en uso"
-                    : undefined
-                }
-                data-testid="ui-asset-delete"
-                onClick={() => setConfirmDeleteId(selectedAsset.id)}
-              >
-                Eliminar
-              </Button>
-            </div>
-          </aside>
+                ) : (
+                  selectedUses.map((use, index) => (
+                    <div
+                      className="audit-item"
+                      data-testid="ui-asset-use"
+                      key={`${use.label}-${index}`}
+                    >
+                      <Image aria-hidden size={18} />
+                      <div>
+                        <strong>{use.label}</strong>
+                        <p>{use.detail}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="export-actions">
+                <Button
+                  icon={ArrowsClockwise}
+                  disabled={busy}
+                  data-testid="ui-asset-replace"
+                  onClick={() => openReplacePicker(selectedAsset)}
+                >
+                  Reemplazar imagen
+                </Button>
+                <Button
+                  variant="danger"
+                  disabled={busy || selectedUses.length > 0}
+                  title={
+                    selectedUses.length > 0
+                      ? "Sólo se puede eliminar una imagen que no esté en uso"
+                      : undefined
+                  }
+                  data-testid="ui-asset-delete"
+                  onClick={() => setConfirmDeleteId(selectedAsset.id)}
+                >
+                  Eliminar
+                </Button>
+              </div>
+            </aside>
+          </DockedInspector>
         ) : null}
         {project.assets.length > 0 ? (
           <div className="asset-library-toolbar">

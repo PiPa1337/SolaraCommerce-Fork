@@ -253,6 +253,7 @@ test("mantiene el encabezado y permite alcanzar la barra masiva al hacer scroll"
     (paneBox?.y ?? 0) + (paneBox?.height ?? 0) + 1,
   );
   await expect(bulk.getByRole("button", { name: "Aplicar estado" })).toBeVisible();
+  await page.screenshot({ path: ".impeccable/review/editor-workbench/bulk-panel.png" });
 });
 
 test("P5-B5: archivar un producto inline y restaurarlo sin perder la fila", async ({ page }) => {
@@ -342,6 +343,9 @@ test("R4-P5-B5: el export CSV descarga productos con encabezado", async ({ page 
   await openCatalog(page);
 
   const downloadPromise = page.waitForEvent("download", { timeout: 30_000 });
+  if ((await page.locator(".workbench-transfer").getAttribute("open")) === null) {
+    await page.locator(".workbench-transfer > summary").click();
+  }
   await page.getByRole("button", { name: "Exportar CSV" }).click();
   const download = await downloadPromise;
   const filename = download.suggestedFilename();

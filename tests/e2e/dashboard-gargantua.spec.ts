@@ -76,12 +76,28 @@ async function seedLibrary(page: Page, count = 120) {
   await page.getByRole("heading", { name: "Tus tiendas", exact: true }).click();
 }
 
-test("el arranque entra desde Gargantua y libera el dashboard", async ({ page }) => {
+test("la splash informa el arranque y libera el dashboard después del negro", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
+  await page.addInitScript(() => {
+    localStorage.setItem("solara-dashboard-selected", "store-modo-sur-demo");
+  });
   await page.goto(url, { waitUntil: "commit" });
 
   const boot = page.getByTestId("solara-app-boot");
   await expect(boot).toBeVisible();
+  const progress = page.getByRole("progressbar", { name: "Progreso de carga" });
+  await expect(progress).toBeVisible();
+  await expect(progress).toHaveAttribute("aria-valuemin", "0");
+  await expect(progress).toHaveAttribute("aria-valuemax", "100");
+  await expect(boot.getByTestId("solara-boot-progress-label")).not.toHaveText("");
+  await expect(boot.getByTestId("solara-boot-progress-detail")).not.toHaveText("");
+  const splashGlow = await boot.evaluate((element) => ({
+    logo: getComputedStyle(element.querySelector(".app-boot-sequence__logo")!).boxShadow,
+    progress: getComputedStyle(element.querySelector(".app-boot-sequence__progress-value")!)
+      .boxShadow,
+  }));
+  expect(splashGlow.logo).toBe("none");
+  expect(splashGlow.progress).toBe("none");
   await expect(boot.locator(".dashboard-gravity-field")).toHaveAttribute("data-renderer", "webgl2");
   await page.waitForFunction(() => {
     const canvas = document.querySelector<HTMLCanvasElement>(
@@ -89,15 +105,47 @@ test("el arranque entra desde Gargantua y libera el dashboard", async ({ page })
     );
     return canvas !== null && Number.parseFloat(getComputedStyle(canvas).opacity) >= 0.99;
   }, undefined, { timeout: 2_000 });
-  await page.waitForFunction(() => document.documentElement.dataset.solaraBoot === "entering", {
-    timeout: 5_000,
+  await page.waitForFunction(() => {
+    const phase = document
+      .querySelector<HTMLElement>('[data-testid="solara-app-boot"]')
+      ?.getAttribute("data-boot-phase");
+    return phase === "blackout" || phase === "returning";
   });
-  await expect(page.locator(".dashboard-gargantua > .dashboard-gravity-field")).toHaveAttribute(
+  const bootPhase = await boot.getAttribute("data-boot-phase");
+  if (bootPhase === "blackout") {
+    await expect(boot).toHaveClass(/is-blackout/);
+    await page.waitForFunction(() => {
+      const blackout = document.querySelector<HTMLElement>(
+        '[data-testid="solara-app-boot"] .app-boot-sequence__blackout',
+      );
+      return blackout !== null && Number.parseFloat(getComputedStyle(blackout).opacity) >= 0.9;
+    });
+  }
+  await page.waitForFunction(() => document.documentElement.dataset.solaraBoot === undefined, {
+    timeout: 3_000,
+  });
+  await expect(boot).toHaveClass(/is-returning/);
+  await expect(boot.locator(".dashboard-gravity-field")).toHaveAttribute(
     "data-animation-state",
     "running",
   );
+  await page.waitForFunction(
+    () => document.documentElement.dataset.solaraDashboardEntry === "true",
+    { timeout: 5_000 },
+  );
+  await expect(boot).toHaveClass(/is-dashboard/);
+  await expect
+    .poll(() =>
+      page
+        .locator(".app-header--dashboard-cosmic")
+        .evaluate((element) => getComputedStyle(element).animationName),
+    )
+    .toBe("solara-boot-block-in");
   await expect(page.locator(".dashboard-cosmic-library")).toHaveCSS("opacity", "1");
   await expect(page.getByRole("heading", { name: "Tus tiendas", exact: true })).toBeVisible();
+  await expect(page.locator(".dashboard-store-card.is-selected")).toHaveCount(0);
+  await expect(page.locator(".dashboard-store-detail.is-open")).toHaveCount(0);
+  expect(await page.evaluate(() => document.activeElement?.tagName)).toBe("BODY");
   await expect(boot).toHaveCount(0, { timeout: 5_000 });
   await expect(page.locator(".dashboard-gargantua > .dashboard-gravity-field")).toHaveAttribute(
     "data-animation-state",
@@ -182,6 +230,7 @@ test("cards y detalle comparten línea superior y margen para hover", async ({ p
   const card = page.locator(".dashboard-cosmic-store-groups .dashboard-store-card").first();
   const detail = page.locator(".dashboard-store-detail.is-open");
   await expect(card).toBeVisible();
+  await card.locator(".dashboard-store-card__button").click();
   await expect(detail).toBeVisible();
 
   const alignment = await page.evaluate(() => {
@@ -518,13 +567,183 @@ test("el slider de opacidad de Gargantua vive en el navbar", async ({
 }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.goto(url);
-  await expect(page.getByRole("heading", { name: "Tus tiendas", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Tus tiendas", exact: true })).toBeVisible({
+    timeout: 10_000,
+  });
   const control = page.locator(
     ".app-header--dashboard-cosmic .app-header__actions .app-gargantua-opacity-control",
   );
   await expect(control).toBeVisible();
   await expect(control.locator("input[type=range]")).toHaveValue("100");
   await expect(page.locator('[data-gargantua-debug="true"]')).toHaveCount(1);
+});
+
+test("el inspector del fondo reemplaza el dashboard y aplica presets en vivo", async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.goto(url);
+  await expect(page.getByRole("heading", { name: "Tus tiendas", exact: true })).toBeVisible({
+    timeout: 10_000,
+  });
+
+  const trigger = page.getByRole("button", { name: "Ajustar animación del fondo", exact: true });
+  await trigger.click();
+
+  const panel = page.getByRole("dialog", { name: "Ajustes del fondo" });
+  await expect(panel).toBeVisible();
+  await expect(page.locator(".dashboard-cosmic__content")).toHaveAttribute("aria-hidden", "true");
+  await expect(page.getByRole("heading", { name: "Tus tiendas", exact: true })).toBeHidden();
+  await expect(panel.getByTestId("gravity-telemetry-card")).toBeVisible();
+  await expect(panel.getByTestId("gravity-telemetry-card")).toHaveAttribute("data-measuring", "true", {
+    timeout: 3_000,
+  });
+  await expect(panel.getByTestId("gravity-telemetry-gpu-name")).toBeVisible();
+  await expect(panel.getByTestId("gravity-telemetry-cpu-name")).toBeVisible();
+  await expect(
+    page.locator(".app-root--dashboard-cosmic .dashboard-gravity-field"),
+  ).toHaveAttribute("data-telemetry-state", "active");
+  await expect(panel.locator('input[type="range"]')).toHaveCount(20);
+  await expect(panel.locator('[data-testid^="gravity-custom-preset-"]')).toHaveCount(3);
+  await expect(panel.locator('[data-testid^="gravity-taa-quality-"]')).toHaveCount(6);
+  await expect(panel.getByTestId("gravity-taa-quality-off")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  for (const quality of ["low", "medium", "high", "very-high", "extreme"] as const) {
+    const option = panel.getByTestId(`gravity-taa-quality-${quality}`);
+    await option.click();
+    await expect(option).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator(".app-root--dashboard-cosmic .dashboard-gravity-field")).toHaveAttribute(
+      "data-taa-quality",
+      quality,
+    );
+    await expect(page.locator(".app-root--dashboard-cosmic .dashboard-gravity-field")).toHaveAttribute(
+      "data-taa-state",
+      "active",
+    );
+  }
+  await panel.getByTestId("gravity-taa-quality-medium").click();
+  await expect(panel.getByTestId("gravity-setting-renderScaleMultiplier")).toHaveValue("1");
+  await expect(panel.getByTestId("gravity-setting-maxFps")).toHaveValue("60");
+  await expect(panel.getByTestId("gravity-setting-diskLayers")).toHaveValue("3");
+  await expect(panel.getByTestId("gravity-setting-turbulence")).toHaveValue("1");
+  const expectedBounds = {
+    renderScaleMultiplier: ["0.1", "2.5"],
+    maxFps: ["1", "120"],
+    diskLayers: ["1", "6"],
+    materialSpeed: ["0.1", "4"],
+    pointerResponse: ["0.1", "4"],
+    starDensity: ["0.1", "3"],
+    dustIntensity: ["0.1", "3"],
+    haloIntensity: ["0.1", "3"],
+    warmth: ["0.1", "3"],
+    contrast: ["0.1", "2.8"],
+    turbulence: ["0.1", "3"],
+    filamentDetail: ["0.1", "3"],
+    gasAbsorption: ["0.1", "3"],
+    diskTilt: ["0.1", "3"],
+    lensStrength: ["0.1", "3"],
+    bloomSpread: ["0.1", "3"],
+    causticIntensity: ["0.1", "3"],
+    galaxyIntensity: ["0.1", "3"],
+    starTwinkle: ["0.1", "3"],
+    vignette: ["0.1", "3"],
+  } as const;
+  for (const [setting, [min, max]] of Object.entries(expectedBounds)) {
+    await expect(panel.getByTestId(`gravity-setting-${setting}`)).toHaveAttribute("min", min);
+    await expect(panel.getByTestId(`gravity-setting-${setting}`)).toHaveAttribute("max", max);
+  }
+
+  await panel.locator(".dashboard-gargantua-settings__preset").first().click();
+  await expect(panel.getByTestId("gravity-setting-renderScaleMultiplier")).toHaveValue("0.1");
+  await expect(panel.getByTestId("gravity-setting-maxFps")).toHaveValue("30");
+  await expect(panel.getByTestId("gravity-setting-diskLayers")).toHaveValue("1");
+  await expect(panel.getByTestId("gravity-setting-materialSpeed")).toHaveValue("0.1");
+  await expect(panel.getByTestId("gravity-setting-contrast")).toHaveValue("0.1");
+  await expect(panel).toContainText("Eficiencia");
+
+  await panel.locator(".dashboard-gargantua-settings__preset").nth(2).click();
+  await expect(panel.getByTestId("gravity-setting-renderScaleMultiplier")).toHaveValue("2.5");
+  await expect(panel.getByTestId("gravity-setting-maxFps")).toHaveValue("120");
+  await expect(panel.getByTestId("gravity-setting-diskLayers")).toHaveValue("6");
+  await expect(panel.getByTestId("gravity-setting-materialSpeed")).toHaveValue("4");
+  await expect(panel.getByTestId("gravity-setting-contrast")).toHaveValue("2.8");
+  await expect(panel.getByTestId("gravity-taa-quality-extreme")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(panel).toContainText("Máxima");
+
+  await panel.getByTestId("gravity-setting-haloIntensity").fill("0.25");
+  await expect(panel).toContainText("Personalizada");
+  await panel.getByRole("button", { name: "Restablecer actual", exact: true }).click();
+  await expect(panel.getByTestId("gravity-setting-renderScaleMultiplier")).toHaveValue("1");
+  await expect(panel.getByTestId("gravity-setting-haloIntensity")).toHaveValue("1");
+  await expect(panel).toContainText("Actual");
+  await panel.getByTestId("gravity-taa-quality-medium").click();
+
+  await panel.getByTestId("gravity-custom-preset-0").click();
+  await panel.getByTestId("gravity-setting-filamentDetail").fill("2.75");
+  await panel.getByTestId("gravity-save-preset").click();
+  await expect(panel.getByTestId("gravity-custom-preset-0")).toContainText("Guardado");
+
+  const reopenedPage = await page.context().newPage();
+  await page.close();
+  await reopenedPage.goto(url, { waitUntil: "commit" });
+  await expect(reopenedPage.getByRole("heading", { name: "Tus tiendas", exact: true })).toBeVisible({
+    timeout: 20_000,
+  });
+  await reopenedPage.waitForTimeout(2_000);
+  const reopenedTrigger = reopenedPage.getByRole("button", {
+    name: "Ajustar animación del fondo",
+    exact: true,
+  });
+  await reopenedTrigger.click();
+  const reloadedPanel = reopenedPage.getByRole("dialog", { name: "Ajustes del fondo" });
+  await expect(reloadedPanel.getByTestId("gravity-setting-filamentDetail")).toHaveValue("2.75");
+  await expect(reloadedPanel.getByTestId("gravity-taa-quality-medium")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(reloadedPanel.getByTestId("gravity-custom-preset-0")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+
+  await reloadedPanel
+    .getByRole("button", { name: "Cerrar ajustes del fondo", exact: true })
+    .click();
+  await expect(reloadedPanel).toHaveCount(0);
+  await expect(reopenedPage.getByTestId("gravity-telemetry-card")).toHaveCount(0);
+  await expect(
+    reopenedPage.locator(".app-root--dashboard-cosmic .dashboard-gravity-field"),
+  ).toHaveAttribute("data-telemetry-state", "inactive");
+  await expect(reopenedPage.getByRole("heading", { name: "Tus tiendas", exact: true })).toBeVisible();
+  await expect(reopenedTrigger).toBeFocused();
+  await reopenedPage.close();
+});
+
+test("el inspector del fondo conserva los márgenes en móvil", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(url);
+  await expect(page.getByRole("heading", { name: "Tus tiendas", exact: true })).toBeVisible({
+    timeout: 10_000,
+  });
+
+  await page.getByRole("button", { name: "Ajustar animación del fondo", exact: true }).click();
+  const panel = page.getByRole("dialog", { name: "Ajustes del fondo" });
+  await expect(panel).toBeVisible();
+  await page.waitForTimeout(300);
+  const bounds = await panel.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return { left: rect.left, right: rect.right, viewport: window.innerWidth };
+  });
+  expect(bounds.left).toBeGreaterThanOrEqual(0);
+  expect(bounds.right).toBeLessThanOrEqual(bounds.viewport);
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
+    )
+    .toBe(true);
 });
 
 test("las flechas respetan el orden visual después de fijar una tienda", async ({ page }) => {

@@ -161,6 +161,9 @@ test("deshabilita las acciones y muestra progreso mientras importa un CSV grande
 }) => {
   await openDemoCatalog(page);
   const csv = exportProductsCsv(generatePerformanceFixture(1_000).products);
+  if ((await page.locator(".workbench-transfer").getAttribute("open")) === null) {
+    await page.locator(".workbench-transfer > summary").click();
+  }
   const importButton = page.getByTestId("ui-csv-import");
   await page.locator('input[type="file"][accept*="csv"]').setInputFiles({
     name: "catalogo-1000.csv",

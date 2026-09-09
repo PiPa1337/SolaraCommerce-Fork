@@ -828,526 +828,609 @@ export function Overview({
         description="Datos comerciales compartidos por la tienda, el pedido y la exportación."
         actions={saveIndicator("", "ui-save-indicator")}
       />
-<WorkspaceGroups label="Datos de la tienda" groups={[
-{ id: "identity", label: "Identidad", content: <>
-        <AccordionSection
-          sectionKey="identity"
-          label="Identidad"
-          icon={Storefront}
-          collapsed={collapsedSections.has("identity")}
-          onToggle={() => toggleSection("identity")}
-        >
-          <div className="form-grid">
-            <Field label="Nombre de la tienda" {...(nameError ? { error: nameError } : {})}>
-              <input
-                aria-label="Nombre de la tienda"
-                value={nameDisplay}
-                onChange={(event) =>
-                  updateField(
-                    "name",
-                    event.target.value,
-                    (next) => next.trim() !== "",
-                    (next) =>
-                      commit({
-                        name: next,
-                        identity: { ...latestProjectRef.current.identity, brandName: next },
-                      }),
-                  )
-                }
-              />
-            </Field>
-            <Field label="Razón social" {...(legalNameError ? { error: legalNameError } : {})}>
-              <input
-                aria-label="Razón social"
-                value={legalNameDisplay}
-                onChange={(event) =>
-                  updateField(
-                    "legalName",
-                    event.target.value,
-                    (next) => next.trim() !== "",
-                    (next) =>
-                      commit({
-                        identity: { ...latestProjectRef.current.identity, legalName: next },
-                      }),
-                  )
-                }
-              />
-            </Field>
-            <Field
-              label="Descripción"
-              className="field--wide"
-              {...(descriptionError ? { error: descriptionError } : {})}
-            >
-              <textarea
-                rows={4}
-                aria-label="Descripción"
-                value={descriptionDisplay}
-                onChange={(event) =>
-                  updateField(
-                    "description",
-                    event.target.value,
-                    (next) => next.trim() !== "",
-                    (next) =>
-                      commit({
-                        identity: { ...latestProjectRef.current.identity, description: next },
-                      }),
-                  )
-                }
-              />
-            </Field>
-            <Field
-              label="Logo de la tienda"
-              hint="Se usa la misma imagen en el navbar y en el footer."
-              className="field--wide"
-            >
-              <div className="identity-media-control">
-                <ImageAssetPicker
-                  value={project.identity.logoAssetId ?? ""}
-                  assets={project.assets}
-                  ariaLabel="Logo de la tienda"
-                  onChange={(next) => setIdentityImage("logo", next)}
-                  onUpload={(asset) => uploadIdentityImage("logo", asset)}
-                />
-                {identityImagePreview(project.identity.logoAssetId, "Logo de la tienda")}
-              </div>
-            </Field>
-            <Field
-              label="Favicon del sitio"
-              hint="La imagen se convierte automáticamente en ICO multirresolución y fallback para iPhone."
-              className="field--wide"
-            >
-              <div className="identity-media-control">
-                <ImageAssetPicker
-                  value={project.seo.faviconAssetId ?? ""}
-                  assets={faviconAssets}
-                  ariaLabel="Favicon del sitio"
-                  onChange={(next) => setIdentityImage("favicon", next)}
-                  onUpload={(asset) => uploadIdentityImage("favicon", asset)}
-                  processFile={createFaviconAsset}
-                />
-                {identityImagePreview(project.seo.faviconAssetId, "Favicon del sitio")}
-              </div>
-            </Field>
-            <Field
-              label="Imagen de portada para SEO"
-              hint="Se usa como imagen social al compartir la portada del sitio."
-              className="field--wide"
-            >
-              <div className="identity-media-control">
-                <ImageAssetPicker
-                  value={project.seo.socialImageId ?? ""}
-                  assets={project.assets}
-                  ariaLabel="Imagen de portada para SEO"
-                  onChange={(next) => setIdentityImage("cover", next)}
-                  onUpload={(asset) => uploadIdentityImage("cover", asset)}
-                  processFile={createSiteCoverAsset}
-                />
-                {identityImagePreview(project.seo.socialImageId, "Imagen de portada para SEO")}
-              </div>
-            </Field>
-            <Field label="Email" {...(emailError ? { error: emailError } : {})}>
-              <input
-                type="email"
-                aria-label="Email"
-                value={emailDisplay}
-                onChange={(event) =>
-                  updateField(
-                    "email",
-                    event.target.value,
-                    (next) => next === "" || isValidEmail(next),
-                    (next) =>
-                      commit({
-                        identity: { ...latestProjectRef.current.identity, email: next },
-                      }),
-                  )
-                }
-              />
-            </Field>
-            <Field label="Teléfono">
-              <input
-                aria-label="Teléfono"
-                value={project.identity.phone}
-                onChange={(event) =>
-                  commit({
-                    identity: { ...latestProjectRef.current.identity, phone: event.target.value },
-                  })
-                }
-              />
-            </Field>
-            <Field label="Dirección" className="field--wide">
-              <input
-                aria-label="Dirección"
-                value={project.identity.address}
-                onChange={(event) =>
-                  commit({
-                    identity: {
-                      ...latestProjectRef.current.identity,
-                      address: event.target.value,
-                    },
-                  })
-                }
-              />
-            </Field>
-            <Field label="Instagram" hint="URL completa del perfil.">
-              <input
-                type="url"
-                aria-label="Instagram"
-                value={project.identity.instagramUrl ?? ""}
-                onChange={(event) =>
-                  commit({
-                    identity: {
-                      ...latestProjectRef.current.identity,
-                      instagramUrl: event.target.value,
-                    },
-                  })
-                }
-              />
-            </Field>
-            <Field label="Facebook" hint="URL completa de la página.">
-              <input
-                type="url"
-                aria-label="Facebook"
-                value={project.identity.facebookUrl ?? ""}
-                onChange={(event) =>
-                  commit({
-                    identity: {
-                      ...latestProjectRef.current.identity,
-                      facebookUrl: event.target.value,
-                    },
-                  })
-                }
-              />
-            </Field>
-            <Field label="TikTok" hint="URL completa del perfil.">
-              <input
-                type="url"
-                aria-label="TikTok"
-                value={project.identity.tiktokUrl ?? ""}
-                onChange={(event) =>
-                  commit({
-                    identity: {
-                      ...latestProjectRef.current.identity,
-                      tiktokUrl: event.target.value,
-                    },
-                  })
-                }
-              />
-            </Field>
-            <Field label="Usuario de X / Twitter" hint="Sólo el usuario, con o sin @.">
-              <input
-                aria-label="Usuario de X Twitter"
-                value={project.identity.twitterHandle ?? ""}
-                onChange={(event) =>
-                  commit({
-                    identity: {
-                      ...latestProjectRef.current.identity,
-                      twitterHandle: event.target.value,
-                    },
-                  })
-                }
-              />
-            </Field>
-          </div>
-        </AccordionSection>
-</> },
-{ id: "sales", label: "Venta y pedidos", content: <>
-        <AccordionSection
-          sectionKey="whatsapp"
-          label="Pedido por WhatsApp"
-          icon={WhatsappLogo}
-          badge={
-            <StatusBadge
-              status={phoneInvalid ? "warning" : phoneMissing ? "idle" : "ok"}
-              label={
-                phoneInvalid ? "Revisar formato" : phoneMissing ? "Pendiente" : "Formato correcto"
-              }
-            />
-          }
-          collapsed={collapsedSections.has("whatsapp")}
-          onToggle={() => toggleSection("whatsapp")}
-        >
-          <div className="form-grid">
-            <Field
-              label="Número internacional"
-              hint="Sólo números, con código de país y área."
-              {...(phoneError ? { error: phoneError } : {})}
-            >
-              <input
-                inputMode="tel"
-                aria-label="Número internacional"
-                value={phoneDisplay}
-                onChange={(event) =>
-                  updateField(
-                    "phone",
-                    event.target.value.replace(/\D/g, ""),
-                    (next) => next !== "" && PHONE_PATTERN.test(next),
-                    (next) =>
-                      commit({
-                        whatsapp: { ...latestProjectRef.current.whatsapp, phone: next },
-                      }),
-                  )
-                }
-              />
-            </Field>
-            <Field label="Saludo del pedido" className="field--wide">
-              <input
-                aria-label="Saludo del pedido"
-                value={project.whatsapp.greeting}
-                onChange={(event) =>
-                  commit({
-                    whatsapp: {
-                      ...latestProjectRef.current.whatsapp,
-                      greeting: event.target.value,
-                    },
-                  })
-                }
-              />
-            </Field>
-          </div>
-        </AccordionSection>        <AccordionSection
-          sectionKey="price-format"
-          label="Formato de precios"
-          icon={CurrencyDollar}
-          collapsed={collapsedSections.has("price-format")}
-          onToggle={() => toggleSection("price-format")}
-        >
-          <div className="form-grid">
-            <Toggle
-              checked={project.priceFractionDisplay === "auto"}
-              onChange={(checked) => commit({ priceFractionDisplay: checked ? "auto" : "always" })}
-              label="Ocultar centavos cuando sean cero"
-            />
-            <p className="form-help">
-              Ejemplo: $1.500,00 se muestra como $1.500. Los precios con centavos, como $1.500,50,
-              se mantienen completos.
-            </p>
-          </div>
-        </AccordionSection>
-</> },
-{ id: "content", label: "Navegación y textos", content: <>
-        <AccordionSection
-          sectionKey="navigation"
-          label="Navegación pública"
-          icon={List}
-          collapsed={collapsedSections.has("navigation")}
-          onToggle={() => toggleSection("navigation")}
-        >
-          <div className="form-grid">
-            <Field
-              label="Nombre del catálogo"
-              hint={`${catalogLabelDisplay.length}/${CATALOG_LABEL_MAX_LENGTH} caracteres`}
-              {...(catalogLabelError ? { error: catalogLabelError } : {})}
-            >
-              <input
-                aria-label="Nombre del catálogo"
-                maxLength={CATALOG_LABEL_MAX_LENGTH}
-                value={catalogLabelDisplay}
-                onChange={(event) =>
-                  updateField(
-                    "catalogLabel",
-                    event.target.value,
-                    (next) => next.trim() !== "" && next.length <= CATALOG_LABEL_MAX_LENGTH,
-                    (next) => updateNavigation({ catalogLabel: next }),
-                  )
-                }
-              />
-            </Field>
-            <div className="navigation-switches">
-              {(
-                [
-                  ["showHome", "Mostrar Inicio"],
-                  ["showSearch", "Mostrar búsqueda"],
-                  ["showCart", "Mostrar carrito"],
-                ] as const
-              ).map(([key, label]) => (
-                <Toggle
-                  key={key}
-                  checked={project.navigation[key]}
-                  onChange={(checked) => updateNavigation({ [key]: checked })}
-                  label={label}
-                />
-              ))}
-            </div>
-            <div className="navigation-switches field--wide">
-              {(
-                [
-                  ["announcement", "Mostrar barra informativa"],
-                  ["header", "Mostrar encabezado"],
-                  ["footer", "Mostrar pie"],
-                  ["cart", "Mostrar carrito lateral"],
-                ] as const
-              ).map(([key, label]) => (
-                <Toggle
-                  key={key}
-                  checked={project.siteShell[key]}
-                  onChange={(checked) =>
-                    commit({
-                      siteShell: { ...latestProjectRef.current.siteShell, [key]: checked },
-                    })
-                  }
-                  label={label}
-                />
-              ))}
-            </div>
-            <div className="navigation-editor field--wide">
-              {project.navigation.items.map((item, index) => {
-                const itemHrefDraft = drafts[`nav-${item.id}`] ?? item.href ?? "";
-                const itemHrefError = destinationError(itemHrefDraft);
-                const itemLabelKey = `nav-label-${item.id}`;
-                const itemLabelDisplay = fieldValue(itemLabelKey, item.label);
-                const itemLabelError =
-                  itemLabelDisplay.trim() === ""
-                    ? "Completá el nombre del enlace."
-                    : itemLabelDisplay.length > NAVIGATION_LABEL_MAX_LENGTH
-                      ? `Usá hasta ${NAVIGATION_LABEL_MAX_LENGTH} caracteres.`
-                      : undefined;
-                const children = item.children ?? [];
-                const childrenLimitReached = children.length >= NAVIGATION_CHILDREN_MAX;
-                const childrenContextId = `nav-children-context-${item.id}`;
-                const childrenLimitId = `nav-children-limit-${item.id}`;
-                return (
-                  <div className="navigation-editor-item" key={item.id}>
-                    <div className="form-grid">
-                      <Field
-                        label={`Enlace ${index + 1}`}
-                        hint={`${itemLabelDisplay.length}/${NAVIGATION_LABEL_MAX_LENGTH} caracteres`}
-                        {...(itemLabelError ? { error: itemLabelError } : {})}
-                      >
-                        <input
-                          aria-label={`Enlace ${index + 1}`}
-                          maxLength={NAVIGATION_LABEL_MAX_LENGTH}
-                          value={itemLabelDisplay}
-                          onChange={(event) =>
-                            updateField(
-                              itemLabelKey,
-                              event.target.value,
-                              (next) =>
-                                next.trim() !== "" && next.length <= NAVIGATION_LABEL_MAX_LENGTH,
-                              (next) =>
-                                updateNavigation({
-                                  items: project.navigation.items.map((current) =>
-                                    current.id === item.id ? { ...current, label: next } : current,
-                                  ),
-                                }),
-                            )
-                          }
+      <WorkspaceGroups
+        label="Datos de la tienda"
+        groups={[
+          {
+            id: "identity",
+            label: "Identidad",
+            content: (
+              <>
+                <AccordionSection
+                  sectionKey="identity"
+                  label="Identidad"
+                  icon={Storefront}
+                  collapsed={collapsedSections.has("identity")}
+                  onToggle={() => toggleSection("identity")}
+                >
+                  <div className="form-grid">
+                    <Field label="Nombre de la tienda" {...(nameError ? { error: nameError } : {})}>
+                      <input
+                        aria-label="Nombre de la tienda"
+                        value={nameDisplay}
+                        onChange={(event) =>
+                          updateField(
+                            "name",
+                            event.target.value,
+                            (next) => next.trim() !== "",
+                            (next) =>
+                              commit({
+                                name: next,
+                                identity: { ...latestProjectRef.current.identity, brandName: next },
+                              }),
+                          )
+                        }
+                      />
+                    </Field>
+                    <Field
+                      label="Razón social"
+                      {...(legalNameError ? { error: legalNameError } : {})}
+                    >
+                      <input
+                        aria-label="Razón social"
+                        value={legalNameDisplay}
+                        onChange={(event) =>
+                          updateField(
+                            "legalName",
+                            event.target.value,
+                            (next) => next.trim() !== "",
+                            (next) =>
+                              commit({
+                                identity: { ...latestProjectRef.current.identity, legalName: next },
+                              }),
+                          )
+                        }
+                      />
+                    </Field>
+                    <Field
+                      label="Descripción"
+                      className="field--wide"
+                      {...(descriptionError ? { error: descriptionError } : {})}
+                    >
+                      <textarea
+                        rows={4}
+                        aria-label="Descripción"
+                        value={descriptionDisplay}
+                        onChange={(event) =>
+                          updateField(
+                            "description",
+                            event.target.value,
+                            (next) => next.trim() !== "",
+                            (next) =>
+                              commit({
+                                identity: {
+                                  ...latestProjectRef.current.identity,
+                                  description: next,
+                                },
+                              }),
+                          )
+                        }
+                      />
+                    </Field>
+                    <Field
+                      label="Logo de la tienda"
+                      hint="Se usa la misma imagen en el navbar y en el footer."
+                      className="field--wide"
+                    >
+                      <div className="identity-media-control">
+                        <ImageAssetPicker
+                          value={project.identity.logoAssetId ?? ""}
+                          assets={project.assets}
+                          ariaLabel="Logo de la tienda"
+                          onChange={(next) => setIdentityImage("logo", next)}
+                          onUpload={(asset) => uploadIdentityImage("logo", asset)}
                         />
-                      </Field>
-                      <Field
-                        label="Destino"
-                        description={`Destino del enlace ${item.label}`}
-                        {...(itemHrefError ? { error: itemHrefError } : {})}
-                      >
-                        {destinationInput(`nav-${item.id}`, item.href ?? "", (next) =>
-                          updateNavigationItem(item.id, { href: next }),
+                        {identityImagePreview(project.identity.logoAssetId, "Logo de la tienda")}
+                      </div>
+                    </Field>
+                    <Field
+                      label="Favicon del sitio"
+                      hint="La imagen se convierte automáticamente en ICO multirresolución y fallback para iPhone."
+                      className="field--wide"
+                    >
+                      <div className="identity-media-control">
+                        <ImageAssetPicker
+                          value={project.seo.faviconAssetId ?? ""}
+                          assets={faviconAssets}
+                          ariaLabel="Favicon del sitio"
+                          onChange={(next) => setIdentityImage("favicon", next)}
+                          onUpload={(asset) => uploadIdentityImage("favicon", asset)}
+                          processFile={createFaviconAsset}
+                        />
+                        {identityImagePreview(project.seo.faviconAssetId, "Favicon del sitio")}
+                      </div>
+                    </Field>
+                    <Field
+                      label="Imagen de portada para SEO"
+                      hint="Se usa como imagen social al compartir la portada del sitio."
+                      className="field--wide"
+                    >
+                      <div className="identity-media-control">
+                        <ImageAssetPicker
+                          value={project.seo.socialImageId ?? ""}
+                          assets={project.assets}
+                          ariaLabel="Imagen de portada para SEO"
+                          onChange={(next) => setIdentityImage("cover", next)}
+                          onUpload={(asset) => uploadIdentityImage("cover", asset)}
+                          processFile={createSiteCoverAsset}
+                        />
+                        {identityImagePreview(
+                          project.seo.socialImageId,
+                          "Imagen de portada para SEO",
                         )}
-                      </Field>
-                    </div>
-                    <div className="navigation-reorder">
-                      <IconButton
-                        icon={ArrowUp}
-                        label={`Mover ${item.label} arriba`}
-                        disabled={index === 0}
-                        onClick={() => moveNavigationItem(item.id, -1)}
+                      </div>
+                    </Field>
+                    <Field label="Email" {...(emailError ? { error: emailError } : {})}>
+                      <input
+                        type="email"
+                        aria-label="Email"
+                        value={emailDisplay}
+                        onChange={(event) =>
+                          updateField(
+                            "email",
+                            event.target.value,
+                            (next) => next === "" || isValidEmail(next),
+                            (next) =>
+                              commit({
+                                identity: { ...latestProjectRef.current.identity, email: next },
+                              }),
+                          )
+                        }
                       />
-                      <IconButton
-                        icon={ArrowDown}
-                        label={`Mover ${item.label} abajo`}
-                        disabled={index === project.navigation.items.length - 1}
-                        onClick={() => moveNavigationItem(item.id, 1)}
+                    </Field>
+                    <Field label="Teléfono">
+                      <input
+                        aria-label="Teléfono"
+                        value={project.identity.phone}
+                        onChange={(event) =>
+                          commit({
+                            identity: {
+                              ...latestProjectRef.current.identity,
+                              phone: event.target.value,
+                            },
+                          })
+                        }
                       />
+                    </Field>
+                    <Field label="Dirección" className="field--wide">
+                      <input
+                        aria-label="Dirección"
+                        value={project.identity.address}
+                        onChange={(event) =>
+                          commit({
+                            identity: {
+                              ...latestProjectRef.current.identity,
+                              address: event.target.value,
+                            },
+                          })
+                        }
+                      />
+                    </Field>
+                    <Field label="Instagram" hint="URL completa del perfil.">
+                      <input
+                        type="url"
+                        aria-label="Instagram"
+                        value={project.identity.instagramUrl ?? ""}
+                        onChange={(event) =>
+                          commit({
+                            identity: {
+                              ...latestProjectRef.current.identity,
+                              instagramUrl: event.target.value,
+                            },
+                          })
+                        }
+                      />
+                    </Field>
+                    <Field label="Facebook" hint="URL completa de la página.">
+                      <input
+                        type="url"
+                        aria-label="Facebook"
+                        value={project.identity.facebookUrl ?? ""}
+                        onChange={(event) =>
+                          commit({
+                            identity: {
+                              ...latestProjectRef.current.identity,
+                              facebookUrl: event.target.value,
+                            },
+                          })
+                        }
+                      />
+                    </Field>
+                    <Field label="TikTok" hint="URL completa del perfil.">
+                      <input
+                        type="url"
+                        aria-label="TikTok"
+                        value={project.identity.tiktokUrl ?? ""}
+                        onChange={(event) =>
+                          commit({
+                            identity: {
+                              ...latestProjectRef.current.identity,
+                              tiktokUrl: event.target.value,
+                            },
+                          })
+                        }
+                      />
+                    </Field>
+                    <Field label="Usuario de X / Twitter" hint="Sólo el usuario, con o sin @.">
+                      <input
+                        aria-label="Usuario de X Twitter"
+                        value={project.identity.twitterHandle ?? ""}
+                        onChange={(event) =>
+                          commit({
+                            identity: {
+                              ...latestProjectRef.current.identity,
+                              twitterHandle: event.target.value,
+                            },
+                          })
+                        }
+                      />
+                    </Field>
+                  </div>
+                </AccordionSection>
+              </>
+            ),
+          },
+          {
+            id: "sales",
+            label: "Venta y pedidos",
+            content: (
+              <>
+                <AccordionSection
+                  sectionKey="whatsapp"
+                  label="Pedido por WhatsApp"
+                  icon={WhatsappLogo}
+                  badge={
+                    <StatusBadge
+                      status={phoneInvalid ? "warning" : phoneMissing ? "idle" : "ok"}
+                      label={
+                        phoneInvalid
+                          ? "Revisar formato"
+                          : phoneMissing
+                            ? "Pendiente"
+                            : "Formato correcto"
+                      }
+                    />
+                  }
+                  collapsed={collapsedSections.has("whatsapp")}
+                  onToggle={() => toggleSection("whatsapp")}
+                >
+                  <div className="form-grid">
+                    <Field
+                      label="Número internacional"
+                      hint="Sólo números, con código de país y área."
+                      {...(phoneError ? { error: phoneError } : {})}
+                    >
+                      <input
+                        inputMode="tel"
+                        aria-label="Número internacional"
+                        value={phoneDisplay}
+                        onChange={(event) =>
+                          updateField(
+                            "phone",
+                            event.target.value.replace(/\D/g, ""),
+                            (next) => next !== "" && PHONE_PATTERN.test(next),
+                            (next) =>
+                              commit({
+                                whatsapp: { ...latestProjectRef.current.whatsapp, phone: next },
+                              }),
+                          )
+                        }
+                      />
+                    </Field>
+                    <Field label="Saludo del pedido" className="field--wide">
+                      <input
+                        aria-label="Saludo del pedido"
+                        value={project.whatsapp.greeting}
+                        onChange={(event) =>
+                          commit({
+                            whatsapp: {
+                              ...latestProjectRef.current.whatsapp,
+                              greeting: event.target.value,
+                            },
+                          })
+                        }
+                      />
+                    </Field>
+                  </div>
+                </AccordionSection>{" "}
+                <AccordionSection
+                  sectionKey="price-format"
+                  label="Formato de precios"
+                  icon={CurrencyDollar}
+                  collapsed={collapsedSections.has("price-format")}
+                  onToggle={() => toggleSection("price-format")}
+                >
+                  <div className="form-grid">
+                    <Toggle
+                      checked={project.priceFractionDisplay === "auto"}
+                      onChange={(checked) =>
+                        commit({ priceFractionDisplay: checked ? "auto" : "always" })
+                      }
+                      label="Ocultar centavos cuando sean cero"
+                    />
+                    <p className="form-help">
+                      Ejemplo: $1.500,00 se muestra como $1.500. Los precios con centavos, como
+                      $1.500,50, se mantienen completos.
+                    </p>
+                  </div>
+                </AccordionSection>
+              </>
+            ),
+          },
+          {
+            id: "content",
+            label: "Navegación y textos",
+            content: (
+              <>
+                <AccordionSection
+                  sectionKey="navigation"
+                  label="Navegación pública"
+                  icon={List}
+                  collapsed={collapsedSections.has("navigation")}
+                  onToggle={() => toggleSection("navigation")}
+                >
+                  <div className="form-grid">
+                    <Field
+                      label="Nombre del catálogo"
+                      hint={`${catalogLabelDisplay.length}/${CATALOG_LABEL_MAX_LENGTH} caracteres`}
+                      {...(catalogLabelError ? { error: catalogLabelError } : {})}
+                    >
+                      <input
+                        aria-label="Nombre del catálogo"
+                        maxLength={CATALOG_LABEL_MAX_LENGTH}
+                        value={catalogLabelDisplay}
+                        onChange={(event) =>
+                          updateField(
+                            "catalogLabel",
+                            event.target.value,
+                            (next) => next.trim() !== "" && next.length <= CATALOG_LABEL_MAX_LENGTH,
+                            (next) => updateNavigation({ catalogLabel: next }),
+                          )
+                        }
+                      />
+                    </Field>
+                    <div className="navigation-switches">
+                      {(
+                        [
+                          ["showHome", "Mostrar Inicio"],
+                          ["showSearch", "Mostrar búsqueda"],
+                          ["showCart", "Mostrar carrito"],
+                        ] as const
+                      ).map(([key, label]) => (
+                        <Toggle
+                          key={key}
+                          checked={project.navigation[key]}
+                          onChange={(checked) => updateNavigation({ [key]: checked })}
+                          label={label}
+                        />
+                      ))}
                     </div>
-                    <div className="navigation-children">
-                      <span className="navigation-children-title">Subenlaces</span>
-                      <span id={childrenContextId} className="visually-hidden">
-                        Subenlaces de {item.label}
-                      </span>
-                      {children.map((child, childIndex) => {
-                        const childHrefDraft =
-                          drafts[`nav-${item.id}-${child.id}`] ?? child.href ?? "";
-                        const childHrefError = destinationError(childHrefDraft);
-                        const childLabelKey = `nav-child-label-${child.id}`;
-                        const childLabelDisplay = fieldValue(childLabelKey, child.label);
-                        const childLabelError =
-                          childLabelDisplay.trim() === ""
-                            ? "Completá el nombre del subenlace."
-                            : childLabelDisplay.length > NAVIGATION_LABEL_MAX_LENGTH
+                    <div className="navigation-switches field--wide">
+                      {(
+                        [
+                          ["announcement", "Mostrar barra informativa"],
+                          ["header", "Mostrar encabezado"],
+                          ["footer", "Mostrar pie"],
+                          ["cart", "Mostrar carrito lateral"],
+                        ] as const
+                      ).map(([key, label]) => (
+                        <Toggle
+                          key={key}
+                          checked={project.siteShell[key]}
+                          onChange={(checked) =>
+                            commit({
+                              siteShell: { ...latestProjectRef.current.siteShell, [key]: checked },
+                            })
+                          }
+                          label={label}
+                        />
+                      ))}
+                    </div>
+                    <div className="navigation-editor field--wide">
+                      {project.navigation.items.map((item, index) => {
+                        const itemHrefDraft = drafts[`nav-${item.id}`] ?? item.href ?? "";
+                        const itemHrefError = destinationError(itemHrefDraft);
+                        const itemLabelKey = `nav-label-${item.id}`;
+                        const itemLabelDisplay = fieldValue(itemLabelKey, item.label);
+                        const itemLabelError =
+                          itemLabelDisplay.trim() === ""
+                            ? "Completá el nombre del enlace."
+                            : itemLabelDisplay.length > NAVIGATION_LABEL_MAX_LENGTH
                               ? `Usá hasta ${NAVIGATION_LABEL_MAX_LENGTH} caracteres.`
                               : undefined;
+                        const children = item.children ?? [];
+                        const childrenLimitReached = children.length >= NAVIGATION_CHILDREN_MAX;
+                        const childrenContextId = `nav-children-context-${item.id}`;
+                        const childrenLimitId = `nav-children-limit-${item.id}`;
                         return (
-                          <div className="navigation-child-editor" key={child.id}>
-                            <Field
-                              label={`Subenlace ${childIndex + 1}`}
-                              description={`Subenlace ${child.label} de ${item.label}`}
-                              hint={`${childLabelDisplay.length}/${NAVIGATION_LABEL_MAX_LENGTH} caracteres`}
-                              {...(childLabelError ? { error: childLabelError } : {})}
-                            >
-                              <input
-                                aria-label={`Subenlace ${childIndex + 1}`}
-                                maxLength={NAVIGATION_LABEL_MAX_LENGTH}
-                                value={childLabelDisplay}
-                                onChange={(event) =>
-                                  updateField(
-                                    childLabelKey,
-                                    event.target.value,
-                                    (next) =>
-                                      next.trim() !== "" &&
-                                      next.length <= NAVIGATION_LABEL_MAX_LENGTH,
-                                    (next) =>
-                                      updateNavigationItem(item.id, {
-                                        children: (item.children ?? []).map((current) =>
-                                          current.id === child.id
-                                            ? { ...current, label: next }
-                                            : current,
-                                        ),
-                                      }),
-                                  )
-                                }
-                              />
-                            </Field>
-                            <Field
-                              label="Destino"
-                              description={`Destino del subenlace ${child.label} de ${item.label}`}
-                              {...(childHrefError ? { error: childHrefError } : {})}
-                            >
-                              {destinationInput(
-                                `nav-${item.id}-${child.id}`,
-                                child.href ?? "",
-                                (next) =>
-                                  updateNavigationItem(item.id, {
-                                    children: (item.children ?? []).map((current) =>
-                                      current.id === child.id
-                                        ? { ...current, href: next }
-                                        : current,
-                                    ),
-                                  }),
-                              )}
-                            </Field>
+                          <div className="navigation-editor-item" key={item.id}>
+                            <div className="form-grid">
+                              <Field
+                                label={`Enlace ${index + 1}`}
+                                hint={`${itemLabelDisplay.length}/${NAVIGATION_LABEL_MAX_LENGTH} caracteres`}
+                                {...(itemLabelError ? { error: itemLabelError } : {})}
+                              >
+                                <input
+                                  aria-label={`Enlace ${index + 1}`}
+                                  maxLength={NAVIGATION_LABEL_MAX_LENGTH}
+                                  value={itemLabelDisplay}
+                                  onChange={(event) =>
+                                    updateField(
+                                      itemLabelKey,
+                                      event.target.value,
+                                      (next) =>
+                                        next.trim() !== "" &&
+                                        next.length <= NAVIGATION_LABEL_MAX_LENGTH,
+                                      (next) =>
+                                        updateNavigation({
+                                          items: project.navigation.items.map((current) =>
+                                            current.id === item.id
+                                              ? { ...current, label: next }
+                                              : current,
+                                          ),
+                                        }),
+                                    )
+                                  }
+                                />
+                              </Field>
+                              <Field
+                                label="Destino"
+                                description={`Destino del enlace ${item.label}`}
+                                {...(itemHrefError ? { error: itemHrefError } : {})}
+                              >
+                                {destinationInput(`nav-${item.id}`, item.href ?? "", (next) =>
+                                  updateNavigationItem(item.id, { href: next }),
+                                )}
+                              </Field>
+                            </div>
                             <div className="navigation-reorder">
                               <IconButton
                                 icon={ArrowUp}
-                                label={`Mover ${child.label} arriba`}
-                                disabled={childIndex === 0}
-                                onClick={() => moveNavigationChild(item.id, child.id, -1)}
+                                label={`Mover ${item.label} arriba`}
+                                disabled={index === 0}
+                                onClick={() => moveNavigationItem(item.id, -1)}
                               />
                               <IconButton
                                 icon={ArrowDown}
-                                label={`Mover ${child.label} abajo`}
-                                disabled={childIndex === (item.children?.length ?? 0) - 1}
-                                onClick={() => moveNavigationChild(item.id, child.id, 1)}
+                                label={`Mover ${item.label} abajo`}
+                                disabled={index === project.navigation.items.length - 1}
+                                onClick={() => moveNavigationItem(item.id, 1)}
                               />
+                            </div>
+                            <div className="navigation-children">
+                              <span className="navigation-children-title">Subenlaces</span>
+                              <span id={childrenContextId} className="visually-hidden">
+                                Subenlaces de {item.label}
+                              </span>
+                              {children.map((child, childIndex) => {
+                                const childHrefDraft =
+                                  drafts[`nav-${item.id}-${child.id}`] ?? child.href ?? "";
+                                const childHrefError = destinationError(childHrefDraft);
+                                const childLabelKey = `nav-child-label-${child.id}`;
+                                const childLabelDisplay = fieldValue(childLabelKey, child.label);
+                                const childLabelError =
+                                  childLabelDisplay.trim() === ""
+                                    ? "Completá el nombre del subenlace."
+                                    : childLabelDisplay.length > NAVIGATION_LABEL_MAX_LENGTH
+                                      ? `Usá hasta ${NAVIGATION_LABEL_MAX_LENGTH} caracteres.`
+                                      : undefined;
+                                return (
+                                  <div className="navigation-child-editor" key={child.id}>
+                                    <Field
+                                      label={`Subenlace ${childIndex + 1}`}
+                                      description={`Subenlace ${child.label} de ${item.label}`}
+                                      hint={`${childLabelDisplay.length}/${NAVIGATION_LABEL_MAX_LENGTH} caracteres`}
+                                      {...(childLabelError ? { error: childLabelError } : {})}
+                                    >
+                                      <input
+                                        aria-label={`Subenlace ${childIndex + 1}`}
+                                        maxLength={NAVIGATION_LABEL_MAX_LENGTH}
+                                        value={childLabelDisplay}
+                                        onChange={(event) =>
+                                          updateField(
+                                            childLabelKey,
+                                            event.target.value,
+                                            (next) =>
+                                              next.trim() !== "" &&
+                                              next.length <= NAVIGATION_LABEL_MAX_LENGTH,
+                                            (next) =>
+                                              updateNavigationItem(item.id, {
+                                                children: (item.children ?? []).map((current) =>
+                                                  current.id === child.id
+                                                    ? { ...current, label: next }
+                                                    : current,
+                                                ),
+                                              }),
+                                          )
+                                        }
+                                      />
+                                    </Field>
+                                    <Field
+                                      label="Destino"
+                                      description={`Destino del subenlace ${child.label} de ${item.label}`}
+                                      {...(childHrefError ? { error: childHrefError } : {})}
+                                    >
+                                      {destinationInput(
+                                        `nav-${item.id}-${child.id}`,
+                                        child.href ?? "",
+                                        (next) =>
+                                          updateNavigationItem(item.id, {
+                                            children: (item.children ?? []).map((current) =>
+                                              current.id === child.id
+                                                ? { ...current, href: next }
+                                                : current,
+                                            ),
+                                          }),
+                                      )}
+                                    </Field>
+                                    <div className="navigation-reorder">
+                                      <IconButton
+                                        icon={ArrowUp}
+                                        label={`Mover ${child.label} arriba`}
+                                        disabled={childIndex === 0}
+                                        onClick={() => moveNavigationChild(item.id, child.id, -1)}
+                                      />
+                                      <IconButton
+                                        icon={ArrowDown}
+                                        label={`Mover ${child.label} abajo`}
+                                        disabled={childIndex === (item.children?.length ?? 0) - 1}
+                                        onClick={() => moveNavigationChild(item.id, child.id, 1)}
+                                      />
+                                    </div>
+                                    <IconButton
+                                      icon={Trash}
+                                      label={`Eliminar subenlace ${child.label}`}
+                                      tooltip="Eliminar subenlace"
+                                      onClick={() =>
+                                        setPendingNavDelete({
+                                          kind: "child",
+                                          itemId: item.id,
+                                          childId: child.id,
+                                          label: child.label,
+                                          parentLabel: item.label,
+                                        })
+                                      }
+                                    />
+                                  </div>
+                                );
+                              })}
+                              <Button
+                                variant="secondary"
+                                aria-describedby={`${childrenContextId}${childrenLimitReached ? ` ${childrenLimitId}` : ""}`}
+                                disabled={childrenLimitReached}
+                                onClick={() =>
+                                  updateNavigationItem(item.id, {
+                                    children: [
+                                      ...children,
+                                      {
+                                        id: `nav-${crypto.randomUUID()}`,
+                                        label: "Nuevo subenlace",
+                                        href: project.categories[0]
+                                          ? `/categorias/${project.categories[0].slug}/`
+                                          : "/",
+                                      },
+                                    ],
+                                  })
+                                }
+                              >
+                                Añadir subenlace
+                              </Button>
+                              {childrenLimitReached ? (
+                                <small id={childrenLimitId} className="navigation-limit-hint">
+                                  Llegaste al máximo de {NAVIGATION_CHILDREN_MAX} subenlaces.
+                                </small>
+                              ) : null}
                             </div>
                             <IconButton
                               icon={Trash}
-                              label={`Eliminar subenlace ${child.label}`}
-                              tooltip="Eliminar subenlace"
+                              label={`Eliminar enlace ${item.label}`}
+                              tooltip="Eliminar enlace"
                               onClick={() =>
                                 setPendingNavDelete({
-                                  kind: "child",
+                                  kind: "item",
                                   itemId: item.id,
-                                  childId: child.id,
-                                  label: child.label,
-                                  parentLabel: item.label,
+                                  label: item.label,
+                                  childCount: item.children?.length ?? 0,
                                 })
                               }
                             />
@@ -1356,15 +1439,19 @@ export function Overview({
                       })}
                       <Button
                         variant="secondary"
-                        aria-describedby={`${childrenContextId}${childrenLimitReached ? ` ${childrenLimitId}` : ""}`}
-                        disabled={childrenLimitReached}
+                        aria-describedby={
+                          project.navigation.items.length >= NAVIGATION_ITEMS_MAX
+                            ? navigationItemsLimitId
+                            : undefined
+                        }
+                        disabled={project.navigation.items.length >= NAVIGATION_ITEMS_MAX}
                         onClick={() =>
-                          updateNavigationItem(item.id, {
-                            children: [
-                              ...children,
+                          updateNavigation({
+                            items: [
+                              ...project.navigation.items,
                               {
                                 id: `nav-${crypto.randomUUID()}`,
-                                label: "Nuevo subenlace",
+                                label: "Nueva categoría",
                                 href: project.categories[0]
                                   ? `/categorias/${project.categories[0].slug}/`
                                   : "/",
@@ -1373,372 +1460,352 @@ export function Overview({
                           })
                         }
                       >
-                        Añadir subenlace
+                        Añadir enlace de catálogo
                       </Button>
-                      {childrenLimitReached ? (
-                        <small id={childrenLimitId} className="navigation-limit-hint">
-                          Llegaste al máximo de {NAVIGATION_CHILDREN_MAX} subenlaces.
+                      {project.navigation.items.length >= NAVIGATION_ITEMS_MAX ? (
+                        <small
+                          id={navigationItemsLimitId}
+                          className="navigation-limit-hint"
+                          data-testid="ui-navigation-items-limit"
+                        >
+                          Llegaste al máximo de {NAVIGATION_ITEMS_MAX} enlaces de navegación.
                         </small>
                       ) : null}
                     </div>
-                    <IconButton
-                      icon={Trash}
-                      label={`Eliminar enlace ${item.label}`}
-                      tooltip="Eliminar enlace"
-                      onClick={() =>
-                        setPendingNavDelete({
-                          kind: "item",
-                          itemId: item.id,
-                          label: item.label,
-                          childCount: item.children?.length ?? 0,
-                        })
-                      }
-                    />
                   </div>
-                );
-              })}
-              <Button
-                variant="secondary"
-                aria-describedby={
-                  project.navigation.items.length >= NAVIGATION_ITEMS_MAX
-                    ? navigationItemsLimitId
-                    : undefined
-                }
-                disabled={project.navigation.items.length >= NAVIGATION_ITEMS_MAX}
-                onClick={() =>
-                  updateNavigation({
-                    items: [
-                      ...project.navigation.items,
-                      {
-                        id: `nav-${crypto.randomUUID()}`,
-                        label: "Nueva categoría",
-                        href: project.categories[0]
-                          ? `/categorias/${project.categories[0].slug}/`
-                          : "/",
-                      },
-                    ],
-                  })
-                }
-              >
-                Añadir enlace de catálogo
-              </Button>
-              {project.navigation.items.length >= NAVIGATION_ITEMS_MAX ? (
-                <small
-                  id={navigationItemsLimitId}
-                  className="navigation-limit-hint"
-                  data-testid="ui-navigation-items-limit"
+                </AccordionSection>{" "}
+                <AccordionSection
+                  sectionKey="pages"
+                  label="Páginas editoriales"
+                  icon={Article}
+                  collapsed={collapsedSections.has("pages")}
+                  onToggle={() => toggleSection("pages")}
                 >
-                  Llegaste al máximo de {NAVIGATION_ITEMS_MAX} enlaces de navegación.
-                </small>
-              ) : null}
-            </div>
-          </div>
-        </AccordionSection>        <AccordionSection
-          sectionKey="pages"
-          label="Páginas editoriales"
-          icon={Article}
-          collapsed={collapsedSections.has("pages")}
-          onToggle={() => toggleSection("pages")}
-        >
-          <div className="form-grid">
-            {project.pages.map((page) => {
-              if (page.kind !== "home") return null;
-              const pageLabel = "Home";
-              const pageTitleDisplay = fieldValue(`page-title-${page.id}`, page.title);
-              const pageTitleError =
-                pageTitleDisplay.trim() === "" ? "Completá el título visible." : undefined;
-              const seoTitleKey = `page-seo-title-${page.id}`;
-              const seoTitleDisplay = fieldValue(seoTitleKey, page.seoTitle);
-              const seoTitleError =
-                seoTitleDisplay.trim() === "" ? "Completá el título SEO." : undefined;
-              const seoDescriptionKey = `page-seo-desc-${page.id}`;
-              const seoDescriptionDisplay = fieldValue(seoDescriptionKey, page.seoDescription);
-              const seoDescriptionError =
-                seoDescriptionDisplay.trim() === "" ? "Completá la descripción SEO." : undefined;
-              return (
-                <div className="page-editor" key={page.id}>
-                  <strong>{pageLabel}</strong>
-                  <Field
-                    label="Título visible"
-                    description={`Página ${pageLabel}`}
-                    {...(pageTitleError ? { error: pageTitleError } : {})}
-                  >
-                    <input
-                      aria-label="Título visible"
-                      value={pageTitleDisplay}
-                      onChange={(event) =>
-                        updateField(
-                          `page-title-${page.id}`,
-                          event.target.value,
-                          (next) => next.trim() !== "",
-                          (next) => updatePage(page.id, { title: next }),
-                        )
-                      }
-                    />
-                  </Field>
-                  <Field
-                    label="Título SEO"
-                    description={`Página ${pageLabel}`}
-                    hint={`${seoTitleDisplay.length}/70 caracteres`}
-                    {...(seoTitleError ? { error: seoTitleError } : {})}
-                  >
-                    <input
-                      aria-label="Título SEO"
-                      maxLength={70}
-                      value={seoTitleDisplay}
-                      onChange={(event) =>
-                        updateField(
-                          seoTitleKey,
-                          event.target.value,
-                          (next) => next.trim() !== "",
-                          (next) => updatePage(page.id, { seoTitle: next }),
-                        )
-                      }
-                    />
-                  </Field>
-                  <Field
-                    label="Descripción SEO"
-                    description={`Página ${pageLabel}`}
-                    hint={`${seoDescriptionDisplay.length}/180 caracteres`}
-                    {...(seoDescriptionError ? { error: seoDescriptionError } : {})}
-                  >
-                    <textarea
-                      rows={2}
-                      aria-label="Descripción SEO"
-                      maxLength={180}
-                      value={seoDescriptionDisplay}
-                      onChange={(event) =>
-                        updateField(
-                          seoDescriptionKey,
-                          event.target.value,
-                          (next) => next.trim() !== "",
-                          (next) => updatePage(page.id, { seoDescription: next }),
-                        )
-                      }
-                    />
-                  </Field>
-                </div>
-              );
-            })}
-          </div>
-        </AccordionSection>        <AccordionSection
-          sectionKey="public-copy"
-          label="Contenido global"
-          icon={Article}
-          collapsed={collapsedSections.has("public-copy")}
-          onToggle={() => toggleSection("public-copy")}
-        >
-          <p className="form-help">
-            Estos textos aparecen en controles y estados compartidos del sitio público. El contenido
-            particular de cada sección se edita desde su propio inspector.
-          </p>
-          <div className="form-grid">
-            {PUBLIC_COPY_FIELDS.map(({ group, key, label }) => {
-              const copyGroup = project.publicCopy[
-                group as keyof StoreProjectV1["publicCopy"]
-              ] as Record<string, string>;
-              const fieldKey = `public-copy-${group}-${key}`;
-              const value = fieldValue(fieldKey, copyGroup[key] ?? "");
-              const restrictedKey = `${group}.${key}`;
-              const isRestricted = RESTRICTED_COPY_FIELDS.has(restrictedKey);
-              const hasPlaceholder = PLACEHOLDER_COPY_FIELDS.has(restrictedKey);
-              const minLength = MIN_LENGTH_COPY_FIELDS[restrictedKey];
-              return (
-                <Field
-                  key={fieldKey}
-                  label={label}
-                  className="field--wide"
-                  {...(isRestricted
-                    ? { description: "Texto del sistema. Editar con cuidado." }
-                    : {})}
-                  {...(hasPlaceholder
-                    ? { hint: "Contiene placeholders técnicos que no deben eliminarse" }
-                    : {})}
-                  {...(minLength !== undefined ? { hint: `Mínimo ${minLength} caracteres` } : {})}
+                  <div className="form-grid">
+                    {project.pages.map((page) => {
+                      if (page.kind !== "home") return null;
+                      const pageLabel = "Home";
+                      const pageTitleDisplay = fieldValue(`page-title-${page.id}`, page.title);
+                      const pageTitleError =
+                        pageTitleDisplay.trim() === "" ? "Completá el título visible." : undefined;
+                      const seoTitleKey = `page-seo-title-${page.id}`;
+                      const seoTitleDisplay = fieldValue(seoTitleKey, page.seoTitle);
+                      const seoTitleError =
+                        seoTitleDisplay.trim() === "" ? "Completá el título SEO." : undefined;
+                      const seoDescriptionKey = `page-seo-desc-${page.id}`;
+                      const seoDescriptionDisplay = fieldValue(
+                        seoDescriptionKey,
+                        page.seoDescription,
+                      );
+                      const seoDescriptionError =
+                        seoDescriptionDisplay.trim() === ""
+                          ? "Completá la descripción SEO."
+                          : undefined;
+                      return (
+                        <div className="page-editor" key={page.id}>
+                          <strong>{pageLabel}</strong>
+                          <Field
+                            label="Título visible"
+                            description={`Página ${pageLabel}`}
+                            {...(pageTitleError ? { error: pageTitleError } : {})}
+                          >
+                            <input
+                              aria-label="Título visible"
+                              value={pageTitleDisplay}
+                              onChange={(event) =>
+                                updateField(
+                                  `page-title-${page.id}`,
+                                  event.target.value,
+                                  (next) => next.trim() !== "",
+                                  (next) => updatePage(page.id, { title: next }),
+                                )
+                              }
+                            />
+                          </Field>
+                          <Field
+                            label="Título SEO"
+                            description={`Página ${pageLabel}`}
+                            hint={`${seoTitleDisplay.length}/70 caracteres`}
+                            {...(seoTitleError ? { error: seoTitleError } : {})}
+                          >
+                            <input
+                              aria-label="Título SEO"
+                              maxLength={70}
+                              value={seoTitleDisplay}
+                              onChange={(event) =>
+                                updateField(
+                                  seoTitleKey,
+                                  event.target.value,
+                                  (next) => next.trim() !== "",
+                                  (next) => updatePage(page.id, { seoTitle: next }),
+                                )
+                              }
+                            />
+                          </Field>
+                          <Field
+                            label="Descripción SEO"
+                            description={`Página ${pageLabel}`}
+                            hint={`${seoDescriptionDisplay.length}/180 caracteres`}
+                            {...(seoDescriptionError ? { error: seoDescriptionError } : {})}
+                          >
+                            <textarea
+                              rows={2}
+                              aria-label="Descripción SEO"
+                              maxLength={180}
+                              value={seoDescriptionDisplay}
+                              onChange={(event) =>
+                                updateField(
+                                  seoDescriptionKey,
+                                  event.target.value,
+                                  (next) => next.trim() !== "",
+                                  (next) => updatePage(page.id, { seoDescription: next }),
+                                )
+                              }
+                            />
+                          </Field>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </AccordionSection>{" "}
+                <AccordionSection
+                  sectionKey="public-copy"
+                  label="Contenido global"
+                  icon={Article}
+                  collapsed={collapsedSections.has("public-copy")}
+                  onToggle={() => toggleSection("public-copy")}
                 >
-                  <input
-                    aria-label={label}
-                    value={value}
-                    onChange={(event) =>
-                      updateField(
-                        fieldKey,
-                        event.target.value,
-                        (next) => next.trim() !== "",
-                        (next) => updatePublicCopy(group, key, next),
-                      )
-                    }
-                  />
-                </Field>
-              );
-            })}
-          </div>
-        </AccordionSection>
-</> },
-{ id: "publication", label: "Dominio y legales", content: <>
-        <AccordionSection
-          sectionKey="domain"
-          label="Dominio"
-          icon={Globe}
-          collapsed={collapsedSections.has("domain")}
-          onToggle={() => toggleSection("domain")}
-        >
-          <div className="form-grid">
-            <Field
-              label="URL pública"
-              hint="La exportación de producción usa esta URL para canonical y feeds."
-              {...(urlError ? { error: urlError } : {})}
-            >
-              <input
-                type="url"
-                aria-label="URL pública"
-                value={urlDisplay}
-                onChange={(event) =>
-                  updateField(
-                    "baseUrl",
-                    event.target.value,
-                    (next) => next.trim() !== "" && isValidUrl(next),
-                    (next) => commit({ baseUrl: next }),
-                  )
-                }
-              />
-            </Field>
-            <Field
-              label="Slug interno"
-              hint="Minúsculas, números y guiones. Cambia las rutas futuras del sitio."
-              {...(slugError ? { error: slugError } : {})}
-            >
-              <input
-                aria-label="Slug interno"
-                maxLength={120}
-                autoCapitalize="none"
-                autoComplete="off"
-                spellCheck={false}
-                value={slugDisplay}
-                onChange={(event) =>
-                  updateField(
-                    "slug",
-                    event.target.value,
-                    (next) => SlugSchema.safeParse(next.trim()).success,
-                    (next) => {
-                      const result = SlugSchema.safeParse(next.trim());
-                      if (result.success) commit({ slug: result.data });
-                    },
-                  )
-                }
-              />
-            </Field>
-          </div>
-        </AccordionSection>        <AccordionSection
-          sectionKey="legal-profile"
-          label="Perfil legal"
-          icon={Article}
-          collapsed={collapsedSections.has("legal-profile")}
-          onToggle={() => toggleSection("legal-profile")}
-        >
-          <p className="form-help">
-            El perfil determina la jurisdicción y las referencias legales del sitio. Los datos
-            fiscales y comerciales deben ser los de tu tienda.
-          </p>
-          <div className="form-grid">
-            <Field
-              label="País legal"
-              hint={`Perfil disponible actualmente para ${ARGENTINA_LEGAL_PROFILE.countryName}.`}
-            >
-              <input
-                aria-label="País legal"
-                value={`${ARGENTINA_LEGAL_PROFILE.countryName} (${project.legalProfile.countryCode})`}
-                readOnly
-              />
-            </Field>
-            <Field
-              label="Última revisión"
-              hint={`Fecha registrada: ${project.legalProfile.revisionAt?.slice(0, 10) ?? project.createdAt.slice(0, 10)}`}
-            >
-              <Button
-                variant="secondary"
-                data-testid="ui-legal-profile-review"
-                onClick={() => updateLegalProfile({ revisionAt: new Date().toISOString() })}
-              >
-                Registrar revisión de políticas
-              </Button>
-            </Field>
-            <Field label="CUIT / identificación fiscal">
-              <input
-                aria-label="CUIT identificación fiscal"
-                value={project.legalProfile.taxId}
-                onChange={(event) => updateLegalProfile({ taxId: event.target.value })}
-              />
-            </Field>
-            <Field label="Jurisdicción declarada">
-              <input
-                aria-label="Jurisdicción declarada"
-                value={project.legalProfile.jurisdiction}
-                onChange={(event) => updateLegalProfile({ jurisdiction: event.target.value })}
-              />
-            </Field>
-            <Field
-              label="Medios de pago"
-              hint="Separalos con comas; se muestran como información declarada por la tienda."
-            >
-              <input
-                aria-label="Medios de pago"
-                value={project.legalProfile.paymentMethods.join(", ")}
-                onChange={(event) =>
-                  updateLegalProfile({
-                    paymentMethods: event.target.value
-                      .split(",")
-                      .map((value) => value.trim())
-                      .filter(Boolean),
-                  })
-                }
-              />
-            </Field>
-            <Field
-              label="Canales de venta"
-              hint="Separalos con comas; no agregues canales que la tienda no use."
-            >
-              <input
-                aria-label="Canales de venta"
-                value={project.legalProfile.salesChannels.join(", ")}
-                onChange={(event) =>
-                  updateLegalProfile({
-                    salesChannels: event.target.value
-                      .split(",")
-                      .map((value) => value.trim())
-                      .filter(Boolean),
-                  })
-                }
-              />
-            </Field>
-            <Toggle
-              checked={project.legalProfile.consumerRights.enabled}
-              onChange={(checked) => updateLegalProfile({ consumerRights: { enabled: checked } })}
-              label="Habilitar botón de arrepentimiento"
-            />
-            <p className="form-help">
-              Se deriva del perfil protegido: {ARGENTINA_LEGAL_PROFILE.withdrawal.label} de{" "}
-              {ARGENTINA_LEGAL_PROFILE.withdrawal.defaultDays} días y su autoridad oficial.
-            </p>
-            <Field label="Texto legal avanzado de privacidad" className="field--wide">
-              <textarea
-                aria-label="Texto legal avanzado de privacidad"
-                rows={4}
-                value={project.legalProfile.privacyOverride}
-                onChange={(event) => updateLegalProfile({ privacyOverride: event.target.value })}
-              />
-            </Field>
-            <Field label="Texto legal avanzado de términos" className="field--wide">
-              <textarea
-                aria-label="Texto legal avanzado de términos"
-                rows={4}
-                value={project.legalProfile.termsOverride}
-                onChange={(event) => updateLegalProfile({ termsOverride: event.target.value })}
-              />
-            </Field>
-          </div>
-        </AccordionSection>
-</> }
-]} />
+                  <p className="form-help">
+                    Estos textos aparecen en controles y estados compartidos del sitio público. El
+                    contenido particular de cada sección se edita desde su propio inspector.
+                  </p>
+                  <div className="form-grid">
+                    {PUBLIC_COPY_FIELDS.map(({ group, key, label }) => {
+                      const copyGroup = project.publicCopy[
+                        group as keyof StoreProjectV1["publicCopy"]
+                      ] as Record<string, string>;
+                      const fieldKey = `public-copy-${group}-${key}`;
+                      const value = fieldValue(fieldKey, copyGroup[key] ?? "");
+                      const restrictedKey = `${group}.${key}`;
+                      const isRestricted = RESTRICTED_COPY_FIELDS.has(restrictedKey);
+                      const hasPlaceholder = PLACEHOLDER_COPY_FIELDS.has(restrictedKey);
+                      const minLength = MIN_LENGTH_COPY_FIELDS[restrictedKey];
+                      return (
+                        <Field
+                          key={fieldKey}
+                          label={label}
+                          className="field--wide"
+                          {...(isRestricted
+                            ? { description: "Texto del sistema. Editar con cuidado." }
+                            : {})}
+                          {...(hasPlaceholder
+                            ? { hint: "Contiene placeholders técnicos que no deben eliminarse" }
+                            : {})}
+                          {...(minLength !== undefined
+                            ? { hint: `Mínimo ${minLength} caracteres` }
+                            : {})}
+                        >
+                          <input
+                            aria-label={label}
+                            value={value}
+                            onChange={(event) =>
+                              updateField(
+                                fieldKey,
+                                event.target.value,
+                                (next) => next.trim() !== "",
+                                (next) => updatePublicCopy(group, key, next),
+                              )
+                            }
+                          />
+                        </Field>
+                      );
+                    })}
+                  </div>
+                </AccordionSection>
+              </>
+            ),
+          },
+          {
+            id: "publication",
+            label: "Dominio y legales",
+            content: (
+              <>
+                <AccordionSection
+                  sectionKey="domain"
+                  label="Dominio"
+                  icon={Globe}
+                  collapsed={collapsedSections.has("domain")}
+                  onToggle={() => toggleSection("domain")}
+                >
+                  <div className="form-grid">
+                    <Field
+                      label="URL pública"
+                      hint="La exportación de producción usa esta URL para canonical y feeds."
+                      {...(urlError ? { error: urlError } : {})}
+                    >
+                      <input
+                        type="url"
+                        aria-label="URL pública"
+                        value={urlDisplay}
+                        onChange={(event) =>
+                          updateField(
+                            "baseUrl",
+                            event.target.value,
+                            (next) => next.trim() !== "" && isValidUrl(next),
+                            (next) => commit({ baseUrl: next }),
+                          )
+                        }
+                      />
+                    </Field>
+                    <Field
+                      label="Slug interno"
+                      hint="Minúsculas, números y guiones. Cambia las rutas futuras del sitio."
+                      {...(slugError ? { error: slugError } : {})}
+                    >
+                      <input
+                        aria-label="Slug interno"
+                        maxLength={120}
+                        autoCapitalize="none"
+                        autoComplete="off"
+                        spellCheck={false}
+                        value={slugDisplay}
+                        onChange={(event) =>
+                          updateField(
+                            "slug",
+                            event.target.value,
+                            (next) => SlugSchema.safeParse(next.trim()).success,
+                            (next) => {
+                              const result = SlugSchema.safeParse(next.trim());
+                              if (result.success) commit({ slug: result.data });
+                            },
+                          )
+                        }
+                      />
+                    </Field>
+                  </div>
+                </AccordionSection>{" "}
+                <AccordionSection
+                  sectionKey="legal-profile"
+                  label="Perfil legal"
+                  icon={Article}
+                  collapsed={collapsedSections.has("legal-profile")}
+                  onToggle={() => toggleSection("legal-profile")}
+                >
+                  <p className="form-help">
+                    El perfil determina la jurisdicción y las referencias legales del sitio. Los
+                    datos fiscales y comerciales deben ser los de tu tienda.
+                  </p>
+                  <div className="form-grid">
+                    <Field
+                      label="País legal"
+                      hint={`Perfil disponible actualmente para ${ARGENTINA_LEGAL_PROFILE.countryName}.`}
+                    >
+                      <input
+                        aria-label="País legal"
+                        value={`${ARGENTINA_LEGAL_PROFILE.countryName} (${project.legalProfile.countryCode})`}
+                        readOnly
+                      />
+                    </Field>
+                    <Field
+                      label="Última revisión"
+                      hint={`Fecha registrada: ${project.legalProfile.revisionAt?.slice(0, 10) ?? project.createdAt.slice(0, 10)}`}
+                    >
+                      <Button
+                        variant="secondary"
+                        data-testid="ui-legal-profile-review"
+                        onClick={() => updateLegalProfile({ revisionAt: new Date().toISOString() })}
+                      >
+                        Registrar revisión de políticas
+                      </Button>
+                    </Field>
+                    <Field label="CUIT / identificación fiscal">
+                      <input
+                        aria-label="CUIT identificación fiscal"
+                        value={project.legalProfile.taxId}
+                        onChange={(event) => updateLegalProfile({ taxId: event.target.value })}
+                      />
+                    </Field>
+                    <Field label="Jurisdicción declarada">
+                      <input
+                        aria-label="Jurisdicción declarada"
+                        value={project.legalProfile.jurisdiction}
+                        onChange={(event) =>
+                          updateLegalProfile({ jurisdiction: event.target.value })
+                        }
+                      />
+                    </Field>
+                    <Field
+                      label="Medios de pago"
+                      hint="Separalos con comas; se muestran como información declarada por la tienda."
+                    >
+                      <input
+                        aria-label="Medios de pago"
+                        value={project.legalProfile.paymentMethods.join(", ")}
+                        onChange={(event) =>
+                          updateLegalProfile({
+                            paymentMethods: event.target.value
+                              .split(",")
+                              .map((value) => value.trim())
+                              .filter(Boolean),
+                          })
+                        }
+                      />
+                    </Field>
+                    <Field
+                      label="Canales de venta"
+                      hint="Separalos con comas; no agregues canales que la tienda no use."
+                    >
+                      <input
+                        aria-label="Canales de venta"
+                        value={project.legalProfile.salesChannels.join(", ")}
+                        onChange={(event) =>
+                          updateLegalProfile({
+                            salesChannels: event.target.value
+                              .split(",")
+                              .map((value) => value.trim())
+                              .filter(Boolean),
+                          })
+                        }
+                      />
+                    </Field>
+                    <Toggle
+                      checked={project.legalProfile.consumerRights.enabled}
+                      onChange={(checked) =>
+                        updateLegalProfile({ consumerRights: { enabled: checked } })
+                      }
+                      label="Habilitar botón de arrepentimiento"
+                    />
+                    <p className="form-help">
+                      Se deriva del perfil protegido: {ARGENTINA_LEGAL_PROFILE.withdrawal.label} de{" "}
+                      {ARGENTINA_LEGAL_PROFILE.withdrawal.defaultDays} días y su autoridad oficial.
+                    </p>
+                    <Field label="Texto legal avanzado de privacidad" className="field--wide">
+                      <textarea
+                        aria-label="Texto legal avanzado de privacidad"
+                        rows={4}
+                        value={project.legalProfile.privacyOverride}
+                        onChange={(event) =>
+                          updateLegalProfile({ privacyOverride: event.target.value })
+                        }
+                      />
+                    </Field>
+                    <Field label="Texto legal avanzado de términos" className="field--wide">
+                      <textarea
+                        aria-label="Texto legal avanzado de términos"
+                        rows={4}
+                        value={project.legalProfile.termsOverride}
+                        onChange={(event) =>
+                          updateLegalProfile({ termsOverride: event.target.value })
+                        }
+                      />
+                    </Field>
+                  </div>
+                </AccordionSection>
+              </>
+            ),
+          },
+        ]}
+      />
       <div className="overview-savebar" data-testid="ui-overview-savebar">
         {saveIndicator()}
         <span className="overview-savebar__note">

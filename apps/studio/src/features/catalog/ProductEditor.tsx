@@ -1,6 +1,5 @@
-import { DockedInspector } from "../workbench/InspectorDock";
 /** Edición de producto y variantes; entrega snapshots validados al reducer del catálogo. */
-import { ArrowDown, ArrowUp, Copy, Plus, Trash, X } from "@phosphor-icons/react";
+import { ArrowDown, ArrowUp, Copy, Plus, Trash } from "@phosphor-icons/react";
 import {
   type Category,
   type Collection,
@@ -15,6 +14,7 @@ import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { ImageAssetPicker, ImageUploadButton } from "../../components/ImageAssetPicker";
 import { ResponsiveAssetImage } from "../../components/ResponsiveAssetImage";
 import { Button, Field, IconButton, InlineError } from "../../components/Ui";
+import { DockedInspector } from "../workbench/InspectorDock";
 import {
   createBlankVariant,
   type DraftErrors,
@@ -378,658 +378,665 @@ export function ProductEditor({
   };
 
   return (
-    <DockedInspector><dialog
-      open
-      ref={dialogRef}
-      className="product-dialog"
-      aria-labelledby={titleId}
-      data-dirty={isDirty ? "true" : undefined}
-      onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); requestClose(); } }}
-      onCancel={(event) => {
-        event.preventDefault();
-        requestClose();
-      }}
-    >
-      <div className="product-dialog__header">
-        <div>
-          <span>{mode === "create" ? "Nuevo producto" : "Editar producto"}</span>
-          <h2 id={titleId}>{draft.title || "Producto sin nombre"}</h2>
-          {isDirty ? (
-            <output
-              className="product-dialog__dirty"
-              data-testid="ui-product-dirty"
-              aria-live="polite"
-            >
-              Cambios sin guardar
-            </output>
-          ) : null}
-        </div>
-        <IconButton icon={X} label="Cerrar editor" onClick={requestClose} />
-      </div>
-
-      <div className="product-dialog__body">
-        {error ? <InlineError>{error}</InlineError> : null}
-
-        <nav className="product-editor-steps" aria-label="Pasos del producto">
-          <span className="product-editor-steps__label">Edición guiada</span>
-          <ol>
-            {editorSteps.map((step, index) => (
-              <li key={step.id}>
-                <button
-                  ref={(element) => {
-                    stepButtons.current[index] = element;
-                  }}
-                  type="button"
-                  className={activeStep === step.id ? "is-active" : undefined}
-                  aria-current={activeStep === step.id ? "step" : undefined}
-                  onClick={() => goToStep(step.id)}
-                  onKeyDown={(event) => {
-                    const target = stepTarget(index, event.key);
-                    if (target === undefined) return;
-                    const nextStep = editorSteps[target];
-                    if (nextStep === undefined) return;
-                    event.preventDefault();
-                    goToStep(nextStep.id);
-                    stepButtons.current[target]?.focus();
-                  }}
-                >
-                  <span aria-hidden>{index + 1}</span>
-                  {step.label}
-                </button>
-              </li>
-            ))}
-          </ol>
-        </nav>
-
-        <fieldset
-          className="editor-group"
-          id={`${stepIdPrefix}-details`}
-          ref={(element) => {
-            stepRefs.current.details = element;
-          }}
-        >
-          <legend>Información comercial</legend>
-          <div className="form-grid">
-            <Field label="Título" {...(errors.title ? { error: errors.title } : {})}>
-              <input
-                maxLength={120}
-                value={draft.title}
-                onChange={(event) => {
-                  const title = event.target.value;
-                  setDraft((current) => {
-                    const next = { ...current, title };
-                    if (!slugTouched) {
-                      next.slug = slugify(title) as Product["slug"];
-                    }
-                    return next;
-                  });
-                }}
-              />
-            </Field>
-            <Field label="Slug" {...slugFieldFeedback(errors)}>
-              <input
-                value={draft.slug}
-                onChange={(event) => {
-                  setSlugTouched(true);
-                  setDraft((current) => ({
-                    ...current,
-                    slug: event.target.value as Product["slug"],
-                  }));
-                }}
-              />
-            </Field>
-            <Field label="Marca">
-              <input
-                value={draft.brand}
-                onChange={(event) =>
-                  setDraft((current) => ({ ...current, brand: event.target.value }))
-                }
-              />
-            </Field>
-            <Field label="Estado">
-              <select
-                value={draft.status}
-                onChange={(event) =>
-                  setDraft((current) => ({
-                    ...current,
-                    status: event.target.value as Product["status"],
-                  }))
-                }
+    <DockedInspector blocking onClose={requestClose}>
+      <dialog
+        open
+        ref={dialogRef}
+        className="product-dialog"
+        aria-labelledby={titleId}
+        data-dirty={isDirty ? "true" : undefined}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            event.stopPropagation();
+            requestClose();
+          }
+        }}
+        onCancel={(event) => {
+          event.preventDefault();
+          requestClose();
+        }}
+      >
+        <div className="product-dialog__header">
+          <div>
+            <span>{mode === "create" ? "Nuevo producto" : "Editar producto"}</span>
+            <h2 id={titleId}>{draft.title || "Producto sin nombre"}</h2>
+            {isDirty ? (
+              <output
+                className="product-dialog__dirty"
+                data-testid="ui-product-dirty"
+                aria-live="polite"
               >
-                {PRODUCT_STATUS_OPTIONS.map((status) => (
-                  <option value={status} key={status}>
-                    {STATUS_LABELS[status]}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Descripción" className="field--wide">
-              <textarea
-                rows={4}
-                value={draft.description}
-                onChange={(event) =>
-                  setDraft((current) => ({ ...current, description: event.target.value }))
-                }
-              />
-            </Field>
-            <Field label="Tags" hint="Separados por comas." className="field--wide">
-              <input value={tags} onChange={(event) => setTags(event.target.value)} />
-            </Field>
+                Cambios sin guardar
+              </output>
+            ) : null}
           </div>
-        </fieldset>
+        </div>
 
-        <fieldset
-          className="editor-group"
-          id={`${stepIdPrefix}-media`}
-          ref={(element) => {
-            stepRefs.current.media = element;
-          }}
-        >
-          <legend>Imágenes y videos</legend>
-          {onAssetUpload ? (
-            <ImageUploadButton
-              assets={assets}
-              onUpload={addUploadedAssetToProduct}
-              label="Subir imagen nueva"
-            />
-          ) : null}
-          {assets.length === 0 ? (
-            <p className="editor-empty-hint">
-              Todavía no hay recursos cargados. Subí una imagen nueva o agregala desde Recursos.
-            </p>
-          ) : (
-            <div className="product-asset-picker">
-              {assets.map((asset) => (
-                <label className="product-asset-option" key={asset.id}>
-                  <input
-                    type="checkbox"
-                    checked={draft.imageIds.includes(asset.id)}
-                    onChange={(event) =>
-                      setDraft((current) => ({
-                        ...current,
-                        imageIds: event.target.checked
-                          ? [...current.imageIds, asset.id]
-                          : current.imageIds.filter((id) => id !== asset.id),
-                      }))
-                    }
-                  />
-                  <ResponsiveAssetImage
-                    asset={asset}
-                    alt=""
-                    width={asset.width}
-                    height={asset.height}
-                    sizes="42px"
-                  />
-                  <span>
-                    <strong>{asset.name}</strong>
-                    <small title={asset.alt || asset.name}>
-                      {asset.alt || "Sin texto alternativo"}
-                    </small>
-                  </span>
-                </label>
+        <div className="product-dialog__body">
+          {error ? <InlineError>{error}</InlineError> : null}
+
+          <nav className="product-editor-steps" aria-label="Pasos del producto">
+            <span className="product-editor-steps__label">Edición guiada</span>
+            <ol>
+              {editorSteps.map((step, index) => (
+                <li key={step.id}>
+                  <button
+                    ref={(element) => {
+                      stepButtons.current[index] = element;
+                    }}
+                    type="button"
+                    className={activeStep === step.id ? "is-active" : undefined}
+                    aria-current={activeStep === step.id ? "step" : undefined}
+                    onClick={() => goToStep(step.id)}
+                    onKeyDown={(event) => {
+                      const target = stepTarget(index, event.key);
+                      if (target === undefined) return;
+                      const nextStep = editorSteps[target];
+                      if (nextStep === undefined) return;
+                      event.preventDefault();
+                      goToStep(nextStep.id);
+                      stepButtons.current[target]?.focus();
+                    }}
+                  >
+                    <span aria-hidden>{index + 1}</span>
+                    {step.label}
+                  </button>
+                </li>
               ))}
+            </ol>
+          </nav>
+
+          <fieldset
+            className="editor-group"
+            id={`${stepIdPrefix}-details`}
+            ref={(element) => {
+              stepRefs.current.details = element;
+            }}
+          >
+            <legend>Información comercial</legend>
+            <div className="form-grid">
+              <Field label="Título" {...(errors.title ? { error: errors.title } : {})}>
+                <input
+                  maxLength={120}
+                  value={draft.title}
+                  onChange={(event) => {
+                    const title = event.target.value;
+                    setDraft((current) => {
+                      const next = { ...current, title };
+                      if (!slugTouched) {
+                        next.slug = slugify(title) as Product["slug"];
+                      }
+                      return next;
+                    });
+                  }}
+                />
+              </Field>
+              <Field label="Slug" {...slugFieldFeedback(errors)}>
+                <input
+                  value={draft.slug}
+                  onChange={(event) => {
+                    setSlugTouched(true);
+                    setDraft((current) => ({
+                      ...current,
+                      slug: event.target.value as Product["slug"],
+                    }));
+                  }}
+                />
+              </Field>
+              <Field label="Marca">
+                <input
+                  value={draft.brand}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, brand: event.target.value }))
+                  }
+                />
+              </Field>
+              <Field label="Estado">
+                <select
+                  value={draft.status}
+                  onChange={(event) =>
+                    setDraft((current) => ({
+                      ...current,
+                      status: event.target.value as Product["status"],
+                    }))
+                  }
+                >
+                  {PRODUCT_STATUS_OPTIONS.map((status) => (
+                    <option value={status} key={status}>
+                      {STATUS_LABELS[status]}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Descripción" className="field--wide">
+                <textarea
+                  rows={4}
+                  value={draft.description}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, description: event.target.value }))
+                  }
+                />
+              </Field>
+              <Field label="Tags" hint="Separados por comas." className="field--wide">
+                <input value={tags} onChange={(event) => setTags(event.target.value)} />
+              </Field>
             </div>
-          )}
-          <div className="product-video-picker">
-            <strong>Videos (opcional, máx. 3 — ideal 1 MB, tope 2 MB)</strong>
-            {videos.length === 0 ? (
+          </fieldset>
+
+          <fieldset
+            className="editor-group"
+            id={`${stepIdPrefix}-media`}
+            ref={(element) => {
+              stepRefs.current.media = element;
+            }}
+          >
+            <legend>Imágenes y videos</legend>
+            {onAssetUpload ? (
+              <ImageUploadButton
+                assets={assets}
+                onUpload={addUploadedAssetToProduct}
+                label="Subir imagen nueva"
+              />
+            ) : null}
+            {assets.length === 0 ? (
               <p className="editor-empty-hint">
-                Todavía no hay videos. Subí un MP4 o WebM de hasta 2 MB (ideal 1 MB) y 10 s.
+                Todavía no hay recursos cargados. Subí una imagen nueva o agregala desde Recursos.
               </p>
             ) : (
               <div className="product-asset-picker">
-                {videos.map((video) => {
-                  const selected = (draft.videoIds ?? []).includes(video.id);
-                  const full = (draft.videoIds ?? []).length >= 3;
-                  return (
-                    <label className="product-asset-option" key={video.id}>
-                      <input
-                        type="checkbox"
-                        checked={selected}
-                        disabled={!selected && full}
-                        onChange={(event) =>
-                          setDraft((current) => ({
-                            ...current,
-                            videoIds: event.target.checked
-                              ? [...(current.videoIds ?? []), video.id]
-                              : (current.videoIds ?? []).filter((id) => id !== video.id),
-                          }))
-                        }
-                      />
-                      <video
-                        src={video.source}
-                        poster={assets.find((a) => a.id === video.posterAssetId)?.source}
-                        preload="metadata"
-                        muted
-                        playsInline
-                        width={84}
-                        height={47}
-                      />
-                      <span>
-                        <strong>{video.name}</strong>
-                        <small>
-                          {Math.round(video.durationSeconds)} s · {video.width}×{video.height}
-                        </small>
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-            {onVideoUpload ? (
-              <label className="field">
-                <span>Subir video nuevo</span>
-                <input
-                  type="file"
-                  accept="video/mp4,video/webm"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (!file) return;
-                    void (async () => {
-                      try {
-                        const { readVideoMetadata, buildVideoAsset } = await import(
-                          "../builder/videoUpload.js"
-                        );
-                        const { optimizeProductVideoSource } = await import(
-                          "../builder/productVideoOptimize.js"
-                        );
-                        const metadata = await readVideoMetadata(file);
-                        const optimized = await optimizeProductVideoSource(file, metadata);
-                        const sourceFile = optimized
-                          ? new File([optimized.blob], file.name, { type: optimized.mimeType })
-                          : file;
-                        const built = await buildVideoAsset(sourceFile);
+                {assets.map((asset) => (
+                  <label className="product-asset-option" key={asset.id}>
+                    <input
+                      type="checkbox"
+                      checked={draft.imageIds.includes(asset.id)}
+                      onChange={(event) =>
                         setDraft((current) => ({
                           ...current,
-                          videoIds: [...(current.videoIds ?? []), built.video.id].slice(0, 3),
-                        }));
-                        onVideoUpload(built.video, built.posterImage);
-                      } catch (reason) {
-                        setError(
-                          reason instanceof Error ? reason.message : "No se pudo subir el video.",
-                        );
+                          imageIds: event.target.checked
+                            ? [...current.imageIds, asset.id]
+                            : current.imageIds.filter((id) => id !== asset.id),
+                        }))
                       }
-                    })();
-                    event.target.value = "";
-                  }}
-                />
-              </label>
-            ) : null}
-            {validateProductVideos(draft.videoIds) ? (
-              <InlineError>{validateProductVideos(draft.videoIds) as string}</InlineError>
-            ) : null}
-          </div>
-        </fieldset>
-
-        <fieldset
-          className="editor-group"
-          id={`${stepIdPrefix}-organization`}
-          ref={(element) => {
-            stepRefs.current.organization = element;
-          }}
-        >
-          <legend>Organización</legend>
-          <div className="assignment-grid">
-            <div>
-              <strong>Categorías</strong>
-              {orderedCategories(categories).map((category) => (
-                <label className="check-field" key={category.id}>
-                  <input
-                    type="checkbox"
-                    checked={draft.categoryIds.includes(category.id)}
-                    onChange={(event) =>
-                      setDraft((current) => ({
-                        ...current,
-                        categoryIds: event.target.checked
-                          ? [...current.categoryIds, category.id]
-                          : current.categoryIds.filter((id) => id !== category.id),
-                      }))
-                    }
-                  />
-                  {category.parentId ? `↳ ${category.title}` : category.title}
-                </label>
-              ))}
-            </div>
-            <div>
-              <strong>Colecciones</strong>
-              {collections.map((collection) => (
-                <label className="check-field" key={collection.id}>
-                  <input
-                    type="checkbox"
-                    checked={draft.collectionIds.includes(collection.id)}
-                    onChange={(event) =>
-                      setDraft((current) => ({
-                        ...current,
-                        collectionIds: event.target.checked
-                          ? [...current.collectionIds, collection.id]
-                          : current.collectionIds.filter((id) => id !== collection.id),
-                      }))
-                    }
-                  />
-                  {collection.title}
-                </label>
-              ))}
-            </div>
-          </div>
-        </fieldset>
-
-        <fieldset
-          className="editor-group"
-          id={`${stepIdPrefix}-variants`}
-          ref={(element) => {
-            stepRefs.current.variants = element;
-          }}
-        >
-          <legend>Variantes</legend>
-          <section className="product-mini-preview" data-testid="ui-product-mini-preview">
-            <span className="product-mini-preview__label">Vista previa del producto</span>
-            <div className="product-mini-preview__card">
-              {firstImage ? (
-                <ResponsiveAssetImage
-                  asset={firstImage}
-                  alt=""
-                  width={firstImage.width}
-                  height={firstImage.height}
-                  sizes="64px"
-                />
+                    />
+                    <ResponsiveAssetImage
+                      asset={asset}
+                      alt=""
+                      width={asset.width}
+                      height={asset.height}
+                      sizes="42px"
+                    />
+                    <span>
+                      <strong>{asset.name}</strong>
+                      <small title={asset.alt || asset.name}>
+                        {asset.alt || "Sin texto alternativo"}
+                      </small>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
+            <div className="product-video-picker">
+              <strong>Videos (opcional, máx. 3 — ideal 1 MB, tope 2 MB)</strong>
+              {videos.length === 0 ? (
+                <p className="editor-empty-hint">
+                  Todavía no hay videos. Subí un MP4 o WebM de hasta 2 MB (ideal 1 MB) y 10 s.
+                </p>
               ) : (
-                <span className="product-mini-preview__placeholder" aria-hidden>
-                  Sin imagen
-                </span>
+                <div className="product-asset-picker">
+                  {videos.map((video) => {
+                    const selected = (draft.videoIds ?? []).includes(video.id);
+                    const full = (draft.videoIds ?? []).length >= 3;
+                    return (
+                      <label className="product-asset-option" key={video.id}>
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          disabled={!selected && full}
+                          onChange={(event) =>
+                            setDraft((current) => ({
+                              ...current,
+                              videoIds: event.target.checked
+                                ? [...(current.videoIds ?? []), video.id]
+                                : (current.videoIds ?? []).filter((id) => id !== video.id),
+                            }))
+                          }
+                        />
+                        <video
+                          src={video.source}
+                          poster={assets.find((a) => a.id === video.posterAssetId)?.source}
+                          preload="metadata"
+                          muted
+                          playsInline
+                          width={84}
+                          height={47}
+                        />
+                        <span>
+                          <strong>{video.name}</strong>
+                          <small>
+                            {Math.round(video.durationSeconds)} s · {video.width}×{video.height}
+                          </small>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
               )}
-              <div className="product-mini-preview__info">
-                <strong title={draft.title.trim() || "Producto sin nombre"}>
-                  {draft.title.trim() || "Producto sin nombre"}
-                </strong>
-                <span>Desde {formatCents(minimumPrice)}</span>
-                <span
-                  className={`product-mini-preview__status product-mini-preview__status--${draft.status}`}
-                >
-                  {STATUS_LABELS[draft.status]}
-                </span>
+              {onVideoUpload ? (
+                <label className="field">
+                  <span>Subir video nuevo</span>
+                  <input
+                    type="file"
+                    accept="video/mp4,video/webm"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (!file) return;
+                      void (async () => {
+                        try {
+                          const { readVideoMetadata, buildVideoAsset } = await import(
+                            "../builder/videoUpload.js"
+                          );
+                          const { optimizeProductVideoSource } = await import(
+                            "../builder/productVideoOptimize.js"
+                          );
+                          const metadata = await readVideoMetadata(file);
+                          const optimized = await optimizeProductVideoSource(file, metadata);
+                          const sourceFile = optimized
+                            ? new File([optimized.blob], file.name, { type: optimized.mimeType })
+                            : file;
+                          const built = await buildVideoAsset(sourceFile);
+                          setDraft((current) => ({
+                            ...current,
+                            videoIds: [...(current.videoIds ?? []), built.video.id].slice(0, 3),
+                          }));
+                          onVideoUpload(built.video, built.posterImage);
+                        } catch (reason) {
+                          setError(
+                            reason instanceof Error ? reason.message : "No se pudo subir el video.",
+                          );
+                        }
+                      })();
+                      event.target.value = "";
+                    }}
+                  />
+                </label>
+              ) : null}
+              {validateProductVideos(draft.videoIds) ? (
+                <InlineError>{validateProductVideos(draft.videoIds) as string}</InlineError>
+              ) : null}
+            </div>
+          </fieldset>
+
+          <fieldset
+            className="editor-group"
+            id={`${stepIdPrefix}-organization`}
+            ref={(element) => {
+              stepRefs.current.organization = element;
+            }}
+          >
+            <legend>Organización</legend>
+            <div className="assignment-grid">
+              <div>
+                <strong>Categorías</strong>
+                {orderedCategories(categories).map((category) => (
+                  <label className="check-field" key={category.id}>
+                    <input
+                      type="checkbox"
+                      checked={draft.categoryIds.includes(category.id)}
+                      onChange={(event) =>
+                        setDraft((current) => ({
+                          ...current,
+                          categoryIds: event.target.checked
+                            ? [...current.categoryIds, category.id]
+                            : current.categoryIds.filter((id) => id !== category.id),
+                        }))
+                      }
+                    />
+                    {category.parentId ? `↳ ${category.title}` : category.title}
+                  </label>
+                ))}
+              </div>
+              <div>
+                <strong>Colecciones</strong>
+                {collections.map((collection) => (
+                  <label className="check-field" key={collection.id}>
+                    <input
+                      type="checkbox"
+                      checked={draft.collectionIds.includes(collection.id)}
+                      onChange={(event) =>
+                        setDraft((current) => ({
+                          ...current,
+                          collectionIds: event.target.checked
+                            ? [...current.collectionIds, collection.id]
+                            : current.collectionIds.filter((id) => id !== collection.id),
+                        }))
+                      }
+                    />
+                    {collection.title}
+                  </label>
+                ))}
               </div>
             </div>
-          </section>
-          <div className="variant-list">
-            {draft.variants.map((variant, index) => {
-              const variantError = variantErrors[index] ?? {
-                title: undefined,
-                price: undefined,
-                compareAtPrice: undefined,
-                options: undefined,
-              };
-              return (
-                <article className="variant-editor" key={variant.id}>
-                  <header>
-                    <strong>Variante {index + 1}</strong>
-                    <div className="variant-editor__actions">
-                      <IconButton
-                        icon={ArrowUp}
-                        label={`Subir ${variant.title}`}
-                        disabled={index === 0}
-                        onClick={() => moveVariant(variant.id, -1)}
-                      />
-                      <IconButton
-                        icon={ArrowDown}
-                        label={`Bajar ${variant.title}`}
-                        disabled={index === draft.variants.length - 1}
-                        onClick={() => moveVariant(variant.id, 1)}
-                      />
-                      <IconButton
-                        icon={Copy}
-                        label={`Duplicar ${variant.title}`}
-                        onClick={() => addVariant(variant)}
-                      />
-                      <IconButton
-                        icon={Trash}
-                        label={`Eliminar ${variant.title}`}
-                        disabled={draft.variants.length === 1}
-                        onClick={() =>
-                          setPendingVariantDelete({
-                            id: variant.id,
-                            index,
-                            label: variant.title || `Variante ${index + 1}`,
-                          })
-                        }
-                        data-variant-delete-index={index}
-                      />
-                    </div>
-                  </header>
-                  <div className="form-grid">
-                    <Field
-                      label="Nombre"
-                      {...(variantError.title ? { error: variantError.title } : {})}
-                    >
-                      <input
-                        value={variant.title}
-                        onChange={(event) =>
-                          updateVariant(variant.id, (current) => ({
-                            ...current,
-                            title: event.target.value,
-                          }))
-                        }
-                      />
-                    </Field>
-                    <Field label="SKU">
-                      <input
-                        value={variant.sku}
-                        onChange={(event) =>
-                          updateVariant(variant.id, (current) => ({
-                            ...current,
-                            sku: event.target.value,
-                          }))
-                        }
-                      />
-                    </Field>
-                    <Field
-                      label="Opciones"
-                      {...(variantError.options
-                        ? { error: variantError.options }
-                        : { hint: "Ejemplo: Color=Azul, Talle=M" })}
-                    >
-                      <input
-                        value={optionValues[variant.id] ?? ""}
-                        onChange={(event) =>
-                          setOptionValues((current) => ({
-                            ...current,
-                            [variant.id]: event.target.value,
-                          }))
-                        }
-                      />
-                    </Field>
-                    <Field
-                      label="Precio en centavos"
-                      {...(variantError.price ? { error: variantError.price } : {})}
-                    >
-                      <input
-                        type="number"
-                        min={0}
-                        step={1}
-                        value={priceText[variant.id] ?? String(variant.price)}
-                        onChange={(event) => {
-                          const text = event.target.value;
-                          setPriceText((current) => ({ ...current, [variant.id]: text }));
-                          if (text !== "") {
-                            const value = Number(text);
-                            if (Number.isInteger(value) && value >= 0) {
-                              updateVariant(variant.id, (current) => ({
-                                ...current,
-                                price: value as Variant["price"],
-                              }));
-                            }
+          </fieldset>
+
+          <fieldset
+            className="editor-group"
+            id={`${stepIdPrefix}-variants`}
+            ref={(element) => {
+              stepRefs.current.variants = element;
+            }}
+          >
+            <legend>Variantes</legend>
+            <section className="product-mini-preview" data-testid="ui-product-mini-preview">
+              <span className="product-mini-preview__label">Vista previa del producto</span>
+              <div className="product-mini-preview__card">
+                {firstImage ? (
+                  <ResponsiveAssetImage
+                    asset={firstImage}
+                    alt=""
+                    width={firstImage.width}
+                    height={firstImage.height}
+                    sizes="64px"
+                  />
+                ) : (
+                  <span className="product-mini-preview__placeholder" aria-hidden>
+                    Sin imagen
+                  </span>
+                )}
+                <div className="product-mini-preview__info">
+                  <strong title={draft.title.trim() || "Producto sin nombre"}>
+                    {draft.title.trim() || "Producto sin nombre"}
+                  </strong>
+                  <span>Desde {formatCents(minimumPrice)}</span>
+                  <span
+                    className={`product-mini-preview__status product-mini-preview__status--${draft.status}`}
+                  >
+                    {STATUS_LABELS[draft.status]}
+                  </span>
+                </div>
+              </div>
+            </section>
+            <div className="variant-list">
+              {draft.variants.map((variant, index) => {
+                const variantError = variantErrors[index] ?? {
+                  title: undefined,
+                  price: undefined,
+                  compareAtPrice: undefined,
+                  options: undefined,
+                };
+                return (
+                  <article className="variant-editor" key={variant.id}>
+                    <header>
+                      <strong>Variante {index + 1}</strong>
+                      <div className="variant-editor__actions">
+                        <IconButton
+                          icon={ArrowUp}
+                          label={`Subir ${variant.title}`}
+                          disabled={index === 0}
+                          onClick={() => moveVariant(variant.id, -1)}
+                        />
+                        <IconButton
+                          icon={ArrowDown}
+                          label={`Bajar ${variant.title}`}
+                          disabled={index === draft.variants.length - 1}
+                          onClick={() => moveVariant(variant.id, 1)}
+                        />
+                        <IconButton
+                          icon={Copy}
+                          label={`Duplicar ${variant.title}`}
+                          onClick={() => addVariant(variant)}
+                        />
+                        <IconButton
+                          icon={Trash}
+                          label={`Eliminar ${variant.title}`}
+                          disabled={draft.variants.length === 1}
+                          onClick={() =>
+                            setPendingVariantDelete({
+                              id: variant.id,
+                              index,
+                              label: variant.title || `Variante ${index + 1}`,
+                            })
                           }
-                        }}
-                      />
-                    </Field>
-                    <Field
-                      label="Precio anterior en centavos"
-                      {...(variantError.compareAtPrice
-                        ? { error: variantError.compareAtPrice }
-                        : {})}
-                    >
-                      <input
-                        type="number"
-                        min={0}
-                        step={1}
-                        value={variant.compareAtPrice ?? ""}
-                        onChange={(event) =>
-                          updateVariant(variant.id, (current) => ({
-                            ...current,
-                            compareAtPrice:
-                              event.target.value === ""
-                                ? undefined
-                                : (Number(event.target.value) as Variant["price"]),
-                          }))
-                        }
-                      />
-                    </Field>
-                    <Field label="Stock">
-                      <select
-                        value={variant.stockStatus}
-                        onChange={(event) =>
-                          updateVariant(variant.id, (current) => ({
-                            ...current,
-                            stockStatus: event.target.value as Variant["stockStatus"],
-                          }))
-                        }
-                      >
-                        {VARIANT_STOCK_OPTIONS.map((stockStatus) => (
-                          <option value={stockStatus} key={stockStatus}>
-                            {STOCK_LABELS[stockStatus]}
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
-                    {variant.stockStatus === "preorder" || variant.availabilityDate ? (
+                          data-variant-delete-index={index}
+                        />
+                      </div>
+                    </header>
+                    <div className="form-grid">
                       <Field
-                        label="Fecha de disponibilidad"
-                        hint="Se usa para informar cuándo estará disponible una preventa."
+                        label="Nombre"
+                        {...(variantError.title ? { error: variantError.title } : {})}
                       >
                         <input
-                          type="date"
-                          value={variant.availabilityDate?.slice(0, 10) ?? ""}
-                          onChange={(event) => {
-                            const date = event.target.value;
+                          value={variant.title}
+                          onChange={(event) =>
                             updateVariant(variant.id, (current) => ({
                               ...current,
-                              availabilityDate: date ? `${date}T00:00:00.000Z` : undefined,
-                            }));
+                              title: event.target.value,
+                            }))
+                          }
+                        />
+                      </Field>
+                      <Field label="SKU">
+                        <input
+                          value={variant.sku}
+                          onChange={(event) =>
+                            updateVariant(variant.id, (current) => ({
+                              ...current,
+                              sku: event.target.value,
+                            }))
+                          }
+                        />
+                      </Field>
+                      <Field
+                        label="Opciones"
+                        {...(variantError.options
+                          ? { error: variantError.options }
+                          : { hint: "Ejemplo: Color=Azul, Talle=M" })}
+                      >
+                        <input
+                          value={optionValues[variant.id] ?? ""}
+                          onChange={(event) =>
+                            setOptionValues((current) => ({
+                              ...current,
+                              [variant.id]: event.target.value,
+                            }))
+                          }
+                        />
+                      </Field>
+                      <Field
+                        label="Precio en centavos"
+                        {...(variantError.price ? { error: variantError.price } : {})}
+                      >
+                        <input
+                          type="number"
+                          min={0}
+                          step={1}
+                          value={priceText[variant.id] ?? String(variant.price)}
+                          onChange={(event) => {
+                            const text = event.target.value;
+                            setPriceText((current) => ({ ...current, [variant.id]: text }));
+                            if (text !== "") {
+                              const value = Number(text);
+                              if (Number.isInteger(value) && value >= 0) {
+                                updateVariant(variant.id, (current) => ({
+                                  ...current,
+                                  price: value as Variant["price"],
+                                }));
+                              }
+                            }
                           }}
                         />
                       </Field>
-                    ) : null}
-                    <Field label="GTIN">
-                      <input
-                        value={variant.gtin ?? ""}
-                        onChange={(event) =>
-                          updateVariant(variant.id, (current) => ({
-                            ...current,
-                            gtin: event.target.value,
-                          }))
-                        }
-                      />
-                    </Field>
-                    <Field label="MPN">
-                      <input
-                        value={variant.mpn ?? ""}
-                        onChange={(event) =>
-                          updateVariant(variant.id, (current) => ({
-                            ...current,
-                            mpn: event.target.value,
-                          }))
-                        }
-                      />
-                    </Field>
-                    <Field label="Imagen de variante">
-                      <ImageAssetPicker
-                        value={variant.imageId ?? ""}
-                        assets={assets.filter((asset) => draft.imageIds.includes(asset.id))}
-                        knownAssets={assets}
-                        noneLabel="Usar imagen principal"
-                        ariaLabel="Imagen de variante"
-                        onChange={(next) =>
-                          updateVariant(variant.id, (current) => ({
-                            ...current,
-                            imageId: next ? (next as ImageAsset["id"]) : undefined,
-                          }))
-                        }
-                        {...(onAssetUpload
-                          ? {
-                              onUpload: (asset: ImageAsset) =>
-                                addUploadedAssetToVariant(variant.id, asset),
-                            }
+                      <Field
+                        label="Precio anterior en centavos"
+                        {...(variantError.compareAtPrice
+                          ? { error: variantError.compareAtPrice }
                           : {})}
-                      />
-                    </Field>
-                    <label className="check-field">
-                      <input
-                        type="checkbox"
-                        checked={variant.available}
-                        onChange={(event) =>
-                          updateVariant(variant.id, (current) => ({
-                            ...current,
-                            available: event.target.checked,
-                          }))
-                        }
-                      />
-                      Disponible para vender
-                    </label>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-          <Button icon={Plus} onClick={() => addVariant()} data-variant-add>
-            Agregar variante
+                      >
+                        <input
+                          type="number"
+                          min={0}
+                          step={1}
+                          value={variant.compareAtPrice ?? ""}
+                          onChange={(event) =>
+                            updateVariant(variant.id, (current) => ({
+                              ...current,
+                              compareAtPrice:
+                                event.target.value === ""
+                                  ? undefined
+                                  : (Number(event.target.value) as Variant["price"]),
+                            }))
+                          }
+                        />
+                      </Field>
+                      <Field label="Stock">
+                        <select
+                          value={variant.stockStatus}
+                          onChange={(event) =>
+                            updateVariant(variant.id, (current) => ({
+                              ...current,
+                              stockStatus: event.target.value as Variant["stockStatus"],
+                            }))
+                          }
+                        >
+                          {VARIANT_STOCK_OPTIONS.map((stockStatus) => (
+                            <option value={stockStatus} key={stockStatus}>
+                              {STOCK_LABELS[stockStatus]}
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
+                      {variant.stockStatus === "preorder" || variant.availabilityDate ? (
+                        <Field
+                          label="Fecha de disponibilidad"
+                          hint="Se usa para informar cuándo estará disponible una preventa."
+                        >
+                          <input
+                            type="date"
+                            value={variant.availabilityDate?.slice(0, 10) ?? ""}
+                            onChange={(event) => {
+                              const date = event.target.value;
+                              updateVariant(variant.id, (current) => ({
+                                ...current,
+                                availabilityDate: date ? `${date}T00:00:00.000Z` : undefined,
+                              }));
+                            }}
+                          />
+                        </Field>
+                      ) : null}
+                      <Field label="GTIN">
+                        <input
+                          value={variant.gtin ?? ""}
+                          onChange={(event) =>
+                            updateVariant(variant.id, (current) => ({
+                              ...current,
+                              gtin: event.target.value,
+                            }))
+                          }
+                        />
+                      </Field>
+                      <Field label="MPN">
+                        <input
+                          value={variant.mpn ?? ""}
+                          onChange={(event) =>
+                            updateVariant(variant.id, (current) => ({
+                              ...current,
+                              mpn: event.target.value,
+                            }))
+                          }
+                        />
+                      </Field>
+                      <Field label="Imagen de variante">
+                        <ImageAssetPicker
+                          value={variant.imageId ?? ""}
+                          assets={assets.filter((asset) => draft.imageIds.includes(asset.id))}
+                          knownAssets={assets}
+                          noneLabel="Usar imagen principal"
+                          ariaLabel="Imagen de variante"
+                          onChange={(next) =>
+                            updateVariant(variant.id, (current) => ({
+                              ...current,
+                              imageId: next ? (next as ImageAsset["id"]) : undefined,
+                            }))
+                          }
+                          {...(onAssetUpload
+                            ? {
+                                onUpload: (asset: ImageAsset) =>
+                                  addUploadedAssetToVariant(variant.id, asset),
+                              }
+                            : {})}
+                        />
+                      </Field>
+                      <label className="check-field">
+                        <input
+                          type="checkbox"
+                          checked={variant.available}
+                          onChange={(event) =>
+                            updateVariant(variant.id, (current) => ({
+                              ...current,
+                              available: event.target.checked,
+                            }))
+                          }
+                        />
+                        Disponible para vender
+                      </label>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+            <Button icon={Plus} onClick={() => addVariant()} data-variant-add>
+              Agregar variante
+            </Button>
+          </fieldset>
+        </div>
+
+        <div className="product-dialog__footer">
+          <Button variant="quiet" onClick={requestClose}>
+            Cancelar
           </Button>
-        </fieldset>
-      </div>
+          <Button onClick={() => save(false)}>
+            {mode === "create" ? "Guardar borrador" : "Guardar cambios"}
+          </Button>
+          <Button variant="primary" onClick={() => save(true)}>
+            {mode === "create" ? "Crear y activar" : "Guardar y activar"}
+          </Button>
+        </div>
 
-      <div className="product-dialog__footer">
-        <Button variant="quiet" onClick={requestClose}>
-          Cancelar
-        </Button>
-        <Button onClick={() => save(false)}>
-          {mode === "create" ? "Guardar borrador" : "Guardar cambios"}
-        </Button>
-        <Button variant="primary" onClick={() => save(true)}>
-          {mode === "create" ? "Crear y activar" : "Guardar y activar"}
-        </Button>
-      </div>
-
-      {confirmClose ? (
-        <ConfirmDialog
-          title="Salir sin guardar"
-          body="Hay cambios sin guardar en el producto. ¿Querés salir sin guardar?"
-          confirmLabel="Salir sin guardar"
-          cancelLabel="Seguir editando"
-          danger
-          onConfirm={() => {
-            setConfirmClose(false);
-            onCancel();
-          }}
-          onCancel={() => setConfirmClose(false)}
-        />
-      ) : null}
-      {pendingVariantDelete ? (
-        <ConfirmDialog
-          title="Eliminar variante"
-          body={
-            <>
-              Se eliminará «{pendingVariantDelete.label}» y sus opciones, precio y stock del
-              borrador del producto. Podés cancelar ahora si no querés cambiarlo.
-            </>
-          }
-          confirmLabel="Eliminar variante"
-          danger
-          onConfirm={() => {
-            const variantId = pendingVariantDelete.id;
-            setPendingVariantDelete(null);
-            requestAnimationFrame(() => removeVariant(variantId));
-          }}
-          onCancel={() => setPendingVariantDelete(null)}
-        />
-      ) : null}
-    </dialog></DockedInspector>
+        {confirmClose ? (
+          <ConfirmDialog
+            title="Salir sin guardar"
+            body="Hay cambios sin guardar en el producto. ¿Querés salir sin guardar?"
+            confirmLabel="Salir sin guardar"
+            cancelLabel="Seguir editando"
+            danger
+            onConfirm={() => {
+              setConfirmClose(false);
+              onCancel();
+            }}
+            onCancel={() => setConfirmClose(false)}
+          />
+        ) : null}
+        {pendingVariantDelete ? (
+          <ConfirmDialog
+            title="Eliminar variante"
+            body={
+              <>
+                Se eliminará «{pendingVariantDelete.label}» y sus opciones, precio y stock del
+                borrador del producto. Podés cancelar ahora si no querés cambiarlo.
+              </>
+            }
+            confirmLabel="Eliminar variante"
+            danger
+            onConfirm={() => {
+              const variantId = pendingVariantDelete.id;
+              setPendingVariantDelete(null);
+              requestAnimationFrame(() => removeVariant(variantId));
+            }}
+            onCancel={() => setPendingVariantDelete(null)}
+          />
+        ) : null}
+      </dialog>
+    </DockedInspector>
   );
 }
