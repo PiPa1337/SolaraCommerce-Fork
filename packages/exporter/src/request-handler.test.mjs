@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
@@ -593,6 +593,66 @@ describe("handler: estado del QA perpetuo", () => {
       expect(body.blockedCount).toBe(1);
       expect(body.activeCycle).toMatchObject({ backlogItem: "P2", phase: "gates", attempts: 2 });
     } finally {
+      await handler?.close();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("handler: preferencias persistentes de Gargantua", () => {
+  it("guarda y recupera los presets desde el runtime de la instalación", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-handler-gravity-preferences-"));
+    const auth = { cookie: `${shutdownCookieName}=token-test` };
+    const preferences = {
+      customPresets: [null, null, null],
+      activeSettings: { filamentDetail: 2.75, taaQuality: "extreme" },
+      activeCustomPreset: 0,
+      selectedCustomPreset: 0,
+    };
+    let handler;
+    let otherPortHandler;
+    try {
+      handler = createSolaraRequestHandler({
+        applicationRoot: root,
+        origin: "http://127.0.0.1:4174",
+        shutdownToken: "token-test",
+        onShutdown: () => {},
+      });
+
+      const unauthorized = await handler.handle(
+        request("GET", "/__solara/storage/preferences/gravity"),
+      );
+      expect(unauthorized.status).toBe(403);
+
+      const saved = await handler.handle(
+        request(
+          "PUT",
+          "/__solara/storage/preferences/gravity",
+          { ...auth, origin: "http://127.0.0.1:4174", "content-type": "application/json" },
+          JSON.stringify(preferences),
+        ),
+      );
+      expect(saved.status).toBe(200);
+      await expect(
+        readFile(join(root, ".solara-runtime", "gravity-preferences.json"), "utf8"),
+      ).resolves.toContain('"taaQuality": "extreme"');
+
+      otherPortHandler = createSolaraRequestHandler({
+        applicationRoot: root,
+        origin: "http://127.0.0.1:45123",
+        shutdownToken: "token-test",
+        onShutdown: () => {},
+      });
+      const loaded = await otherPortHandler.handle(
+        request("GET", "/__solara/storage/preferences/gravity", {
+          ...auth,
+          origin: "http://127.0.0.1:45123",
+        }),
+      );
+      expect(loaded.status).toBe(200);
+      expect(JSON.parse(loaded.body).preferences).toEqual(preferences);
+    } finally {
+      await otherPortHandler?.close();
       await handler?.close();
       await rm(root, { recursive: true, force: true });
     }

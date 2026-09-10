@@ -13,12 +13,30 @@ export const GRAVITY_TAA_QUALITY_META: Record<
   GravityTaaQuality,
   { label: string; description: string }
 > = {
-  off: { label: "Off", description: "Render actual, sin acumulación" },
-  low: { label: "Bajo", description: "Suaviza bordes con poco coste" },
-  medium: { label: "Medio", description: "Equilibrio entre nitidez y estabilidad" },
-  high: { label: "Alto", description: "Máxima limpieza en filamentos" },
-  "very-high": { label: "Muy alto", description: "Acumulación profunda para bordes exigentes" },
-  extreme: { label: "Extremo", description: "Máxima estabilidad visual y detalle temporal" },
+  off: {
+    label: "Off",
+    description: "1 muestra: sin acumulación temporal y con el menor coste de GPU",
+  },
+  low: {
+    label: "Bajo",
+    description: "2 muestras: suaviza bordes con un aumento mínimo de carga",
+  },
+  medium: {
+    label: "Medio",
+    description: "4 muestras: equilibrio entre bordes limpios y uso de GPU",
+  },
+  high: {
+    label: "Alto",
+    description: "8 muestras: reduce más el parpadeo de filamentos y bordes dentados",
+  },
+  "very-high": {
+    label: "Muy alto",
+    description: "12 muestras: estabiliza detalles finos con mayor coste de GPU",
+  },
+  extreme: {
+    label: "Extremo",
+    description: "16 muestras: máxima estabilidad temporal y mayor uso de GPU",
+  },
 };
 
 export interface GravitySettings {
@@ -42,13 +60,14 @@ export interface GravitySettings {
   galaxyIntensity: number;
   starTwinkle: number;
   vignette: number;
+  staticDiskDetails: boolean;
   pauseWhenHidden: boolean;
   taaQuality: GravityTaaQuality;
 }
 
 export type NumericGravitySetting = Exclude<
   keyof GravitySettings,
-  "pauseWhenHidden" | "taaQuality"
+  "staticDiskDetails" | "pauseWhenHidden" | "taaQuality"
 >;
 
 export const GRAVITY_NUMERIC_SETTINGS: NumericGravitySetting[] = [
@@ -69,10 +88,47 @@ export const GRAVITY_NUMERIC_SETTINGS: NumericGravitySetting[] = [
   "lensStrength",
   "bloomSpread",
   "causticIntensity",
+    "galaxyIntensity",
+    "starTwinkle",
+    "vignette",
+  ];
+
+export const GRAVITY_CINEMATIC_SETTINGS: readonly NumericGravitySetting[] = [
+  "turbulence",
+  "filamentDetail",
+  "gasAbsorption",
+  "diskTilt",
+  "lensStrength",
+  "bloomSpread",
+  "causticIntensity",
   "galaxyIntensity",
   "starTwinkle",
   "vignette",
 ];
+
+const GRAVITY_PRESET_NUMERIC_SETTINGS = GRAVITY_NUMERIC_SETTINGS.filter(
+  (setting) => !GRAVITY_CINEMATIC_SETTINGS.includes(setting),
+);
+
+export function applyBuiltInGravityPreset(
+  current: GravitySettings,
+  preset: GravitySettings,
+): GravitySettings {
+  const next = { ...preset };
+  for (const setting of GRAVITY_CINEMATIC_SETTINGS) {
+    next[setting] = current[setting];
+  }
+  next.staticDiskDetails = current.staticDiskDetails;
+  return next;
+}
+
+export function isGravityPresetActive(settings: GravitySettings, preset: GravitySettings): boolean {
+  return (
+    GRAVITY_PRESET_NUMERIC_SETTINGS.every((setting) => settings[setting] === preset[setting]) &&
+    settings.pauseWhenHidden === preset.pauseWhenHidden &&
+    settings.taaQuality === preset.taaQuality
+  );
+}
 
 export const DEFAULT_GRAVITY_SETTINGS: GravitySettings = {
   renderScaleMultiplier: 1,
@@ -95,6 +151,7 @@ export const DEFAULT_GRAVITY_SETTINGS: GravitySettings = {
   galaxyIntensity: 1,
   starTwinkle: 1,
   vignette: 1,
+  staticDiskDetails: true,
   pauseWhenHidden: true,
   taaQuality: "off",
 };
@@ -123,6 +180,7 @@ export const GRAVITY_PRESETS: Record<GravityPresetId, GravitySettings> = {
     galaxyIntensity: 0.1,
     starTwinkle: 0.1,
     vignette: 0.1,
+    staticDiskDetails: true,
     pauseWhenHidden: true,
     taaQuality: "off",
   },
@@ -148,6 +206,7 @@ export const GRAVITY_PRESETS: Record<GravityPresetId, GravitySettings> = {
     galaxyIntensity: 3,
     starTwinkle: 3,
     vignette: 3,
+    staticDiskDetails: true,
     pauseWhenHidden: true,
     taaQuality: "extreme",
   },
@@ -157,21 +216,22 @@ export const GRAVITY_PRESET_META: Record<GravityPresetId, { label: string; descr
   {
     efficiency: {
       label: "Eficiencia",
-      description: "Menos carga para equipos ajustados",
+      description: "Baja resolución, FPS y capas para reducir el uso de GPU",
     },
     current: {
       label: "Actual",
-      description: "La calidad que ya usa el dashboard",
+      description: "Mantiene 100% de resolución, 60 FPS y 3 capas",
     },
     maximum: {
       label: "Máxima",
-      description: "Más detalle y presencia visual",
+      description: "Sube resolución, FPS, capas y densidad de estrellas; usa más GPU",
     },
   };
 
 export const GRAVITY_PRESET_IDS: GravityPresetId[] = ["efficiency", "current", "maximum"];
 
 export const GRAVITY_PREFERENCES_STORAGE_KEY = "solara-commerce-gravity-preferences-v1";
+export const GRAVITY_PREFERENCES_ENDPOINT = "/__solara/storage/preferences/gravity";
 export const CUSTOM_GRAVITY_PRESET_COUNT = 3;
 
 export interface GravityPreferences {
@@ -214,13 +274,44 @@ function parseGravitySettings(value: unknown): GravitySettings | null {
   ) {
     return null;
   }
+  const staticDiskDetails =
+    candidate.staticDiskDetails === undefined ? true : candidate.staticDiskDetails;
+  if (typeof staticDiskDetails !== "boolean") return null;
   const taaQuality = candidate.taaQuality === undefined ? "off" : candidate.taaQuality;
   if (!isGravityTaaQuality(taaQuality)) return null;
-  return { ...DEFAULT_GRAVITY_SETTINGS, ...candidate, taaQuality } as GravitySettings;
+  return {
+    ...DEFAULT_GRAVITY_SETTINGS,
+    ...candidate,
+    staticDiskDetails,
+    taaQuality,
+  } as GravitySettings;
 }
 
 export function isGravitySettings(value: unknown): value is GravitySettings {
   return parseGravitySettings(value) !== null;
+}
+
+function parseGravityPreferences(value: unknown): GravityPreferences | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  const candidate = value as Record<string, unknown>;
+  const storedPresets = Array.isArray(candidate.customPresets) ? candidate.customPresets : [];
+  const customPresets = Array.from({ length: CUSTOM_GRAVITY_PRESET_COUNT }, (_, index) => {
+    const preset = storedPresets[index];
+    return parseGravitySettings(preset);
+  });
+  const storedActiveCustomPreset = candidate.activeCustomPreset;
+  const activeCustomPreset =
+    isGravityPresetIndex(storedActiveCustomPreset) && customPresets[storedActiveCustomPreset]
+      ? storedActiveCustomPreset
+      : null;
+  return {
+    customPresets,
+    activeSettings: parseGravitySettings(candidate.activeSettings) ?? DEFAULT_GRAVITY_SETTINGS,
+    activeCustomPreset,
+    selectedCustomPreset: isGravityPresetIndex(candidate.selectedCustomPreset)
+      ? candidate.selectedCustomPreset
+      : 0,
+  };
 }
 
 export function loadGravityPreferences(): GravityPreferences {
@@ -230,29 +321,45 @@ export function loadGravityPreferences(): GravityPreferences {
   try {
     const raw = window.localStorage.getItem(GRAVITY_PREFERENCES_STORAGE_KEY);
     if (!raw) return fallback;
-    const parsed: unknown = JSON.parse(raw);
-    if (typeof parsed !== "object" || parsed === null) return fallback;
-    const candidate = parsed as Record<string, unknown>;
-    const storedPresets = Array.isArray(candidate.customPresets) ? candidate.customPresets : [];
-    const customPresets = Array.from({ length: CUSTOM_GRAVITY_PRESET_COUNT }, (_, index) => {
-      const preset = storedPresets[index];
-      return parseGravitySettings(preset);
-    });
-    const storedActiveCustomPreset = candidate.activeCustomPreset;
-    const activeCustomPreset =
-      isGravityPresetIndex(storedActiveCustomPreset) && customPresets[storedActiveCustomPreset]
-        ? storedActiveCustomPreset
-        : null;
-    return {
-      customPresets,
-      activeSettings: parseGravitySettings(candidate.activeSettings) ?? DEFAULT_GRAVITY_SETTINGS,
-      activeCustomPreset,
-      selectedCustomPreset: isGravityPresetIndex(candidate.selectedCustomPreset)
-        ? candidate.selectedCustomPreset
-        : 0,
-    };
+    return parseGravityPreferences(JSON.parse(raw)) ?? fallback;
   } catch {
     return fallback;
+  }
+}
+
+export async function loadGravityPreferencesFromDisk(): Promise<GravityPreferences | null> {
+  if (typeof window === "undefined") return null;
+  try {
+    const response = await fetch(GRAVITY_PREFERENCES_ENDPOINT, {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) return null;
+    const body: unknown = await response.json();
+    if (typeof body !== "object" || body === null || Array.isArray(body)) return null;
+    return parseGravityPreferences((body as Record<string, unknown>).preferences);
+  } catch {
+    return null;
+  }
+}
+
+export async function persistGravityPreferencesToDisk(
+  preferences: GravityPreferences,
+): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  try {
+    const response = await fetch(GRAVITY_PREFERENCES_ENDPOINT, {
+      method: "PUT",
+      credentials: "same-origin",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(preferences),
+    });
+    return response.ok;
+  } catch {
+    return false;
   }
 }
 

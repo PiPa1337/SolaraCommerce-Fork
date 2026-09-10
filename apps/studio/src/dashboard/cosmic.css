@@ -7432,38 +7432,16 @@ tbody tr[data-selected="true"] {
   background: #000;
   transition: background-color 720ms cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
-  --boot-ink: #f6f1e1;
-  --boot-muted: #a9ada6;
-  --boot-faint: #828b87;
-  --boot-amber: #e8b56f;
-  --boot-line: rgb(255 230 187 / 0.14);
-}
-
-.app-boot-sequence .dashboard-gravity-field {
-  position: absolute;
-  z-index: 0;
-  inset: 0;
-  overflow: hidden;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  background-color: #010204;
-  background-image: url("/branding/gargantua-reference.png");
-  background-position: 68% center;
-  background-repeat: no-repeat;
-  background-size: cover;
-}
-
-.app-boot-sequence .dashboard-gravity-field[data-renderer="webgl2"] {
-  background-image: none;
-}
-
-.app-boot-sequence .dashboard-gravity-field canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-  mix-blend-mode: screen;
-  opacity: 1;
+  /* El splash usa el mismo material frío de las cards del dashboard. */
+  --boot-ink: #f3f7fb;
+  --boot-muted: #aab8c8;
+  --boot-faint: #8190a4;
+  --boot-amber: #c4d2e1;
+  --boot-line: rgb(232 242 255 / 0.16);
+  --boot-card-border: rgb(242 248 255 / 0.3);
+  --boot-card-surface: rgb(13 22 36 / 0.78);
+  --boot-card-highlight: rgb(255 255 255 / 0.075);
+  --boot-card-shadow: 0 18px 48px rgb(0 0 0 / 0.28);
 }
 
 .app-boot-sequence__veil {
@@ -7499,16 +7477,15 @@ tbody tr[data-selected="true"] {
   left: 50%;
   width: min(470px, calc(100vw - 40px));
   padding: 26px;
-  border: 1px solid var(--boot-line);
+  border: 1px solid var(--boot-card-border);
   border-radius: 18px;
   color: var(--boot-ink);
   background:
-    linear-gradient(145deg, rgb(24 32 43 / 0.8), rgb(8 12 18 / 0.76)),
-    rgb(8 12 18 / 0.7);
-  box-shadow:
-    0 28px 80px rgb(0 0 0 / 0.46),
-    inset 0 1px 0 rgb(255 255 255 / 0.08);
-  backdrop-filter: blur(20px) saturate(120%);
+    linear-gradient(145deg, rgb(255 255 255 / 0.075), rgb(255 255 255 / 0.018)),
+    var(--boot-card-surface);
+  box-shadow: var(--boot-card-shadow), 0 1px 0 var(--boot-card-highlight) inset;
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  backdrop-filter: blur(14px) saturate(120%);
   transform: translate(-50%, -50%);
   transition:
     opacity 420ms cubic-bezier(0.16, 1, 0.3, 1),
@@ -7527,9 +7504,11 @@ tbody tr[data-selected="true"] {
   flex: 0 0 auto;
   width: 44px;
   height: 44px;
-  border: 1px solid rgb(255 226 174 / 0.35);
+  border: 1px solid rgb(242 248 255 / 0.32);
   border-radius: 50%;
   box-shadow: none;
+  /* El PNG de marca trae un halo cálido; acá debe pertenecer al vidrio frío. */
+  filter: grayscale(1) brightness(1.12) contrast(0.96);
 }
 
 .app-boot-sequence__eyebrow,
@@ -7593,7 +7572,7 @@ tbody tr[data-selected="true"] {
   height: 100%;
   width: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #b9834d, #ffe5a6);
+  background: linear-gradient(90deg, rgb(166 188 214 / 0.95), rgb(243 247 251 / 0.98));
   box-shadow: none;
   transform-origin: left center;
   transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -7616,8 +7595,7 @@ tbody tr[data-selected="true"] {
   font-weight: 600;
 }
 
-.app-boot-sequence.is-blackout,
-.app-boot-sequence.is-returning {
+.app-boot-sequence.is-blackout {
   background-color: #000;
 }
 
@@ -7626,7 +7604,8 @@ tbody tr[data-selected="true"] {
 }
 
 .app-boot-sequence.is-blackout .app-boot-sequence__panel,
-.app-boot-sequence.is-returning .app-boot-sequence__panel {
+.app-boot-sequence.is-returning .app-boot-sequence__panel,
+.app-boot-sequence.is-dashboard .app-boot-sequence__panel {
   opacity: 0;
   transform: translate(-50%, calc(-50% - 10px));
 }
@@ -7636,16 +7615,22 @@ tbody tr[data-selected="true"] {
   transition-duration: 900ms;
 }
 
-.app-boot-sequence.is-returning .dashboard-gravity-field {
-  opacity: 1;
-  transition: opacity 600ms cubic-bezier(0.16, 1, 0.3, 1);
+.app-boot-sequence.is-returning {
+  background-color: transparent;
+}
+
+body:has(.app-boot-sequence.is-returning) .app-root--dashboard-cosmic > .app-header--dashboard-cosmic,
+body:has(.app-boot-sequence.is-returning) .app-root--dashboard-cosmic .dashboard-cosmic__banners,
+body:has(.app-boot-sequence.is-returning) .app-root--dashboard-cosmic .dashboard-cosmic__content {
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* El dashboard entra después del zoom; el marker queda vivo durante todo el
  * stagger para evitar que React quite las animaciones en el primer frame. */
 .app-boot-sequence.is-dashboard {
   opacity: 0;
-  transition: opacity 360ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: none;
 }
 
 html[data-solara-dashboard-entry="true"] .app-root--dashboard-cosmic > .app-header--dashboard-cosmic,
@@ -7727,10 +7712,6 @@ html[data-solara-dashboard-entry="true"] .dashboard-cosmic-results {
 }
 
 @media (max-width: 640px) {
-  .app-boot-sequence .dashboard-gravity-field {
-    background-position: 78% center;
-  }
-
   .app-boot-sequence__panel {
     width: calc(100vw - 32px);
     padding: 20px;
@@ -7758,8 +7739,7 @@ html[data-solara-dashboard-entry="true"] .dashboard-cosmic-results {
 @media (prefers-reduced-motion: reduce) {
   .app-boot-sequence__blackout,
   .app-boot-sequence__panel,
-  .app-boot-sequence__progress-value,
-  .app-boot-sequence .dashboard-gravity-field {
+  .app-boot-sequence__progress-value {
     transition-duration: 120ms;
   }
 
@@ -8529,7 +8509,7 @@ html[data-solara-dashboard-entry="true"] .dashboard-cosmic-results {
 
 .dashboard-gargantua-settings__body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(154px, 180px);
+  grid-template-columns: minmax(0, 1fr);
   gap: 18px;
   min-height: 0;
   flex: 1 1 auto;
@@ -8541,96 +8521,6 @@ html[data-solara-dashboard-entry="true"] .dashboard-cosmic-results {
 
 .dashboard-gargantua-settings__body-main {
   min-width: 0;
-}
-
-.dashboard-gargantua-settings__telemetry {
-  position: sticky;
-  top: 0;
-  align-self: start;
-  display: grid;
-  gap: 12px;
-  margin-top: 14px;
-  padding: 12px;
-  border: 1px solid rgb(232 242 255 / 0.16);
-  border-radius: 10px;
-  background: rgb(10 15 22 / 0.68);
-  box-shadow: 0 12px 28px rgb(0 0 0 / 0.2);
-}
-
-.dashboard-gargantua-settings__telemetry-head,
-.dashboard-gargantua-settings__telemetry-label,
-.dashboard-gargantua-settings__telemetry-usage {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.dashboard-gargantua-settings__telemetry-head h2 {
-  margin: 0;
-  color: var(--cosmic-ink);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.dashboard-gargantua-settings__telemetry-head > span,
-.dashboard-gargantua-settings__telemetry-label > span {
-  color: var(--cosmic-faint);
-  font-size: 9px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.dashboard-gargantua-settings__telemetry-head > span {
-  color: var(--cosmic-amber);
-  font-weight: 700;
-}
-
-.dashboard-gargantua-settings__telemetry-list {
-  display: grid;
-  gap: 10px;
-}
-
-.dashboard-gargantua-settings__telemetry-row {
-  display: grid;
-  gap: 6px;
-  padding-top: 10px;
-  border-top: 1px solid var(--dashboard-glass-border);
-}
-
-.dashboard-gargantua-settings__telemetry-label strong {
-  color: var(--cosmic-ink);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.dashboard-gargantua-settings__telemetry-name {
-  display: block;
-  overflow: hidden;
-  color: var(--cosmic-muted);
-  font-size: 10px;
-  font-weight: 500;
-  line-height: 1.4;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dashboard-gargantua-settings__telemetry-usage span,
-.dashboard-gargantua-settings__telemetry > p {
-  color: var(--cosmic-faint);
-  font-size: 9px;
-  line-height: 1.4;
-}
-
-.dashboard-gargantua-settings__telemetry-usage output {
-  color: var(--cosmic-amber);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-}
-
-.dashboard-gargantua-settings__telemetry > p {
-  margin: 0;
 }
 
 .dashboard-gargantua-settings__section {
@@ -8992,11 +8882,6 @@ html[data-solara-dashboard-entry="true"] .dashboard-cosmic-results {
     gap: 0;
   }
 
-  .dashboard-gargantua-settings__telemetry {
-    position: static;
-    order: -1;
-    margin: 14px 0 0;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

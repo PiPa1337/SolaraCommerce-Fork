@@ -1,8 +1,6 @@
 import { ArrowCounterClockwise, FloppyDisk, X } from "@phosphor-icons/react";
 import { useEffect, useId, useRef } from "react";
-import type { GravityTelemetrySnapshot } from "./GravityField";
 import {
-  GRAVITY_NUMERIC_SETTINGS,
   GRAVITY_PRESET_IDS,
   GRAVITY_PRESET_META,
   GRAVITY_PRESETS,
@@ -11,6 +9,7 @@ import {
   type GravityPresetId,
   type GravitySettings,
   type GravityTaaQuality,
+  isGravityPresetActive,
   type NumericGravitySetting,
 } from "./gravitySettings";
 
@@ -26,7 +25,7 @@ interface GravitySettingsPanelProps {
   onSelectCustomPreset(index: number): void;
   onSaveCustomPreset(): void;
   onTaaQualityChange(value: GravityTaaQuality): void;
-  telemetry: GravityTelemetrySnapshot | null;
+  onToggleStaticDiskDetails(value: boolean): void;
   onTogglePauseWhenHidden(value: boolean): void;
   onReset(): void;
   onClose(): void;
@@ -52,12 +51,7 @@ const CUSTOM_PRESET_SLOTS = [
 
 function getActivePreset(settings: GravitySettings): GravityPresetId | undefined {
   return GRAVITY_PRESET_IDS.find((presetId) => {
-    const preset = GRAVITY_PRESETS[presetId];
-    return (
-      GRAVITY_NUMERIC_SETTINGS.every((setting) => settings[setting] === preset[setting]) &&
-      settings.pauseWhenHidden === preset.pauseWhenHidden &&
-      settings.taaQuality === preset.taaQuality
-    );
+    return isGravityPresetActive(settings, GRAVITY_PRESETS[presetId]);
   });
 }
 
@@ -95,11 +89,6 @@ function RangeSetting({
   );
 }
 
-function formatTelemetryUsage(value: number | null, telemetry: GravityTelemetrySnapshot | null) {
-  if (!telemetry) return "Midiendo…";
-  return value === null ? "N/D" : `${Math.round(value)}%`;
-}
-
 export function GravitySettingsPanel({
   id,
   open,
@@ -112,7 +101,7 @@ export function GravitySettingsPanel({
   onSelectCustomPreset,
   onSaveCustomPreset,
   onTaaQualityChange,
-  telemetry,
+  onToggleStaticDiskDetails,
   onTogglePauseWhenHidden,
   onReset,
   onClose,
@@ -120,7 +109,7 @@ export function GravitySettingsPanel({
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
   const descriptionId = useId();
-  const activePreset = getActivePreset(settings);
+  const activePreset = activeCustomPreset === null ? getActivePreset(settings) : undefined;
   const activePresetLabel =
     activeCustomPreset === null
       ? activePreset
@@ -156,8 +145,9 @@ export function GravitySettingsPanel({
         <div>
           <h1 id={titleId}>Ajustes del fondo</h1>
           <p id={descriptionId}>
-            Afiná la calidad del campo gravitacional en vivo. El resto del dashboard queda oculto
-            mientras ajustás estos valores.
+            Afiná la calidad del campo gravitacional en vivo. Los presets incorporados ajustan
+            rendimiento y apariencia base, pero no modifican la cinemática avanzada. El resto del
+            dashboard queda oculto mientras ajustás estos valores.
           </p>
         </div>
         <button
@@ -203,7 +193,10 @@ export function GravitySettingsPanel({
               <div className="dashboard-gargantua-settings__taa-head">
                 <div>
                   <strong>Antialias temporal (TAA)</strong>
-                  <p>Acumula muestras del fondo para limpiar bordes y filamentos en movimiento.</p>
+                  <p>
+                    Combina entre 1 y 16 cuadros consecutivos para suavizar bordes y filamentos. No
+                    cambia la resolución interna; los niveles altos usan más GPU.
+                  </p>
                 </div>
                 <span>{GRAVITY_TAA_QUALITY_META[settings.taaQuality].label}</span>
               </div>
@@ -229,13 +222,13 @@ export function GravitySettingsPanel({
                 })}
               </fieldset>
               <p className="dashboard-gargantua-settings__taa-hint">
-                Sólo afecta la animación WebGL del fondo; el resto de la interfaz queda igual.
+                Sólo afecta la animación WebGL del fondo; no cambia tus tiendas ni su contenido.
               </p>
             </div>
             <RangeSetting
               setting="renderScaleMultiplier"
               label="Resolución interna"
-              hint="Límite del canvas antes del ajuste automático del navegador."
+              hint="Define los píxeles del canvas: más resolución conserva más detalle, pero procesa más carga de GPU."
               value={settings.renderScaleMultiplier}
               min={0.1}
               max={2.5}
@@ -246,7 +239,7 @@ export function GravitySettingsPanel({
             <RangeSetting
               setting="maxFps"
               label="Límite de cuadros"
-              hint="Reducilo para bajar consumo sin detener el movimiento."
+              hint="Limita cuántos cuadros dibuja por segundo; baja el consumo sin cambiar el detalle de cada cuadro."
               value={settings.maxFps}
               min={1}
               max={120}
@@ -257,7 +250,7 @@ export function GravitySettingsPanel({
             <RangeSetting
               setting="diskLayers"
               label="Capas del disco"
-              hint="Más capas agregan profundidad y también trabajo de GPU."
+              hint="Repite el gas en 1–6 planos de profundidad; más planos dan volumen y exigen más pasadas de GPU."
               value={settings.diskLayers}
               min={1}
               max={6}
@@ -321,7 +314,7 @@ export function GravitySettingsPanel({
             <RangeSetting
               setting="materialSpeed"
               label="Velocidad del material"
-              hint="Controla el flujo de gas, las estrellas y el halo."
+              hint="Multiplica el reloj del shader: acelera o frena el flujo del gas, el polvo, las estrellas y el halo."
               value={settings.materialSpeed}
               min={0.1}
               max={4}
@@ -332,7 +325,7 @@ export function GravitySettingsPanel({
             <RangeSetting
               setting="pointerResponse"
               label="Respuesta al puntero"
-              hint="Intensidad del parallax al mover el cursor sobre el dashboard."
+              hint="Amplía o reduce cuánto se desplaza el centro y el parallax del fondo cuando movés el puntero."
               value={settings.pointerResponse}
               min={0.1}
               max={4}
@@ -343,13 +336,30 @@ export function GravitySettingsPanel({
             <label className="dashboard-gargantua-settings__toggle">
               <span>
                 <strong>Pausar con la pestaña oculta</strong>
-                <small>Evita gastar GPU cuando SolaraCommerce no está visible.</small>
+                <small>
+                  Detiene nuevos cuadros al ocultar la pestaña y retoma la misma fase al volver.
+                </small>
               </span>
               <input
                 data-testid="gravity-setting-pauseWhenHidden"
                 type="checkbox"
                 checked={settings.pauseWhenHidden}
                 onChange={(event) => onTogglePauseWhenHidden(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Manchas estables del disco</strong>
+                <small>
+                  Conserva las manchas suaves de la zona exterior; desactivá esta opción para que
+                  esa textura se anime junto con el resto del gas.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-staticDiskDetails"
+                type="checkbox"
+                checked={settings.staticDiskDetails}
+                onChange={(event) => onToggleStaticDiskDetails(event.target.checked)}
               />
             </label>
           </section>
@@ -364,18 +374,18 @@ export function GravitySettingsPanel({
             <RangeSetting
               setting="starDensity"
               label="Densidad de estrellas"
-              hint="Ajusta cuántos puntos de luz aparecen en el vacío."
+              hint="Controla cuántas estrellas pasan el umbral de visibilidad en las tres escalas del fondo; no cambia su tamaño."
               value={settings.starDensity}
               min={0.1}
-              max={3}
+              max={10}
               step={0.05}
-              format={(value) => `${Math.round(value * 100)}%`}
+              format={(value) => `${value.toFixed(2)}×`}
               onChange={onChange}
             />
             <RangeSetting
               setting="dustIntensity"
               label="Nube de polvo"
-              hint="Más polvo suma textura; menos deja el espacio más limpio."
+              hint="Multiplica la banda de polvo detrás del disco: textura, grietas y granos; no agrega nuevas capas."
               value={settings.dustIntensity}
               min={0.1}
               max={3}
@@ -386,7 +396,7 @@ export function GravitySettingsPanel({
             <RangeSetting
               setting="haloIntensity"
               label="Intensidad del halo"
-              hint="Modifica el resplandor alrededor del disco y la sombra."
+              hint="Multiplica los halos suaves del arco, la sombra y el borde exterior sin cambiar el gas interno."
               value={settings.haloIntensity}
               min={0.1}
               max={3}
@@ -406,7 +416,7 @@ export function GravitySettingsPanel({
             <RangeSetting
               setting="warmth"
               label="Temperatura de color"
-              hint="Llevá el disco hacia una luz más fría o más dorada."
+              hint="Desplaza el color final: menos de 1 enfría la imagen y más de 1 la vuelve dorada."
               value={settings.warmth}
               min={0.1}
               max={3}
@@ -417,7 +427,7 @@ export function GravitySettingsPanel({
             <RangeSetting
               setting="contrast"
               label="Contraste de salida"
-              hint="Define la separación entre el vacío negro y los detalles."
+              hint="Separa los tonos alrededor del punto medio: más contraste marca el negro y los detalles luminosos."
               value={settings.contrast}
               min={0.1}
               max={2.8}
@@ -437,7 +447,7 @@ export function GravitySettingsPanel({
             <RangeSetting
               setting="turbulence"
               label="Turbulencia orbital"
-              hint="Deformá el flujo local del gas sin mover el encuadre."
+              hint="Aumenta los remolinos locales del gas y vuelve más irregular el flujo, sin mover el encuadre general."
               value={settings.turbulence}
               min={0.1}
               max={3}
@@ -448,7 +458,7 @@ export function GravitySettingsPanel({
             <RangeSetting
               setting="filamentDetail"
               label="Detalle de filamentos"
-              hint="Aumentá o suavizá las vetas finas del disco."
+              hint="Multiplica las vetas finas que genera el gas: más detalle dibuja filamentos más visibles y marcados."
               value={settings.filamentDetail}
               min={0.1}
               max={3}
@@ -459,7 +469,7 @@ export function GravitySettingsPanel({
             <RangeSetting
               setting="gasAbsorption"
               label="Absorción del gas"
-              hint="Controlá cuánto oculta la materia las capas posteriores."
+              hint="Aumenta la opacidad óptica de cada capa: el gas frontal oculta más las capas que están detrás."
               value={settings.gasAbsorption}
               min={0.1}
               max={3}
@@ -470,7 +480,7 @@ export function GravitySettingsPanel({
             <RangeSetting
               setting="diskTilt"
               label="Inclinación del disco"
-              hint="Llevá el plano orbital de sutil a dramático."
+              hint="Inclina el plano orbital frente a la cámara: cambia el ángulo aparente, no la posición del centro."
               value={settings.diskTilt}
               min={0.1}
               max={3}
@@ -481,18 +491,18 @@ export function GravitySettingsPanel({
             <RangeSetting
               setting="lensStrength"
               label="Fuerza de lente"
-              hint="Intensificá o relajá la curvatura gravitacional del arco."
+              hint="Multiplica la desviación alrededor de la sombra: curva más el arco y el fondo, hasta 10.00×."
               value={settings.lensStrength}
               min={0.1}
-              max={3}
+              max={10}
               step={0.05}
-              format={(value) => `${Math.round(value * 100)}%`}
+              format={(value) => `${value.toFixed(2)}×`}
               onChange={onChange}
             />
             <RangeSetting
               setting="bloomSpread"
               label="Extensión del bloom"
-              hint="Definí qué tan cerca o lejos se dispersa el resplandor."
+              hint="Amplía o concentra el ancho del resplandor del arco y del halo exterior, sin mover la geometría."
               value={settings.bloomSpread}
               min={0.1}
               max={3}
@@ -503,7 +513,7 @@ export function GravitySettingsPanel({
             <RangeSetting
               setting="causticIntensity"
               label="Intensidad de caústicas"
-              hint="Ajustá los destellos de contacto del material frontal."
+              hint="Multiplica los destellos donde la capa frontal cruza el arco inferior; afecta su brillo, no su posición."
               value={settings.causticIntensity}
               min={0.1}
               max={3}
@@ -514,7 +524,7 @@ export function GravitySettingsPanel({
             <RangeSetting
               setting="galaxyIntensity"
               label="Galaxia de fondo"
-              hint="Subí o bajá la presencia de la galaxia distante."
+              hint="Multiplica la espiral distante del lado izquierdo; no modifica las estrellas cercanas ni el disco."
               value={settings.galaxyIntensity}
               min={0.1}
               max={3}
@@ -525,7 +535,7 @@ export function GravitySettingsPanel({
             <RangeSetting
               setting="starTwinkle"
               label="Centelleo estelar"
-              hint="Dale calma o nervio al parpadeo de las estrellas."
+              hint="Amplía o reduce la oscilación temporal del brillo de cada estrella; no cambia cuántas aparecen."
               value={settings.starTwinkle}
               min={0.1}
               max={3}
@@ -536,7 +546,7 @@ export function GravitySettingsPanel({
             <RangeSetting
               setting="vignette"
               label="Viñeta cinematográfica"
-              hint="Concentrá la atención en el centro o abrí los bordes."
+              hint="Oscurece los bordes cuando supera 1.00×; por debajo de 1.00× los abre y 1.00× deja el borde neutro."
               value={settings.vignette}
               min={0.1}
               max={3}
@@ -546,58 +556,6 @@ export function GravitySettingsPanel({
             />
           </section>
         </div>
-        <section
-          className="dashboard-gargantua-settings__telemetry"
-          data-testid="gravity-telemetry-card"
-          data-measuring={telemetry ? "true" : "pending"}
-          aria-labelledby={`${titleId}-telemetry`}
-        >
-          <div className="dashboard-gargantua-settings__telemetry-head">
-            <h2 id={`${titleId}-telemetry`}>Rendimiento</h2>
-            <span>EN VIVO</span>
-          </div>
-          <div className="dashboard-gargantua-settings__telemetry-list">
-            <div className="dashboard-gargantua-settings__telemetry-row">
-              <div className="dashboard-gargantua-settings__telemetry-label">
-                <strong>GPU</strong>
-                <span>WebGL</span>
-              </div>
-              <strong
-                className="dashboard-gargantua-settings__telemetry-name"
-                data-testid="gravity-telemetry-gpu-name"
-                title={telemetry?.gpuName ?? "Detectando GPU"}
-              >
-                {telemetry?.gpuName ?? "Detectando GPU…"}
-              </strong>
-              <div className="dashboard-gargantua-settings__telemetry-usage">
-                <span>Uso estimado</span>
-                <output data-testid="gravity-telemetry-gpu-usage">
-                  {formatTelemetryUsage(telemetry?.gpuUsage ?? null, telemetry)}
-                </output>
-              </div>
-            </div>
-            <div className="dashboard-gargantua-settings__telemetry-row">
-              <div className="dashboard-gargantua-settings__telemetry-label">
-                <strong>CPU</strong>
-                <span>Hilo principal</span>
-              </div>
-              <strong
-                className="dashboard-gargantua-settings__telemetry-name"
-                data-testid="gravity-telemetry-cpu-name"
-                title={telemetry?.cpuName ?? "Detectando CPU"}
-              >
-                {telemetry?.cpuName ?? "Detectando CPU…"}
-              </strong>
-              <div className="dashboard-gargantua-settings__telemetry-usage">
-                <span>Uso estimado</span>
-                <output data-testid="gravity-telemetry-cpu-usage">
-                  {formatTelemetryUsage(telemetry?.cpuUsage ?? null, telemetry)}
-                </output>
-              </div>
-            </div>
-          </div>
-          <p>Se mide sólo mientras este menú está abierto.</p>
-        </section>
       </div>
 
       <footer className="dashboard-gargantua-settings__footer">

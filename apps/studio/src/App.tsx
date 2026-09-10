@@ -23,20 +23,19 @@ import { ConfirmDialog } from "./components/ConfirmDialog";
 import { ToastProvider } from "./components/Toast";
 import { Button, InlineError } from "./components/Ui";
 import { Dashboard } from "./features/Dashboard";
-import {
-  GravityField,
-  GRAVITY_INTRO_DURATION_MS,
-  type GravityTelemetrySnapshot,
-} from "./features/dashboard/GravityField";
+import { GRAVITY_INTRO_DURATION_MS } from "./features/dashboard/GravityField";
 import { GravitySettingsPanel } from "./features/dashboard/GravitySettingsPanel";
 import {
+  applyBuiltInGravityPreset,
   DEFAULT_GRAVITY_SETTINGS,
-  loadGravityPreferences,
-  persistGravityPreferences,
   type GravityPreferences,
   type GravitySettings,
   type GravityTaaQuality,
+  loadGravityPreferences,
+  loadGravityPreferencesFromDisk,
   type NumericGravitySetting,
+  persistGravityPreferences,
+  persistGravityPreferencesToDisk,
 } from "./features/dashboard/gravitySettings";
 import type { LocalStorageStatus } from "./lib/localStorage";
 import { downloadBlob } from "./lib/projectArchive";
@@ -157,18 +156,17 @@ async function preloadStudioBootResources(onProgress: (percent: number) => void)
 }
 
 const APP_BOOT_FIELD_REVEAL_MS = GRAVITY_INTRO_DURATION_MS;
+const APP_BOOT_SPLASH_EXTRA_MS = 3_000;
 const APP_BOOT_BLACKOUT_MS = 720;
 const APP_BOOT_ZOOM_MS = GRAVITY_INTRO_DURATION_MS;
 const APP_BOOT_DASHBOARD_ENTRY_MS = 1600;
 
 function StudioBootSequence({
   ready,
-  clockOrigin,
   progress,
   onZoomStart,
 }: {
   ready: boolean;
-  clockOrigin: number;
   progress: StudioBootProgress;
   onZoomStart: (clockOrigin: number) => void;
 }) {
@@ -179,6 +177,7 @@ function StudioBootSequence({
   const reducedMotion =
     typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const fieldRevealDuration = reducedMotion ? 240 : APP_BOOT_FIELD_REVEAL_MS;
+  const splashExtraDuration = reducedMotion ? 0 : APP_BOOT_SPLASH_EXTRA_MS;
   const blackoutDuration = reducedMotion ? 180 : APP_BOOT_BLACKOUT_MS;
   const zoomDuration = reducedMotion ? 240 : APP_BOOT_ZOOM_MS;
   const dashboardEntryDuration = reducedMotion ? 240 : APP_BOOT_DASHBOARD_ENTRY_MS;
@@ -196,7 +195,7 @@ function StudioBootSequence({
     if (!ready) return;
 
     const elapsed = performance.now() - startedAtRef.current;
-    const revealWait = Math.max(0, fieldRevealDuration - elapsed);
+    const revealWait = Math.max(0, fieldRevealDuration - elapsed) + splashExtraDuration;
     let blackoutTimer: number | undefined;
     let dashboardTimer: number | undefined;
     const releaseTimer = window.setTimeout(() => {
@@ -229,6 +228,7 @@ function StudioBootSequence({
     fieldRevealDuration,
     onZoomStart,
     ready,
+    splashExtraDuration,
     zoomDuration,
   ]);
 
@@ -245,17 +245,6 @@ function StudioBootSequence({
       aria-live="polite"
       aria-busy="true"
     >
-      <GravityField
-        activeIndex={0}
-        storeCount={0}
-        selectionVisible={false}
-        templateSelected={false}
-        launchProgress={0}
-        introDurationMs={fieldRevealDuration}
-        pauseWhileAppBooting={phase === "loading" || phase === "blackout"}
-        renderScaleMultiplier={0.7}
-        clockOrigin={clockOrigin}
-      />
       <div className="app-boot-sequence__veil" aria-hidden="true" />
       <div className="app-boot-sequence__blackout" aria-hidden="true" />
       <section className="app-boot-sequence__panel" aria-label="Progreso de carga">
@@ -455,7 +444,6 @@ function StudioShellWithBoot() {
       />
       <StudioBootSequence
         ready={initialLoadComplete && resourcesReady}
-        clockOrigin={gravityClockOrigin}
         progress={bootProgress}
         onZoomStart={handleBootZoomStart}
       />
@@ -495,7 +483,6 @@ function StudioShell({
   const [gargantuaUiOpacity, setGargantuaUiOpacity] = useState(1);
   const [gravityPreferences] = useState<GravityPreferences>(() => loadGravityPreferences());
   const [gravitySettingsOpen, setGravitySettingsOpen] = useState(false);
-  const [gravityTelemetry, setGravityTelemetry] = useState<GravityTelemetrySnapshot | null>(null);
   const [gravitySettings, setGravitySettings] = useState<GravitySettings>(
     gravityPreferences.activeSettings,
   );
@@ -530,7 +517,6 @@ function StudioShell({
 
   const closeGravitySettings = useCallback(() => {
     setGravitySettingsOpen(false);
-    setGravityTelemetry(null);
     requestAnimationFrame(() => gravitySettingsTriggerRef.current?.focus());
   }, []);
 
@@ -544,7 +530,7 @@ function StudioShell({
   }, []);
 
   const selectBuiltInGravityPreset = useCallback((next: GravitySettings) => {
-    setGravitySettings(next);
+    setGravitySettings((current) => applyBuiltInGravityPreset(current, next));
     setActiveCustomGravityPreset(null);
   }, []);
 
@@ -563,14 +549,24 @@ function StudioShell({
     const nextPresets = customGravityPresets.map((preset, index) =>
       index === selectedCustomGravityPreset ? savedSettings : preset,
     );
-    setCustomGravityPresets(nextPresets);
-    setActiveCustomGravityPreset(selectedCustomGravityPreset);
-    persistGravityPreferences({
+    const persistedPreferences = {
       customPresets: nextPresets,
       activeSettings: savedSettings,
       activeCustomPreset: selectedCustomGravityPreset,
       selectedCustomPreset: selectedCustomGravityPreset,
-    });
+    };
+    setCustomGravityPresets(nextPresets);
+    setActiveCustomGravityPreset(selectedCustomGravityPreset);
+    persistGravityPreferences(persistedPreferences);
+    if (storageModeRef.current) {
+      void persistGravityPreferencesToDisk(persistedPreferences).then((persisted) => {
+        if (!persisted) {
+          setNotice(
+            "El preset quedó guardado en el navegador, pero no pudo actualizar el archivo local.",
+          );
+        }
+      });
+    }
   }, [customGravityPresets, gravitySettings, selectedCustomGravityPreset]);
 
   const resetGravitySettings = useCallback(() => {
@@ -580,6 +576,10 @@ function StudioShell({
 
   const toggleGravityPauseWhenHidden = useCallback((value: boolean) => {
     setGravitySettings((current) => ({ ...current, pauseWhenHidden: value }));
+  }, []);
+
+  const toggleGravityStaticDiskDetails = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, staticDiskDetails: value }));
   }, []);
 
   useEffect(() => {
@@ -651,6 +651,23 @@ function StudioShell({
         });
         storageModeRef.current = detectedStorage.managed;
         setLocalStorageStatus(detectedStorage);
+        if (detectedStorage.managed) {
+          onInitialLoadProgress({
+            percent: 19,
+            label: "Cargando preferencias del dashboard",
+            detail: "Revisando los presets guardados en la instalación…",
+          });
+          const diskGravityPreferences = await loadGravityPreferencesFromDisk();
+          if (diskGravityPreferences) {
+            setGravitySettings(diskGravityPreferences.activeSettings);
+            setCustomGravityPresets(diskGravityPreferences.customPresets);
+            setSelectedCustomGravityPreset(diskGravityPreferences.selectedCustomPreset);
+            setActiveCustomGravityPreset(diskGravityPreferences.activeCustomPreset);
+          } else if (detectedStorage.writable) {
+            // Migra una vez el preset anterior del navegador al archivo local.
+            await persistGravityPreferencesToDisk(gravityPreferences);
+          }
+        }
         const retireDiskPromise = (async () => {
           if (detectedStorage.managed && detectedStorage.writable) {
             const { retireLegacyDemoProjectsOnDisk } = await loadLocalStorage();
@@ -858,6 +875,7 @@ function StudioShell({
     persistToDisk,
     refreshBrowser,
     refreshDisk,
+    gravityPreferences,
   ]);
 
   useEffect(() => {
@@ -1202,12 +1220,12 @@ function StudioShell({
           customPresets={customGravityPresets}
           selectedCustomPreset={selectedCustomGravityPreset}
           activeCustomPreset={activeCustomGravityPreset}
-          telemetry={gravityTelemetry}
           onChange={updateGravitySetting}
           onSelectBuiltInPreset={selectBuiltInGravityPreset}
           onSelectCustomPreset={selectCustomGravityPreset}
           onSaveCustomPreset={saveCustomGravityPreset}
           onTaaQualityChange={updateGravityTaaQuality}
+          onToggleStaticDiskDetails={toggleGravityStaticDiskDetails}
           onTogglePauseWhenHidden={toggleGravityPauseWhenHidden}
           onReset={resetGravitySettings}
           onClose={closeGravitySettings}
@@ -1268,8 +1286,6 @@ function StudioShell({
           clockOrigin={clockOrigin}
           gravitySettings={gravitySettings}
           settingsOpen={gravitySettingsOpen}
-          gravityTelemetryEnabled={gravitySettingsOpen}
-          onGravityTelemetryChange={setGravityTelemetry}
           projects={projects}
           onCreate={async (input) => {
             setError("");

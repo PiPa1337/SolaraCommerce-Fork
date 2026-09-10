@@ -1,7 +1,50 @@
+### Splash con margen adicional de arranque (2026-09-09)
+- La splash mantiene su duración normal y suma tres segundos antes del blackout y el zoom, excepto con reduced motion, donde conserva la salida rápida.
+
+### Animación inicial de Gargantua sin saltos (2026-09-09)
+- El campo conserva su escena WebGL al sincronizar el zoom y limita el avance temporal de un frame retrasado, evitando recompilaciones y saltos visibles durante los primeros segundos del dashboard.
+
+### Lente gravitacional concentrada (2026-09-09)
+- Se mantiene intacto el control visible de fuerza de lente, pero la base interna aumenta 50× y concentra la desviación del fondo alrededor del agujero negro.
+
+### Detalles estables del disco configurables (2026-09-09)
+- Las manchas suaves de baja frecuencia en la zona exterior del disco ahora pueden conservarse como antes o animarse junto con el gas mediante `Manchas estables del disco`.
+
+### Presets de Gargantua persistidos en la instalación (2026-09-09)
+
+- Los presets personalizados del fondo se guardan en `.solara-runtime/gravity-preferences.json` mediante el servidor local, por lo que ya no dependen del origen o puerto del navegador; las preferencias existentes en `localStorage` se migran automáticamente como compatibilidad.
+
+### Ajustes gráficos ampliados de Gargantua (2026-09-09)
+
+- Fuerza de lente y densidad de estrellas admiten hasta 10.00×, y el inspector explica qué modifica cada control gráfico, incluidas las muestras TAA y su coste aproximado de GPU.
+
+### Resolución interna como base del TAA (2026-09-09)
+
+- El antialias temporal conserva exactamente la resolución interna elegida; Bajo, Medio y las calidades superiores cambian muestras, acumulación y límite de cuadros sin aplicar una segunda reducción del canvas.
+
+### Presets de cinemática del dashboard (2026-09-09)
+
+- Los presets predeterminados de calidad ya no pisan la cinemática avanzada; las ranuras guardadas por el usuario continúan conservando y restaurando esos ajustes.
+
+### Appear del fondo de Gargantua unificado (2026-09-09)
+
+- Se elimina el canvas WebGL duplicado de la splash: el appear ahora revela el mismo canvas final del dashboard, con sus parámetros persistidos y su estado real.
+- Se retira la intro interna del shader que mezclaba sólo el cielo y cambiaba el zoom durante los primeros 1.5 segundos; la entrada queda a cargo de la transición CSS, sin cambiar la composición del fondo.
+
+### Retiro del medidor GPU/CPU de los ajustes de Gargantua (2026-09-09)
+
+- Se elimina la tarjeta de rendimiento del inspector del dashboard y toda la telemetría asociada: consultas de tiempo WebGL, detección de CPU/GPU y publicación periódica de muestras.
+- El panel conserva únicamente los controles de render que el usuario puede ajustar, con una sola columna de configuración y sin el estado `data-telemetry` en el fondo.
+
+### Transición de arranque sin reaparición de la splash (2026-09-09)
+
+- Se mantiene oculta la tarjeta de progreso durante la fase de entrada del dashboard, evitando que reaparezca brevemente sobre el fade negro después del zoom de Gargantua.
+- Se elimina el fade del contenedor negro al entregar el dashboard: la splash desaparece de inmediato al terminar el zoom y sólo queda visible la entrada propia de la interfaz.
+
 ### Secuencia de splash y zoom del arranque (2026-09-09)
 
 - La splash de glassmorfismo queda centrada sobre un fondo negro plano; al completar la precarga, el panel se desvanece a negro y un segundo fade acompaña el zoom sincronizado hacia Gargantua antes de ejecutar la entrada escalonada del dashboard.
-- Se elimina el halo dorado del logo y la barra de progreso; el dashboard inicia sin tienda seleccionada ni foco automático.
+- La splash adopta el mismo vidrio frío y contraste blanco-azulado de las cards de Gargantua; el logo se neutraliza sólo durante la precarga para eliminar el halo cálido incorporado en el PNG, y el dashboard inicia sin tienda seleccionada ni foco automático.
 
 ### Black hole con más definición visual (2026-09-09)
 

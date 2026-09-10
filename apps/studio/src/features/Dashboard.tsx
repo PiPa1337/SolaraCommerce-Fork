@@ -63,7 +63,7 @@ import { CompareView } from "./dashboard/CompareView";
 import { CreateStoreDialog } from "./dashboard/CreateStoreDialog";
 import { DashboardToolbar } from "./dashboard/DashboardToolbar";
 import { DuplicateDialog } from "./dashboard/DuplicateDialog";
-import { GravityField, type GravityTelemetrySnapshot } from "./dashboard/GravityField";
+import { GravityField } from "./dashboard/GravityField";
 import {
   DEFAULT_GRAVITY_SETTINGS,
   type GravitySettings,
@@ -74,8 +74,6 @@ interface DashboardProps {
   gravitySettings?: GravitySettings;
   clockOrigin?: number;
   settingsOpen?: boolean;
-  gravityTelemetryEnabled?: boolean;
-  onGravityTelemetryChange?(snapshot: GravityTelemetrySnapshot | null): void;
   projects: StoredProject[];
   onCreate(input: { name: string; brandName: string; email: string; phone: string }): Promise<void>;
   onImport(file: File): Promise<void>;
@@ -252,8 +250,6 @@ export function Dashboard({
   gravitySettings = DEFAULT_GRAVITY_SETTINGS,
   clockOrigin,
   settingsOpen = false,
-  gravityTelemetryEnabled = false,
-  onGravityTelemetryChange,
   projects,
   onCreate,
   onImport,
@@ -956,8 +952,6 @@ export function Dashboard({
       <GravityField
         clockOrigin={clockOrigin}
         settings={gravitySettings}
-        telemetryEnabled={gravityTelemetryEnabled}
-        onTelemetryChange={onGravityTelemetryChange}
         activeIndex={selectedId ? (pageIndexById.get(selectedId) ?? 0) : 0}
         selectionVisible={Boolean(
           selectedId && !selectedFilteredOut && pageIndexById.has(selectedId),

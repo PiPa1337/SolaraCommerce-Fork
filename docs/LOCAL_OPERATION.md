@@ -71,7 +71,9 @@ SolaraCommerce/
 Los proyectos conservan el formato `manifestVersion: 2`, `current.projectPath`,
 `.solara.json`, `actual/`, `respaldos/`, `respaldos-manuales/` y `sitios/`.
 `.solara-runtime/` contiene estado operativo regenerable, logs, transacciones y
-estado del agente; no reemplaza los respaldos de `proyectos/`. `instances/`
+estado del agente; también conserva `gravity-preferences.json`, la configuración
+personal del fondo de Gargantua. No reemplaza los respaldos de `proyectos/`.
+`instances/`
 mantiene un registro efímero por sesión activa. `instance.json` conserva sólo
 metadata del layout local y no se usa como autoridad para cerrar procesos.
 

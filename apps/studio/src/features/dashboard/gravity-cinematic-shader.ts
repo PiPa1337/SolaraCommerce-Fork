@@ -7,7 +7,6 @@ uniform vec2 uResolution;
 uniform vec2 uViewport;
 uniform sampler2D uDust;
 uniform float uTime;
-uniform float uIntroDuration;
 uniform vec2 uPointer;
 uniform vec2 uCenter;
 uniform vec2 uDisk;
@@ -33,6 +32,7 @@ uniform float uCausticIntensity;
 uniform float uGalaxyIntensity;
 uniform float uStarTwinkle;
 uniform float uVignette;
+uniform float uStaticDiskDetails;
 uniform vec2 uTaaJitter;
 uniform sampler2D uTaaHistory;
 uniform float uTaaHistoryWeight;
@@ -108,7 +108,9 @@ vec4 matter(vec2 orbit, float t) {
   vec3 gas = mix(gasPopulation(orbit,r,fract(phase+.5)*48.0,footprint),
     gasPopulation(orbit,r,phase*48.0,footprint),weight);
   // A slow envelope retains the large forms while the small filaments flow.
-  float envelope = fbm(rotate(t*.001)*orbit*1.7);
+  float staticEnvelope = fbm(rotate(t*.001)*orbit*1.7);
+  float distantDetails = smoothstep(2.6,4.8,r);
+  float envelope = mix(staticEnvelope,gas.x,(1.0-uStaticDiskDetails)*distantDetails);
   float cloud = mix(envelope,gas.x,.5);
   float erosion = smoothstep(.22,.72,gas.x*.65+envelope*.35);
   float lanes=smoothstep(.25,.66,noise(orbit*5.5+vec2(gas.x*2.0,0)));
@@ -183,10 +185,9 @@ void main() {
   float aspect = uResolution.x / uResolution.y;
   vec2 screen = ((gl_FragCoord.xy + uTaaJitter) / uResolution - .5) * vec2(aspect,1);
   float seconds = uTime * .001;
-  float intro = smoothstep(.55,6.0,seconds * 6000.0 / max(uIntroDuration,1.0));
   float launch = smoothstep(0.0,1.0,uLaunchProgress);
   vec2 center = mix(uCenter,vec2(0),launch);
-  float zoom = mix(mix(1.36,1.0,intro),.12,launch);
+  float zoom = mix(1.0,.12,launch);
   float radius = uDisk.x * .48;
   // Pointer translation supplies parallax without changing the disk's tilt.
   vec2 q = rotate(.16) * (screen-center) * zoom / radius;
@@ -194,7 +195,13 @@ void main() {
   // +300% = four times the prior material clock. Launch only changes camera
   // position; multiplying accumulated time by launch caused phase jumps.
   float t = seconds * 4.0 * uMaterialSpeed;
-  float deflection=.038*uLensStrength/(radial*radial+.5);
+  // Keep the visible slider range intact: this is the internal base strength.
+  // A bounded response prevents the stronger base from flipping the background
+  // while the falloff concentrates the extra bend around the black hole.
+  float horizonProximity=1.0-smoothstep(.82,2.35,radial);
+  float lensArgument=.038*50.0*uLensStrength
+    *pow(horizonProximity,1.65)/(radial*radial+.5);
+  float deflection=lensArgument/(1.0+lensArgument);
   vec2 bent=q*(1.0-deflection);
   vec2 skyPoint=center+rotate(-.16)*bent*radius/zoom;
   vec3 background = sky(skyPoint,seconds * uMaterialSpeed);
@@ -330,7 +337,6 @@ void main() {
   float phase = uActiveIndex/max(uStoreCount,1.0)*TAU + t*.035;
   vec2 ember = vec2(cos(phase)*3.5,sin(phase)*.52);
   color += vec3(.6,.31,.12)*band(length(q-ember),.015)*selection*.2;
-  color = mix(background,color,intro);
   float warmthShift = clamp(uWarmth - 1.0,-1.0,1.0);
   vec3 cooler = color*vec3(.88,.96,1.1);
   vec3 warmer = color*vec3(1.08,.92,.72);
