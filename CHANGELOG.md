@@ -1,5 +1,5 @@
-### Splash con margen adicional de arranque (2026-09-09)
-- La splash mantiene su duración normal y suma tres segundos antes del blackout y el zoom, excepto con reduced motion, donde conserva la salida rápida.
+### Splash sin espera adicional de arranque (2026-09-10)
+- La splash inicia el blackout y el zoom apenas completa su duración normal; se elimina el margen fijo adicional de tres segundos.
 
 ### Animación inicial de Gargantua sin saltos (2026-09-09)
 - El campo conserva su escena WebGL al sincronizar el zoom y limita el avance temporal de un frame retrasado, evitando recompilaciones y saltos visibles durante los primeros segundos del dashboard.

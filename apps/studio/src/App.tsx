@@ -156,7 +156,6 @@ async function preloadStudioBootResources(onProgress: (percent: number) => void)
 }
 
 const APP_BOOT_FIELD_REVEAL_MS = GRAVITY_INTRO_DURATION_MS;
-const APP_BOOT_SPLASH_EXTRA_MS = 3_000;
 const APP_BOOT_BLACKOUT_MS = 720;
 const APP_BOOT_ZOOM_MS = GRAVITY_INTRO_DURATION_MS;
 const APP_BOOT_DASHBOARD_ENTRY_MS = 1600;
@@ -177,7 +176,6 @@ function StudioBootSequence({
   const reducedMotion =
     typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const fieldRevealDuration = reducedMotion ? 240 : APP_BOOT_FIELD_REVEAL_MS;
-  const splashExtraDuration = reducedMotion ? 0 : APP_BOOT_SPLASH_EXTRA_MS;
   const blackoutDuration = reducedMotion ? 180 : APP_BOOT_BLACKOUT_MS;
   const zoomDuration = reducedMotion ? 240 : APP_BOOT_ZOOM_MS;
   const dashboardEntryDuration = reducedMotion ? 240 : APP_BOOT_DASHBOARD_ENTRY_MS;
@@ -195,7 +193,7 @@ function StudioBootSequence({
     if (!ready) return;
 
     const elapsed = performance.now() - startedAtRef.current;
-    const revealWait = Math.max(0, fieldRevealDuration - elapsed) + splashExtraDuration;
+    const revealWait = Math.max(0, fieldRevealDuration - elapsed);
     let blackoutTimer: number | undefined;
     let dashboardTimer: number | undefined;
     const releaseTimer = window.setTimeout(() => {
@@ -228,7 +226,6 @@ function StudioBootSequence({
     fieldRevealDuration,
     onZoomStart,
     ready,
-    splashExtraDuration,
     zoomDuration,
   ]);
 
