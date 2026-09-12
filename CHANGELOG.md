@@ -1,3 +1,40 @@
+### Eliminación del aro residual de las transiciones (2026-09-12)
+
+- Se retira el pseudo-elemento CSS que dibujaba el círculo elíptico durante la entrada inicial y al abrir una tienda; se conservan el blackout y el campo gravitatorio.
+
+### Entrada inversa de Gargantua al abrir la app (2026-09-12)
+
+- El dashboard reproduce una sola vez por arranque la animación de Gargantua en reversa, separada de la apertura de tiendas y respetando `prefers-reduced-motion`.
+- El UI del dashboard permanece oculto y no interactivo hasta que la entrada termina de estabilizarse; el canvas de Gargantua queda visible durante el recorrido.
+
+### Distorsión temprana de los discos (2026-09-12)
+- La deformación tangencial y el zoom adicional de la entrada a Gargantua comienzan desde el 12% del recorrido, de forma gradual, para mantener visibles durante más tiempo los discos distorsionados sin cambiar el cierre de la transición ni el blackout final.
+
+### Residuo lenteado aislado (2026-09-12)
+- La comparación foto contra foto con `Fragmentación de la imagen lenteada` desactivada identifica `Emisión base de la imagen lenteada` como la segunda fuente de las manchas estáticas inferiores. Al desactivar ambas opciones desaparece la forma señalada y se conserva el disco directo; las demás opciones quedan como diagnósticos complementarios.
+
+### Fragmentación lenteada confirmada (2026-09-12)
+- La comparación final identifica `Fragmentación de la imagen lenteada` como la fuente de las manchas marrón/naranja estáticas encerradas en la referencia. Al desactivarla desaparecen esas formas sin ocultar el disco entero; los controles de cara cercana, color térmico, calor radial, absorción y corrugación quedan como diagnósticos complementarios.
+
+### Fuentes adicionales de manchas de Gargantua (2026-09-12)
+- Se exponen cinco controles on/off para la estructura base de nubes, los carriles orbitales, la fragmentación de la imagen lenteada, la nube del halo lenteado y la modulación irregular del anillo. La comparación congelada del canvas permite aislar la combinación de capas que forma las manchas inferiores sin alterar el shader por defecto.
+
+### Anillo de entrada deformado por Gargantua (2026-09-10)
+- El anillo del zoom al abrir una tienda conserva su expansión, pero ahora se comprime y estira de forma progresiva con una deformación tangencial cada vez mayor al acercarse al horizonte. Se desvanece antes del blackout final para que no quede una elipse residual sobre la pantalla negra.
+
+### Controles independientes de Gargantua (2026-09-10)
+- La configuración del dashboard permite activar o desactivar por separado quince contribuciones visuales de Gargantua. A las manchas estables, polvo de fondo, detalle fino, ondulación e imagen secundaria por lente se suman diez controles de diagnóstico para envolvente de nubes, erosión, brillo de carriles, corrientes exteriores, borde caliente, brillo amplio de nubes, estelas, modulación térmica y dos aportes de densidad. Todas quedan activadas por defecto y las preferencias anteriores se completan de forma compatible.
+
+### Manchas de erosión lenteadas configurables (2026-09-10)
+- Se agrega `Manchas de erosión lenteadas` para desactivar únicamente el aporte de baja frecuencia `gas.x` en la erosión del pase lenteado, eliminando las siluetas marrón/naranja estáticas de la zona inferior sin apagar el resto del disco.
+
+### Lente gravitacional progresiva al abrir tienda (2026-09-10)
+- El viaje hacia Gargantua dura aproximadamente tres segundos y concentra el blackout en el tramo final para dejar visible la caída. La lente aumenta de forma no lineal, magnifica y deforma tangencialmente el disco de acreción alrededor del horizonte y acelera el acercamiento en la segunda mitad, manteniendo estable la sombra central y el modo de movimiento reducido.
+
+### Arranque directo del dashboard (2026-09-10)
+- Se elimina por completo la splash de inicio, su precarga, progreso, temporizadores, estados DOM y acople con el reloj de Gargantua.
+- El dashboard aparece directamente al completar la carga de datos, sin stagger ni animaciones `appear` de sus bloques iniciales.
+
 ### Splash sin espera adicional de arranque (2026-09-10)
 - La splash inicia el blackout y el zoom apenas completa su duración normal; se elimina el margen fijo adicional de tres segundos.
 
@@ -4606,3 +4643,5 @@ Antes de este changelog, el repositorio acumuló las siguientes fases
   `solara://studio`).
 - Estabilidad E2E (chat paralelo): senal determinista solara-ready en
   storefront, script e2e-stability.mjs y contencion via unstable.json.
+### Gargantua 120% más grande durante el zoom (2026-09-10)
+- El acercamiento al abrir una tienda hace crecer explícitamente a Gargantua hasta un 120% desde el primer tramo del viaje y completa ese aumento antes del blackout, conservando la duración y la distorsión existentes.

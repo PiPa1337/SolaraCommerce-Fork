@@ -76,101 +76,65 @@ async function seedLibrary(page: Page, count = 120) {
   await page.getByRole("heading", { name: "Tus tiendas", exact: true }).click();
 }
 
-test("la splash informa el arranque y libera el dashboard después del negro", async ({ page }) => {
+test("el dashboard reproduce la entrada inversa de Gargantua una sola vez", async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 912 });
   await page.addInitScript(() => {
     localStorage.setItem("solara-dashboard-selected", "store-modo-sur-demo");
   });
   await page.goto(url, { waitUntil: "commit" });
 
-  const boot = page.getByTestId("solara-app-boot");
-  await expect(boot).toBeVisible();
-  const progress = page.getByRole("progressbar", { name: "Progreso de carga" });
-  await expect(progress).toBeVisible();
-  await expect(progress).toHaveAttribute("aria-valuemin", "0");
-  await expect(progress).toHaveAttribute("aria-valuemax", "100");
-  await expect(boot.getByTestId("solara-boot-progress-label")).not.toHaveText("");
-  await expect(boot.getByTestId("solara-boot-progress-detail")).not.toHaveText("");
-  const splashGlow = await boot.evaluate((element) => ({
-    logo: getComputedStyle(element.querySelector(".app-boot-sequence__logo")!).boxShadow,
-    progress: getComputedStyle(element.querySelector(".app-boot-sequence__progress-value")!)
-      .boxShadow,
-  }));
-  expect(splashGlow.logo).toBe("none");
-  expect(splashGlow.progress).toBe("none");
-  const splashTheme = await boot.evaluate((element) => ({
-    logo: getComputedStyle(element.querySelector(".app-boot-sequence__logo")!),
-    eyebrow: getComputedStyle(element.querySelector(".app-boot-sequence__eyebrow")!).color,
-    progress: getComputedStyle(
-      element.querySelector(".app-boot-sequence__progress-value")!,
-    ).backgroundImage,
-  }));
-  expect(splashTheme.logo.borderTopColor).not.toContain("255, 226, 174");
-  expect(splashTheme.logo.filter).toContain("grayscale(1)");
-  expect(splashTheme.eyebrow).not.toContain("232, 181, 111");
-  expect(splashTheme.progress).not.toContain("185, 131, 77");
-  expect(splashTheme.progress).not.toContain("255, 229, 166");
+  const entry = page.getByTestId("gargantua-entry");
+  await expect(entry).toBeVisible({ timeout: 15_000 });
+  const startupUiState = await page.evaluate(() => {
+    const getVisibility = (selector: string) =>
+      getComputedStyle(document.querySelector<HTMLElement>(selector)!).visibility;
+    const content = document.querySelector<HTMLElement>(".dashboard-cosmic__content");
+    const entryElement = document.querySelector<HTMLElement>('[data-testid="gargantua-entry"]');
+    return {
+      entryBeforeContent: getComputedStyle(entryElement!, "::before").content,
+      headerVisibility: getVisibility(".app-header--dashboard-cosmic"),
+      bannersVisibility: getVisibility(".dashboard-cosmic__banners"),
+      skipLinkVisibility: getVisibility(".skip-link"),
+      contentVisibility: getComputedStyle(content!).visibility,
+      contentOpacity: getComputedStyle(content!).opacity,
+    };
+  });
+  expect(["", "none"]).toContain(startupUiState.entryBeforeContent);
+  expect(startupUiState.headerVisibility).toBe("hidden");
+  expect(startupUiState.bannersVisibility).toBe("hidden");
+  expect(startupUiState.skipLinkVisibility).toBe("hidden");
+  expect(startupUiState.contentVisibility).toBe("hidden");
+  expect(startupUiState.contentOpacity).toBe("0");
+  await expect(page.getByTestId("gargantua-entry")).toHaveCount(0, { timeout: 8_000 });
+  await expect(page.getByRole("heading", { name: "Tus tiendas", exact: true })).toBeVisible({
+    timeout: 15_000,
+  });
+
+  const entryStyles = await page.evaluate(() =>
+    [
+      ".app-header--dashboard-cosmic",
+      ".dashboard-cosmic-library",
+      ".dashboard-cosmic-library-head",
+      ".dashboard-cosmic-toolbar",
+      ".dashboard-cosmic-actions",
+      ".dashboard-cosmic-results",
+    ].map((selector) => {
+      const element = document.querySelector<HTMLElement>(selector);
+      if (!element) return null;
+      const style = getComputedStyle(element);
+      return { selector, animationName: style.animationName, opacity: style.opacity };
+    }),
+  );
+  expect(entryStyles.every((style) => style !== null && style.opacity === "1")).toBe(true);
+  expect(entryStyles.every((style) => style !== null && style.animationName === "none")).toBe(true);
+
   const dashboardField = page.locator(".dashboard-gargantua > .dashboard-gravity-field");
   await expect(dashboardField).toHaveCount(1);
   await expect(dashboardField).toHaveAttribute("data-renderer", "webgl2");
-  await page.waitForFunction(() => {
-    const canvas = document.querySelector<HTMLCanvasElement>(
-      ".dashboard-gargantua > .dashboard-gravity-field canvas",
-    );
-    return canvas !== null && Number.parseFloat(getComputedStyle(canvas).opacity) >= 0.99;
-  }, undefined, { timeout: 2_000 });
-  await page.waitForFunction(() => {
-    const phase = document
-      .querySelector<HTMLElement>('[data-testid="solara-app-boot"]')
-      ?.getAttribute("data-boot-phase");
-    return phase === "blackout" || phase === "returning";
-  });
-  const bootPhase = await boot.getAttribute("data-boot-phase");
-  if (bootPhase === "blackout") {
-    await expect(boot).toHaveClass(/is-blackout/);
-    await page.waitForFunction(() => {
-      const blackout = document.querySelector<HTMLElement>(
-        '[data-testid="solara-app-boot"] .app-boot-sequence__blackout',
-      );
-      return blackout !== null && Number.parseFloat(getComputedStyle(blackout).opacity) >= 0.9;
-    });
-  }
-  await page.waitForFunction(() => document.documentElement.dataset.solaraBoot === undefined, {
-    timeout: 3_000,
-  });
-  await expect(boot).toHaveClass(/is-returning/);
-  await expect(dashboardField).toHaveAttribute(
-    "data-animation-state",
-    "running",
-  );
-  await page.waitForFunction(
-    () => document.documentElement.dataset.solaraDashboardEntry === "true",
-    { timeout: 5_000 },
-  );
-  await page.waitForFunction(
-    () => {
-      const overlay = document.querySelector<HTMLElement>("[data-testid=solara-app-boot]");
-      const panel = overlay?.querySelector<HTMLElement>(".app-boot-sequence__panel");
-      return (
-        overlay?.dataset.bootPhase === "dashboard" &&
-        panel !== null &&
-        getComputedStyle(overlay).opacity === "0" &&
-        getComputedStyle(panel).opacity === "0"
-      );
-    },
-    undefined,
-    { timeout: 5_000 },
-  );
-  await expect(page.locator(".dashboard-cosmic-library")).toHaveCSS("opacity", "1");
-  await expect(page.getByRole("heading", { name: "Tus tiendas", exact: true })).toBeVisible();
+  await expect(dashboardField).toHaveAttribute("data-animation-state", "running");
   await expect(page.locator(".dashboard-store-card.is-selected")).toHaveCount(0);
   await expect(page.locator(".dashboard-store-detail.is-open")).toHaveCount(0);
   expect(await page.evaluate(() => document.activeElement?.tagName)).toBe("BODY");
-  await expect(boot).toHaveCount(0, { timeout: 5_000 });
-  await expect(page.locator(".dashboard-gargantua > .dashboard-gravity-field")).toHaveAttribute(
-    "data-animation-state",
-    "running",
-  );
   await expect(page.getByTestId("gargantua-debug-controls")).toBeVisible();
   await expect(page.getByLabel("Opacidad de la interfaz del dashboard")).toHaveValue("100");
   await expect(page.locator('[data-gargantua-debug="true"]')).toHaveCount(1);
@@ -573,7 +537,12 @@ test("abrir una tienda atraviesa Gargantua antes de montar Studio", async ({ pag
     .getByRole("region", { name: /Tienda seleccionada:/ })
     .getByRole("button", { name: "Abrir tienda", exact: true })
     .click();
-  await expect(page.getByTestId("gargantua-launch")).toBeVisible({ timeout: 2_000 });
+  const launch = page.getByTestId("gargantua-launch");
+  await expect(launch).toBeVisible({ timeout: 2_000 });
+  const launchBeforeContent = await launch.evaluate(
+    (element) => getComputedStyle(element, "::before").content,
+  );
+  expect(["", "none"]).toContain(launchBeforeContent);
   await expect(page.locator(".dashboard-gargantua-transition__readout")).toHaveCount(0);
   await expect(page.getByRole("tab", { name: "Preparar", exact: true })).toBeVisible({
     timeout: 10000,
@@ -596,6 +565,60 @@ test("el slider de opacidad de Gargantua vive en el navbar", async ({
   await expect(control).toBeVisible();
   await expect(control.locator("input[type=range]")).toHaveValue("100");
   await expect(page.locator('[data-gargantua-debug="true"]')).toHaveCount(1);
+});
+
+test("los diagnósticos extra del disco se pueden activar y desactivar", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 1920, height: 912 });
+  await page.goto(url);
+  await expect(page.getByRole("heading", { name: "Tus tiendas", exact: true })).toBeVisible({
+    timeout: 10_000,
+  });
+
+  await page.getByRole("button", { name: "Ajustar animación del fondo", exact: true }).click();
+  const panel = page.getByRole("dialog", { name: "Ajustes del fondo" });
+  await expect(panel).toBeVisible();
+
+  const diagnosticToggles = [
+    "cloudEnvelopeEnabled",
+    "erosionEnabled",
+    "laneBrightnessEnabled",
+    "streamersEnabled",
+    "hotRimEnabled",
+    "gasCloudBrightnessEnabled",
+    "streaksEnabled",
+    "temperatureCloudModulationEnabled",
+    "densityEnvelopeEnabled",
+    "densityLaneAbsorptionEnabled",
+    "gasCloudStructureEnabled",
+    "orbitalLanePatternEnabled",
+    "lensedBreakupEnabled",
+    "lensedBaseEmissionEnabled",
+    "lensedDensityMaskEnabled",
+    "broadWispsEnabled",
+    "lensedStaticEnvelopeEnabled",
+    "lensedGlowCloudEnabled",
+    "rimCloudModulationEnabled",
+    "farSideDiskEnabled",
+    "nearSideDiskEnabled",
+    "thermalColorEnabled",
+    "radialHeatEnabled",
+    "depthAbsorptionEnabled",
+    "layerCorrugationEnabled",
+  ] as const;
+
+  await expect(panel).toContainText("Opción confirmada para el residuo");
+
+  for (const setting of diagnosticToggles) {
+    const toggle = panel.getByTestId(`gravity-setting-${setting}`);
+    await expect(toggle).toBeChecked();
+    await toggle.evaluate((input) => (input as HTMLInputElement).click());
+    await expect(toggle).not.toBeChecked();
+    await toggle.evaluate((input) => (input as HTMLInputElement).click());
+    await expect(toggle).toBeChecked();
+  }
+
+  await page.screenshot({ path: "test-results/gargantua-diagnostic-toggles-1920x912.png" });
 });
 
 test("el inspector del fondo reemplaza el dashboard y aplica presets en vivo", async ({ page }) => {

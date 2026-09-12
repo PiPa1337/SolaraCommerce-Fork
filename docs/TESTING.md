@@ -131,6 +131,15 @@ Las excepciones de drawer y entrega de imágenes se conservan como tests
 funcionales, no como nuevos modos de diseño. El spec focal es
 `tests/e2e/responsive-breakpoints.spec.ts`.
 
+Para el **Studio** (dashboard y editor), el viewport visual de referencia es
+**1920×912 px**: corresponde al área útil habitual de una pantalla 1920×1080 16:9
+con la interfaz de Chrome y la barra de tareas de Windows visibles. Se espera que
+aproximadamente el **99% del uso del Studio** ocurra en ese tamaño. Las capturas,
+ajustes de composición y revisiones visuales rutinarias del Studio deben priorizar
+1920×912; no es necesario dedicar tiempo a optimizar otras relaciones de aspecto
+del Studio salvo requerimiento explícito o regresión funcional. Esta prioridad no
+reduce la cobertura responsive del storefront ni cambia sus tres checkpoints.
+
 Smoke quick cubre: exported-store, storefront-nojs, catalog, assets, interacciones.
 Smoke full agrega: catalog-modern-v2, exporter-sentinel, scale-store,
 ui-sweep-a27..30, release-a11y, nojs-coverage y focus-visible.

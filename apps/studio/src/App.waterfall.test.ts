@@ -10,9 +10,8 @@ test("App debe paralelizar getLocalStorageStatus y purgeRolledBackDemoRecords", 
   expect(src).not.toMatch(/await purgePromise;\s+const detectedStorage = await storagePromise/);
 });
 
-test("la splash no agrega una espera fija al completar la carga", () => {
+test("App monta StudioShell directamente", () => {
   const src = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
 
-  expect(src).not.toContain("APP_BOOT_SPLASH_EXTRA_MS");
-  expect(src).toContain("const revealWait = Math.max(0, fieldRevealDuration - elapsed);");
+  expect(src).toContain("return <StudioShell />;");
 });

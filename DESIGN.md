@@ -169,6 +169,16 @@ replacing the visible list while keeping it mounted to preserve state and scroll
 There is one visible working panel beside the preview. Container queries adapt
 fields and toolbars to the panel's actual available width.
 
+**Primary Studio viewport.** Design, visual tuning and routine UI review for the
+Studio target **1920x912 px**. This is the expected usable browser area on the
+user's normal 1920x1080 16:9 display after Chrome UI and the Windows taskbar take
+their vertical space. About **99% of Studio use** is expected at this viewport, so
+1920x912 is the reference composition and should receive the optimization effort.
+Do not spend routine UI work optimizing additional Studio aspect ratios unless a
+task explicitly requires them or a functional regression is present. This rule is
+specific to the Studio shell; public storefront responsiveness and Preview device
+presets keep their separate contracts below and in `docs/TESTING.md`.
+
 **The Preview Viewport Rule.** Tablet (768px) and Mobile (390px) describe the
 iframe's internal viewport, not supported editor device classes. Scale the
 rendered frame to fit without changing that viewport. Opening the main panel

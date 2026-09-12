@@ -108,47 +108,6 @@ test("el flujo renueva el gas sin saltos y conserva detalle en sesiones largas",
   });
 });
 
-test("el canvas del dashboard recibe la misma fase al entregar el arranque", async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 720 });
-  await page.addInitScript(() => {
-    type GravityClockSample = { surface: "boot" | "dashboard"; time: number };
-    type GravityClockWindow = Window & { __gravityClockSamples?: GravityClockSample[] };
-    const clockWindow = window as GravityClockWindow;
-    clockWindow.__gravityClockSamples = [];
-    const names = new WeakMap<WebGLUniformLocation, string>();
-    const get = WebGL2RenderingContext.prototype.getUniformLocation;
-    const set = WebGL2RenderingContext.prototype.uniform1f;
-    WebGL2RenderingContext.prototype.getUniformLocation = function (program, name) {
-      const location = get.call(this, program, name);
-      if (location) names.set(location, name);
-      return location;
-    };
-    WebGL2RenderingContext.prototype.uniform1f = function (location, value) {
-      if (location && names.get(location) === "uTime") {
-        const surface = this.canvas.closest(".app-boot-sequence") ? "boot" : "dashboard";
-        clockWindow.__gravityClockSamples?.push({ surface, time: value });
-      }
-      set.call(this, location, value);
-    };
-  });
-  await page.goto(url);
-  await expect(page.getByTestId("solara-app-boot")).toHaveCount(0, { timeout: 15000 });
-  const samples = await page.evaluate(() => {
-    type GravityClockSample = { surface: "boot" | "dashboard"; time: number };
-    return (
-      (window as Window & { __gravityClockSamples?: GravityClockSample[] }).__gravityClockSamples ?? []
-    );
-  });
-  const firstDashboardIndex = samples.findIndex((sample) => sample.surface === "dashboard");
-  const precedingBoot = samples
-    .slice(0, firstDashboardIndex)
-    .filter((sample) => sample.surface === "boot")
-    .at(-1);
-  expect(firstDashboardIndex).toBeGreaterThan(0);
-  expect(precedingBoot).toBeDefined();
-  expect(Math.abs(samples[firstDashboardIndex]?.time - (precedingBoot?.time ?? 0))).toBeLessThan(700);
-});
-
 test("el fondo procedural conserva su imagen y recupera el contexto WebGL", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(url);

@@ -13,9 +13,7 @@ interface GravityFieldProps {
   selectionVisible?: boolean;
   templateSelected?: boolean;
   launchProgress?: number;
-  pauseWhileAppBooting?: boolean;
   renderScaleMultiplier?: number;
-  clockOrigin?: number | undefined;
   settings?: GravitySettings;
 }
 
@@ -27,7 +25,6 @@ interface GravityPointer {
 // Gargantua conserva una respuesta sutil: queda en el 30% del movimiento
 // anterior para que el fondo no domine la interacción del dashboard.
 const GRAVITY_PARALLAX_RESPONSE = 0.09;
-export const GRAVITY_INTRO_DURATION_MS = 1_500;
 // If the GPU briefly stalls, keep the material phase continuous instead of
 // advancing the shader by the whole delayed wall-clock interval.
 const GRAVITY_MAX_TIME_STEP_MS = 34;
@@ -74,6 +71,36 @@ interface GravityWebGLScene {
     starTwinkle: WebGLUniformLocation | null;
     vignette: WebGLUniformLocation | null;
     staticDiskDetails: WebGLUniformLocation | null;
+    dustBeltEnabled: WebGLUniformLocation | null;
+    proceduralDetailEnabled: WebGLUniformLocation | null;
+    diskWarpEnabled: WebGLUniformLocation | null;
+    lensedSecondaryEnabled: WebGLUniformLocation | null;
+    cloudEnvelopeEnabled: WebGLUniformLocation | null;
+    erosionEnabled: WebGLUniformLocation | null;
+    laneBrightnessEnabled: WebGLUniformLocation | null;
+    streamersEnabled: WebGLUniformLocation | null;
+    hotRimEnabled: WebGLUniformLocation | null;
+    gasCloudBrightnessEnabled: WebGLUniformLocation | null;
+    streaksEnabled: WebGLUniformLocation | null;
+    temperatureCloudModulationEnabled: WebGLUniformLocation | null;
+    densityEnvelopeEnabled: WebGLUniformLocation | null;
+    densityLaneAbsorptionEnabled: WebGLUniformLocation | null;
+    lensedErosionCloudsEnabled: WebGLUniformLocation | null;
+    gasCloudStructureEnabled: WebGLUniformLocation | null;
+    orbitalLanePatternEnabled: WebGLUniformLocation | null;
+    lensedBreakupEnabled: WebGLUniformLocation | null;
+    lensedBaseEmissionEnabled: WebGLUniformLocation | null;
+    lensedDensityMaskEnabled: WebGLUniformLocation | null;
+    lensedGlowCloudEnabled: WebGLUniformLocation | null;
+    broadWispsEnabled: WebGLUniformLocation | null;
+    lensedStaticEnvelopeEnabled: WebGLUniformLocation | null;
+    rimCloudModulationEnabled: WebGLUniformLocation | null;
+    farSideDiskEnabled: WebGLUniformLocation | null;
+    nearSideDiskEnabled: WebGLUniformLocation | null;
+    thermalColorEnabled: WebGLUniformLocation | null;
+    radialHeatEnabled: WebGLUniformLocation | null;
+    depthAbsorptionEnabled: WebGLUniformLocation | null;
+    layerCorrugationEnabled: WebGLUniformLocation | null;
     taaJitter: WebGLUniformLocation | null;
     taaHistory: WebGLUniformLocation | null;
     taaHistoryWeight: WebGLUniformLocation | null;
@@ -255,6 +282,42 @@ function createGravityWebGLScene(canvas: HTMLCanvasElement): GravityWebGLScene |
       starTwinkle: gl.getUniformLocation(program, "uStarTwinkle"),
       vignette: gl.getUniformLocation(program, "uVignette"),
       staticDiskDetails: gl.getUniformLocation(program, "uStaticDiskDetails"),
+      dustBeltEnabled: gl.getUniformLocation(program, "uDustBeltEnabled"),
+      proceduralDetailEnabled: gl.getUniformLocation(program, "uProceduralDetailEnabled"),
+      diskWarpEnabled: gl.getUniformLocation(program, "uDiskWarpEnabled"),
+      lensedSecondaryEnabled: gl.getUniformLocation(program, "uLensedSecondaryEnabled"),
+      cloudEnvelopeEnabled: gl.getUniformLocation(program, "uCloudEnvelopeEnabled"),
+      erosionEnabled: gl.getUniformLocation(program, "uErosionEnabled"),
+      laneBrightnessEnabled: gl.getUniformLocation(program, "uLaneBrightnessEnabled"),
+      streamersEnabled: gl.getUniformLocation(program, "uStreamersEnabled"),
+      hotRimEnabled: gl.getUniformLocation(program, "uHotRimEnabled"),
+      gasCloudBrightnessEnabled: gl.getUniformLocation(program, "uGasCloudBrightnessEnabled"),
+      streaksEnabled: gl.getUniformLocation(program, "uStreaksEnabled"),
+      temperatureCloudModulationEnabled: gl.getUniformLocation(
+        program,
+        "uTemperatureCloudModulationEnabled",
+      ),
+      densityEnvelopeEnabled: gl.getUniformLocation(program, "uDensityEnvelopeEnabled"),
+      densityLaneAbsorptionEnabled: gl.getUniformLocation(
+        program,
+        "uDensityLaneAbsorptionEnabled",
+      ),
+      lensedErosionCloudsEnabled: gl.getUniformLocation(program, "uLensedErosionCloudsEnabled"),
+      gasCloudStructureEnabled: gl.getUniformLocation(program, "uGasCloudStructureEnabled"),
+      orbitalLanePatternEnabled: gl.getUniformLocation(program, "uOrbitalLanePatternEnabled"),
+      lensedBreakupEnabled: gl.getUniformLocation(program, "uLensedBreakupEnabled"),
+      lensedBaseEmissionEnabled: gl.getUniformLocation(program, "uLensedBaseEmissionEnabled"),
+      lensedDensityMaskEnabled: gl.getUniformLocation(program, "uLensedDensityMaskEnabled"),
+      lensedGlowCloudEnabled: gl.getUniformLocation(program, "uLensedGlowCloudEnabled"),
+      broadWispsEnabled: gl.getUniformLocation(program, "uBroadWispsEnabled"),
+      lensedStaticEnvelopeEnabled: gl.getUniformLocation(program, "uLensedStaticEnvelopeEnabled"),
+      rimCloudModulationEnabled: gl.getUniformLocation(program, "uRimCloudModulationEnabled"),
+      farSideDiskEnabled: gl.getUniformLocation(program, "uFarSideDiskEnabled"),
+      nearSideDiskEnabled: gl.getUniformLocation(program, "uNearSideDiskEnabled"),
+      thermalColorEnabled: gl.getUniformLocation(program, "uThermalColorEnabled"),
+      radialHeatEnabled: gl.getUniformLocation(program, "uRadialHeatEnabled"),
+      depthAbsorptionEnabled: gl.getUniformLocation(program, "uDepthAbsorptionEnabled"),
+      layerCorrugationEnabled: gl.getUniformLocation(program, "uLayerCorrugationEnabled"),
       taaJitter: gl.getUniformLocation(program, "uTaaJitter"),
       taaHistory: gl.getUniformLocation(program, "uTaaHistory"),
       taaHistoryWeight: gl.getUniformLocation(program, "uTaaHistoryWeight"),
@@ -441,6 +504,51 @@ function drawGravityWebGL(
   gl.uniform1f(uniforms.starTwinkle, settings.starTwinkle);
   gl.uniform1f(uniforms.vignette, settings.vignette);
   gl.uniform1f(uniforms.staticDiskDetails, settings.staticDiskDetails ? 1 : 0);
+  gl.uniform1f(uniforms.dustBeltEnabled, settings.dustBeltEnabled ? 1 : 0);
+  gl.uniform1f(uniforms.proceduralDetailEnabled, settings.proceduralDetailEnabled ? 1 : 0);
+  gl.uniform1f(uniforms.diskWarpEnabled, settings.diskWarpEnabled ? 1 : 0);
+  gl.uniform1f(uniforms.lensedSecondaryEnabled, settings.lensedSecondaryEnabled ? 1 : 0);
+  gl.uniform1f(uniforms.cloudEnvelopeEnabled, settings.cloudEnvelopeEnabled ? 1 : 0);
+  gl.uniform1f(uniforms.erosionEnabled, settings.erosionEnabled ? 1 : 0);
+  gl.uniform1f(uniforms.laneBrightnessEnabled, settings.laneBrightnessEnabled ? 1 : 0);
+  gl.uniform1f(uniforms.streamersEnabled, settings.streamersEnabled ? 1 : 0);
+  gl.uniform1f(uniforms.hotRimEnabled, settings.hotRimEnabled ? 1 : 0);
+  gl.uniform1f(uniforms.gasCloudBrightnessEnabled, settings.gasCloudBrightnessEnabled ? 1 : 0);
+  gl.uniform1f(uniforms.streaksEnabled, settings.streaksEnabled ? 1 : 0);
+  gl.uniform1f(
+    uniforms.temperatureCloudModulationEnabled,
+    settings.temperatureCloudModulationEnabled ? 1 : 0,
+  );
+  gl.uniform1f(uniforms.densityEnvelopeEnabled, settings.densityEnvelopeEnabled ? 1 : 0);
+  gl.uniform1f(
+    uniforms.densityLaneAbsorptionEnabled,
+    settings.densityLaneAbsorptionEnabled ? 1 : 0,
+  );
+  gl.uniform1f(
+    uniforms.lensedErosionCloudsEnabled,
+    settings.lensedErosionCloudsEnabled ? 1 : 0,
+  );
+  gl.uniform1f(uniforms.gasCloudStructureEnabled, settings.gasCloudStructureEnabled ? 1 : 0);
+  gl.uniform1f(uniforms.orbitalLanePatternEnabled, settings.orbitalLanePatternEnabled ? 1 : 0);
+  gl.uniform1f(uniforms.lensedBreakupEnabled, settings.lensedBreakupEnabled ? 1 : 0);
+  gl.uniform1f(uniforms.lensedBaseEmissionEnabled, settings.lensedBaseEmissionEnabled ? 1 : 0);
+  gl.uniform1f(uniforms.lensedDensityMaskEnabled, settings.lensedDensityMaskEnabled ? 1 : 0);
+  gl.uniform1f(uniforms.lensedGlowCloudEnabled, settings.lensedGlowCloudEnabled ? 1 : 0);
+  gl.uniform1f(uniforms.broadWispsEnabled, settings.broadWispsEnabled ? 1 : 0);
+  gl.uniform1f(
+    uniforms.lensedStaticEnvelopeEnabled,
+    settings.lensedStaticEnvelopeEnabled ? 1 : 0,
+  );
+  gl.uniform1f(
+    uniforms.rimCloudModulationEnabled,
+    settings.rimCloudModulationEnabled ? 1 : 0,
+  );
+  gl.uniform1f(uniforms.farSideDiskEnabled, settings.farSideDiskEnabled ? 1 : 0);
+  gl.uniform1f(uniforms.nearSideDiskEnabled, settings.nearSideDiskEnabled ? 1 : 0);
+  gl.uniform1f(uniforms.thermalColorEnabled, settings.thermalColorEnabled ? 1 : 0);
+  gl.uniform1f(uniforms.radialHeatEnabled, settings.radialHeatEnabled ? 1 : 0);
+  gl.uniform1f(uniforms.depthAbsorptionEnabled, settings.depthAbsorptionEnabled ? 1 : 0);
+  gl.uniform1f(uniforms.layerCorrugationEnabled, settings.layerCorrugationEnabled ? 1 : 0);
   gl.uniform2f(uniforms.taaJitter, taaJitter[0], taaJitter[1]);
   if (uniforms.taaHistory) {
     gl.activeTexture(gl.TEXTURE1);
@@ -459,9 +567,7 @@ export function GravityField({
   selectionVisible = true,
   templateSelected = false,
   launchProgress = 0,
-  pauseWhileAppBooting = true,
   renderScaleMultiplier = 1,
-  clockOrigin,
   settings = DEFAULT_GRAVITY_SETTINGS,
 }: GravityFieldProps) {
   const fieldRef = useRef<HTMLDivElement>(null);
@@ -473,9 +579,7 @@ export function GravityField({
   const templateSelectedRef = useRef(templateSelected);
   const launchProgressRef = useRef(launchProgress);
   const settingsRef = useRef(settings);
-  const pauseWhileAppBootingRef = useRef(pauseWhileAppBooting);
   const renderScaleMultiplierRef = useRef(renderScaleMultiplier);
-  const clockOriginRef = useRef(clockOrigin);
   const redrawRef = useRef<(() => void) | null>(null);
   activeIndexRef.current = activeIndex;
   storeCountRef.current = storeCount;
@@ -483,12 +587,8 @@ export function GravityField({
   templateSelectedRef.current = templateSelected;
   launchProgressRef.current = launchProgress;
   settingsRef.current = settings;
-  pauseWhileAppBootingRef.current = pauseWhileAppBooting;
   renderScaleMultiplierRef.current = renderScaleMultiplier;
-  clockOriginRef.current = clockOrigin;
 
-  // Keep the WebGL scene alive across boot phases; the clock and pause flags
-  // must not trigger shader compilation during the first visible transition.
   // biome-ignore lint/correctness/useExhaustiveDependencies: refs keep the WebGL scene stable for the component lifetime.
   useEffect(() => {
     const field = fieldRef.current;
@@ -511,7 +611,6 @@ export function GravityField({
     let lastDrawAt = 0;
     let measuredFrames = 0;
     let slowFrames = 0;
-    // Start below native resolution while the boot also loads the local library.
     let adaptiveScale = reducedMotion ? 1 : 0.78;
     let targetScale = adaptiveScale;
     let lastQualityStepAt = 0;
@@ -524,39 +623,19 @@ export function GravityField({
     let rootTop = 0;
     let rootWidth = 1;
     let rootHeight = 1;
-    let sceneStartedAt = clockOriginRef.current ?? performance.now();
-    let appliedClockOrigin = clockOriginRef.current;
     let sceneTime = 0;
-    let lastSceneTick = sceneStartedAt;
+    let lastSceneTick = performance.now();
     let taaFrameIndex = 0;
-    const appBootOverlayMountedBeforeMarker =
-      pauseWhileAppBootingRef.current &&
-      document.documentElement.dataset.solaraBoot === undefined &&
-      document.querySelector('.app-boot-sequence[data-boot-phase="loading"]') !== null;
-    const isAppBooting = () =>
-      pauseWhileAppBootingRef.current && document.documentElement.dataset.solaraBoot === "loading";
-    // The overlay and dashboard mount in the same commit. The one-time DOM
-    // fallback closes that first-effect race before the overlay writes its dataset.
-    let appBootPaused = isAppBooting() || appBootOverlayMountedBeforeMarker;
-    let entryPaused = document.documentElement.dataset.solaraBoot === "entering";
-    let entryPausedAt: number | undefined = entryPaused ? performance.now() : undefined;
     const shouldAnimate = () =>
       !reducedMotion &&
-      !appBootPaused &&
+      !contextLost &&
       (!settingsRef.current.pauseWhenHidden || document.visibilityState === "visible");
-
-    const syncClockOrigin = () => {
-      const nextClockOrigin = clockOriginRef.current;
-      if (nextClockOrigin === appliedClockOrigin) return;
-      sceneStartedAt = nextClockOrigin ?? performance.now();
-      appliedClockOrigin = nextClockOrigin;
-      sceneTime = 0;
-      lastSceneTick = sceneStartedAt;
+    const syncAnimationState = () => {
+      field.dataset.animationState = shouldAnimate() ? "running" : "paused";
     };
 
     const draw = (time: number) => {
-      syncClockOrigin();
-      if (appBootPaused || contextLost) return;
+      if (contextLost) return;
       if (!reducedMotion && gpuFrames.length >= 2) return;
       const currentSettings = settingsRef.current;
       const taaProfile = GRAVITY_TAA_PROFILES[currentSettings.taaQuality];
@@ -696,53 +775,17 @@ export function GravityField({
       draw(performance.now());
     };
 
-    const syncAppBootState = () => {
-      const next = isAppBooting();
-      const entering = document.documentElement.dataset.solaraBoot === "entering";
-      if (next === appBootPaused && entering === entryPaused) return;
-      const wasLoading = appBootPaused;
-      const now = performance.now();
-      appBootPaused = next;
-      entryPaused = entering;
-      field.dataset.animationState = next || entering ? "paused" : "running";
-      if (next || entering) {
-        if (frame !== undefined) window.cancelAnimationFrame(frame);
-        frame = undefined;
-        if (entering) {
-          entryPausedAt = now;
-          // Prepare the dashboard once, then crossfade retained canvases while
-          // the glass controls enter. Two live shaders starved this transition.
-          if (wasLoading) {
-            draw(now);
-          }
-        }
-        return;
-      }
-      if (entryPausedAt !== undefined) {
-        sceneStartedAt += now - entryPausedAt;
-        lastSceneTick = now;
-        entryPausedAt = undefined;
-      }
-      draw(performance.now());
-      if (shouldAnimate()) {
-        frame = window.requestAnimationFrame(animate);
-      }
-    };
-
     redrawRef.current = () => {
       if (scene.taa) scene.taa.historyValid = false;
       taaFrameIndex = 0;
-      syncClockOrigin();
       resizeCanvas();
-      syncAppBootState();
       draw(performance.now());
       if (shouldAnimate() && frame === undefined) frame = window.requestAnimationFrame(animate);
     };
 
     const animate = (time: number) => {
       frame = undefined;
-      syncAppBootState();
-      if (appBootPaused || entryPaused || contextLost) return;
+      if (contextLost) return;
       // Double buffering avoids an IPC round-trip halving the frame rate, while
       // bounding queued work leaves room for library and pointer updates.
       while (gpuFrames.length > 0) {
@@ -811,7 +854,6 @@ export function GravityField({
         hiddenAt ??= now;
       } else if (hiddenAt !== undefined && settingsRef.current.pauseWhenHidden) {
         // Resume the same material phase instead of jumping by hidden wall time.
-        sceneStartedAt += now-hiddenAt;
         hiddenAt = undefined;
         nextDrawAt = now;
         lastSceneTick = now;
@@ -820,7 +862,7 @@ export function GravityField({
       taaFrameIndex = 0;
       if (!settingsRef.current.pauseWhenHidden) hiddenAt = undefined;
       lastDrawAt = 0;
-      syncAppBootState();
+      syncAnimationState();
       if (shouldAnimate() && frame === undefined) {
         frame = window.requestAnimationFrame(animate);
       }
@@ -842,6 +884,7 @@ export function GravityField({
       taaFrameIndex = 0;
       gpuFrames = [];
       field.dataset.renderer = "unavailable";
+      syncAnimationState();
       if (frame !== undefined) window.cancelAnimationFrame(frame);
       frame = undefined;
     };
@@ -854,6 +897,7 @@ export function GravityField({
       taaFrameIndex = 0;
       field.dataset.renderer = "webgl2";
       lastDrawAt = 0;
+      syncAnimationState();
       resize();
       if (shouldAnimate()) {
         frame = window.requestAnimationFrame(animate);
@@ -862,6 +906,7 @@ export function GravityField({
 
     const handleMotionChange = () => {
       reducedMotion = motionMedia.matches;
+      syncAnimationState();
       if (reducedMotion) {
         if (frame !== undefined) window.cancelAnimationFrame(frame);
         frame = undefined;
@@ -891,30 +936,21 @@ export function GravityField({
 
     const resizeObserver =
       typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(resize);
-    const bootObserver =
-      typeof MutationObserver !== "undefined"
-        ? new MutationObserver(syncAppBootState)
-        : undefined;
     resizeObserver?.observe(root);
     if (!resizeObserver) window.addEventListener("resize", resize);
-    bootObserver?.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-solara-boot"],
-    });
     root.addEventListener("pointermove", handlePointerMove, { passive: true });
     root.addEventListener("pointerleave", handlePointerLeave);
     canvas.addEventListener("webglcontextlost", handleContextLost);
     canvas.addEventListener("webglcontextrestored", handleContextRestored);
     document.addEventListener("visibilitychange", handleVisibility);
     addMotionListener();
-    field.dataset.animationState = appBootPaused || entryPaused ? "paused" : "running";
+    syncAnimationState();
     resize();
     if (shouldAnimate()) frame = window.requestAnimationFrame(animate);
 
     return () => {
       redrawRef.current = null;
       resizeObserver?.disconnect();
-      bootObserver?.disconnect();
       if (!resizeObserver) window.removeEventListener("resize", resize);
       root.removeEventListener("pointermove", handlePointerMove);
       root.removeEventListener("pointerleave", handlePointerLeave);
@@ -936,9 +972,7 @@ export function GravityField({
     redrawRef.current?.();
   }, [
     activeIndex,
-    clockOrigin,
     launchProgress,
-    pauseWhileAppBooting,
     renderScaleMultiplier,
     settings,
     selectionVisible,

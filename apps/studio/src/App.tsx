@@ -23,7 +23,6 @@ import { ConfirmDialog } from "./components/ConfirmDialog";
 import { ToastProvider } from "./components/Toast";
 import { Button, InlineError } from "./components/Ui";
 import { Dashboard } from "./features/Dashboard";
-import { GRAVITY_INTRO_DURATION_MS } from "./features/dashboard/GravityField";
 import { GravitySettingsPanel } from "./features/dashboard/GravitySettingsPanel";
 import {
   applyBuiltInGravityPreset,
@@ -96,202 +95,6 @@ const ComponentGallery = lazy(() =>
 const Studio = lazy(() =>
   import("./features/Studio").then(({ Studio: Component }) => ({ default: Component })),
 );
-
-interface StudioBootProgress {
-  percent: number;
-  label: string;
-  detail: string;
-}
-
-const INITIAL_STUDIO_BOOT_PROGRESS: StudioBootProgress = {
-  percent: 0,
-  label: "Preparando tu espacio local",
-  detail: "Iniciando el almacenamiento local…",
-};
-
-const STUDIO_BOOT_RESOURCE_URLS = [
-  "/branding/solara-orbit-64.png",
-  "/branding/gargantua-reference.png",
-];
-
-function preloadStudioBootImage(src: string): Promise<void> {
-  return new Promise((resolve) => {
-    const image = new Image();
-    const settle = () => resolve();
-
-    image.addEventListener("load", settle, { once: true });
-    image.addEventListener("error", settle, { once: true });
-    image.src = src;
-  });
-}
-
-async function preloadStudioBootResources(onProgress: (percent: number) => void): Promise<void> {
-  const imagePromises = STUDIO_BOOT_RESOURCE_URLS.map(preloadStudioBootImage);
-  const fontPromise = typeof document !== "undefined" && document.fonts ? document.fonts.ready : Promise.resolve();
-  const totalResources = imagePromises.length + 1;
-  let completedResources = 0;
-
-  const markResourceComplete = () => {
-    completedResources += 1;
-    onProgress(Math.round((completedResources / totalResources) * 100));
-  };
-
-  await Promise.all(
-    imagePromises.map(async (resourcePromise) => {
-      try {
-        await resourcePromise;
-      } finally {
-        markResourceComplete();
-      }
-    }),
-  );
-
-  try {
-    await fontPromise;
-  } finally {
-    markResourceComplete();
-  }
-
-  onProgress(100);
-}
-
-const APP_BOOT_FIELD_REVEAL_MS = GRAVITY_INTRO_DURATION_MS;
-const APP_BOOT_BLACKOUT_MS = 720;
-const APP_BOOT_ZOOM_MS = GRAVITY_INTRO_DURATION_MS;
-const APP_BOOT_DASHBOARD_ENTRY_MS = 1600;
-
-function StudioBootSequence({
-  ready,
-  progress,
-  onZoomStart,
-}: {
-  ready: boolean;
-  progress: StudioBootProgress;
-  onZoomStart: (clockOrigin: number) => void;
-}) {
-  const [phase, setPhase] = useState<
-    "loading" | "blackout" | "returning" | "dashboard" | "done"
-  >("loading");
-  const startedAtRef = useRef(0);
-  const reducedMotion =
-    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const fieldRevealDuration = reducedMotion ? 240 : APP_BOOT_FIELD_REVEAL_MS;
-  const blackoutDuration = reducedMotion ? 180 : APP_BOOT_BLACKOUT_MS;
-  const zoomDuration = reducedMotion ? 240 : APP_BOOT_ZOOM_MS;
-  const dashboardEntryDuration = reducedMotion ? 240 : APP_BOOT_DASHBOARD_ENTRY_MS;
-
-  useEffect(() => {
-    startedAtRef.current = performance.now();
-    document.documentElement.dataset.solaraBoot = "loading";
-    return () => {
-      delete document.documentElement.dataset.solaraBoot;
-      delete document.documentElement.dataset.solaraDashboardEntry;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!ready) return;
-
-    const elapsed = performance.now() - startedAtRef.current;
-    const revealWait = Math.max(0, fieldRevealDuration - elapsed);
-    let blackoutTimer: number | undefined;
-    let dashboardTimer: number | undefined;
-    const releaseTimer = window.setTimeout(() => {
-      setPhase("blackout");
-      blackoutTimer = window.setTimeout(() => {
-        onZoomStart(performance.now());
-        delete document.documentElement.dataset.solaraBoot;
-        setPhase("returning");
-        dashboardTimer = window.setTimeout(() => {
-          // The CSS entry starts only after the real zoom has completed. Keep
-          // the marker alive until the staggered dashboard animations settle.
-          document.documentElement.dataset.solaraDashboardEntry = "true";
-          setPhase("dashboard");
-          dashboardTimer = window.setTimeout(() => {
-            delete document.documentElement.dataset.solaraDashboardEntry;
-            setPhase("done");
-          }, dashboardEntryDuration);
-        }, zoomDuration);
-      }, blackoutDuration);
-    }, revealWait);
-
-    return () => {
-      window.clearTimeout(releaseTimer);
-      if (blackoutTimer !== undefined) window.clearTimeout(blackoutTimer);
-      if (dashboardTimer !== undefined) window.clearTimeout(dashboardTimer);
-    };
-  }, [
-    blackoutDuration,
-    dashboardEntryDuration,
-    fieldRevealDuration,
-    onZoomStart,
-    ready,
-    zoomDuration,
-  ]);
-
-  if (phase === "done") return null;
-
-  const progressPercent = Math.min(100, Math.max(0, Math.round(progress.percent)));
-
-  return (
-    <div
-      className={`app-boot-sequence${phase === "blackout" ? " is-blackout" : ""}${phase === "returning" ? " is-returning" : ""}${phase === "dashboard" ? " is-dashboard" : ""}`}
-      data-boot-phase={phase}
-      data-testid="solara-app-boot"
-      role="status"
-      aria-live="polite"
-      aria-busy="true"
-    >
-      <div className="app-boot-sequence__veil" aria-hidden="true" />
-      <div className="app-boot-sequence__blackout" aria-hidden="true" />
-      <section className="app-boot-sequence__panel" aria-label="Progreso de carga">
-        <div className="app-boot-sequence__brand">
-          <img
-            className="app-boot-sequence__logo"
-            src="/branding/solara-orbit-64.png"
-            srcSet="/branding/solara-orbit-32.png 32w, /branding/solara-orbit-64.png 64w, /branding/solara-orbit-128.png 128w"
-            sizes="44px"
-            alt=""
-            width={44}
-            height={44}
-            decoding="async"
-            fetchPriority="high"
-          />
-          <div>
-            <p className="app-boot-sequence__eyebrow">SolaraCommerce</p>
-            <p className="app-boot-sequence__brand-detail">Local-first commerce studio</p>
-          </div>
-        </div>
-        <div className="app-boot-sequence__copy">
-          <h1 data-testid="solara-boot-progress-label">{progress.label}</h1>
-          <p data-testid="solara-boot-progress-detail">{progress.detail}</p>
-        </div>
-        <div className="app-boot-sequence__progress">
-          <div
-            className="app-boot-sequence__progress-track"
-            data-testid="solara-boot-progress"
-            role="progressbar"
-            aria-label="Progreso de carga"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={progressPercent}
-            aria-valuetext={`${progress.label}: ${progressPercent}%`}
-          >
-            <span
-              className="app-boot-sequence__progress-value"
-              data-testid="solara-boot-progress-bar"
-              style={{ transform: `scaleX(${progressPercent / 100})` }}
-            />
-          </div>
-          <div className="app-boot-sequence__progress-meta">
-            <span data-testid="solara-boot-progress-status">Estado local en tiempo real</span>
-            <strong data-testid="solara-boot-progress-value">{progressPercent}%</strong>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-}
 
 type StoreLaunchCurtainPhase = "idle" | "covering" | "releasing";
 
@@ -389,77 +192,16 @@ function AppInner() {
       </Suspense>
     );
   }
-  return <StudioShellWithBoot />;
+  return <StudioShell />;
 }
 
-function StudioShellWithBoot() {
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
-  const [initialLoadProgress, setInitialLoadProgress] = useState<StudioBootProgress>(
-    INITIAL_STUDIO_BOOT_PROGRESS,
-  );
-  const [resourceProgress, setResourceProgress] = useState(0);
-  const [resourcesReady, setResourcesReady] = useState(false);
-  const handleInitialLoadComplete = useCallback(() => setInitialLoadComplete(true), []);
-  const handleInitialLoadProgress = useCallback(
-    (progress: StudioBootProgress) => setInitialLoadProgress(progress),
-    [],
-  );
-  const [gravityClockOrigin, setGravityClockOrigin] = useState(() => performance.now());
-  const handleBootZoomStart = useCallback(
-    (nextClockOrigin: number) => setGravityClockOrigin(nextClockOrigin),
-    [],
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    void preloadStudioBootResources((percent) => {
-      if (!cancelled) setResourceProgress(percent);
-    }).then(() => {
-      if (!cancelled) setResourcesReady(true);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const bootProgress: StudioBootProgress = {
-    ...initialLoadProgress,
-    percent: Math.round(initialLoadProgress.percent * 0.82 + resourceProgress * 0.18),
-    detail:
-      resourceProgress < 100
-        ? "Precalentando el logo, el fondo y las tipografías…"
-        : initialLoadProgress.detail,
-  };
-
-  return (
-    <>
-      <StudioShell
-        onInitialLoadComplete={handleInitialLoadComplete}
-        onInitialLoadProgress={handleInitialLoadProgress}
-        clockOrigin={gravityClockOrigin}
-      />
-      <StudioBootSequence
-        ready={initialLoadComplete && resourcesReady}
-        progress={bootProgress}
-        onZoomStart={handleBootZoomStart}
-      />
-    </>
-  );
-}
-
-function StudioShell({
-  onInitialLoadComplete,
-  onInitialLoadProgress,
-  clockOrigin,
-}: {
-  onInitialLoadComplete: () => void;
-  onInitialLoadProgress: (progress: StudioBootProgress) => void;
-  clockOrigin: number;
-}) {
+function StudioShell() {
   const gravitySettingsPanelId = useId();
   const [projects, setProjects] = useState<StoredProject[]>([]);
   const [active, setActive] = useState<StoreProjectV1>();
+  // La entrada inversa se reproduce una vez por arranque del shell, no al
+  // volver desde Studio al dashboard.
+  const [dashboardEntryPending, setDashboardEntryPending] = useState(true);
   const [storeLaunchCurtain, setStoreLaunchCurtain] = useState<StoreLaunchCurtainPhase>("idle");
   const [recovery, setRecovery] = useState<ProjectRecoveryIssue[]>([]);
   const [loading, setLoading] = useState(true);
@@ -483,6 +225,7 @@ function StudioShell({
   const [gravitySettings, setGravitySettings] = useState<GravitySettings>(
     gravityPreferences.activeSettings,
   );
+  const completeDashboardEntry = useCallback(() => setDashboardEntryPending(false), []);
   const [customGravityPresets, setCustomGravityPresets] = useState(
     gravityPreferences.customPresets,
   );
@@ -579,6 +322,126 @@ function StudioShell({
     setGravitySettings((current) => ({ ...current, staticDiskDetails: value }));
   }, []);
 
+  const toggleGravityDustBelt = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, dustBeltEnabled: value }));
+  }, []);
+
+  const toggleGravityProceduralDetail = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, proceduralDetailEnabled: value }));
+  }, []);
+
+  const toggleGravityDiskWarp = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, diskWarpEnabled: value }));
+  }, []);
+
+  const toggleGravityLensedSecondary = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, lensedSecondaryEnabled: value }));
+  }, []);
+
+  const toggleGravityCloudEnvelope = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, cloudEnvelopeEnabled: value }));
+  }, []);
+
+  const toggleGravityErosion = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, erosionEnabled: value }));
+  }, []);
+
+  const toggleGravityLaneBrightness = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, laneBrightnessEnabled: value }));
+  }, []);
+
+  const toggleGravityStreamers = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, streamersEnabled: value }));
+  }, []);
+
+  const toggleGravityHotRim = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, hotRimEnabled: value }));
+  }, []);
+
+  const toggleGravityGasCloudBrightness = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, gasCloudBrightnessEnabled: value }));
+  }, []);
+
+  const toggleGravityStreaks = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, streaksEnabled: value }));
+  }, []);
+
+  const toggleGravityTemperatureCloudModulation = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, temperatureCloudModulationEnabled: value }));
+  }, []);
+
+  const toggleGravityDensityEnvelope = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, densityEnvelopeEnabled: value }));
+  }, []);
+
+  const toggleGravityDensityLaneAbsorption = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, densityLaneAbsorptionEnabled: value }));
+  }, []);
+
+  const toggleGravityLensedErosionClouds = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, lensedErosionCloudsEnabled: value }));
+  }, []);
+
+  const toggleGravityGasCloudStructure = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, gasCloudStructureEnabled: value }));
+  }, []);
+
+  const toggleGravityOrbitalLanePattern = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, orbitalLanePatternEnabled: value }));
+  }, []);
+
+  const toggleGravityLensedBreakup = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, lensedBreakupEnabled: value }));
+  }, []);
+
+  const toggleGravityLensedBaseEmission = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, lensedBaseEmissionEnabled: value }));
+  }, []);
+
+  const toggleGravityLensedDensityMask = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, lensedDensityMaskEnabled: value }));
+  }, []);
+
+  const toggleGravityBroadWisps = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, broadWispsEnabled: value }));
+  }, []);
+
+  const toggleGravityLensedStaticEnvelope = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, lensedStaticEnvelopeEnabled: value }));
+  }, []);
+
+  const toggleGravityLensedGlowCloud = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, lensedGlowCloudEnabled: value }));
+  }, []);
+
+  const toggleGravityRimCloudModulation = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, rimCloudModulationEnabled: value }));
+  }, []);
+
+  const toggleGravityFarSideDisk = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, farSideDiskEnabled: value }));
+  }, []);
+
+  const toggleGravityNearSideDisk = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, nearSideDiskEnabled: value }));
+  }, []);
+
+  const toggleGravityThermalColor = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, thermalColorEnabled: value }));
+  }, []);
+
+  const toggleGravityRadialHeat = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, radialHeatEnabled: value }));
+  }, []);
+
+  const toggleGravityDepthAbsorption = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, depthAbsorptionEnabled: value }));
+  }, []);
+
+  const toggleGravityLayerCorrugation = useCallback((value: boolean) => {
+    setGravitySettings((current) => ({ ...current, layerCorrugationEnabled: value }));
+  }, []);
+
   useEffect(() => {
     document.documentElement.style.setProperty(
       "--gargantua-debug-ui-opacity",
@@ -624,13 +487,7 @@ function StudioShell({
 
   useEffect(() => {
     void (async () => {
-      let bootFailed = false;
       try {
-        onInitialLoadProgress({
-          percent: 4,
-          label: "Preparando tu espacio local",
-          detail: "Comprobando el almacenamiento disponible…",
-        });
         const purgePromise = purgeRolledBackDemoRecords();
         const storagePromise = loadLocalStorage()
           .then(({ getLocalStorageStatus }) =>
@@ -641,19 +498,9 @@ function StudioShell({
           )
           .catch(() => ({ managed: false, writable: false }));
         const [, detectedStorage] = await Promise.all([purgePromise, storagePromise]);
-        onInitialLoadProgress({
-          percent: 16,
-          label: "Verificando almacenamiento local",
-          detail: "Buscando tiendas y respaldos disponibles…",
-        });
         storageModeRef.current = detectedStorage.managed;
         setLocalStorageStatus(detectedStorage);
         if (detectedStorage.managed) {
-          onInitialLoadProgress({
-            percent: 19,
-            label: "Cargando preferencias del dashboard",
-            detail: "Revisando los presets guardados en la instalación…",
-          });
           const diskGravityPreferences = await loadGravityPreferencesFromDisk();
           if (diskGravityPreferences) {
             setGravitySettings(diskGravityPreferences.activeSettings);
@@ -683,11 +530,6 @@ function StudioShell({
           retireDiskPromise,
           retireBrowserPromise,
         ]);
-        onInitialLoadProgress({
-          percent: 24,
-          label: "Comprobando versiones",
-          detail: "Validando el estado de tus tiendas…",
-        });
         const retiredLegacyProjects = retiredDisk || retiredBrowser;
         if (retiredLegacyProjects) {
           notify("Se retiraron las referencias legacy; la demo V2 es la única demo integrada.");
@@ -695,23 +537,11 @@ function StudioShell({
         const diskListing = detectedStorage.managed
           ? await (await loadLocalProjectRepository()).loadAllDiskProjects()
           : undefined;
-        onInitialLoadProgress({
-          percent: 42,
-          label: "Cargando tiendas guardadas",
-          detail: detectedStorage.managed
-            ? "Leyendo proyectos confirmados en disco…"
-            : "Leyendo proyectos locales del navegador…",
-        });
         // Un recovery de disco es estado administrado: no caer al seeding de
         // IndexedDB, que intentaría volver a guardar con una versión nula.
         if (diskListing && (diskListing.projects.length > 0 || diskListing.recovery.length > 0)) {
           // El listing ya está validado en memoria; sólo hay que releer el disco
           // cuando una migración escribe sobre él.
-          onInitialLoadProgress({
-            percent: 54,
-            label: "Sincronizando tus tiendas",
-            detail: "Revisando migraciones y respaldos pendientes…",
-          });
           let diskMutated = false;
           if (detectedStorage.writable) {
             await Promise.allSettled(
@@ -762,31 +592,16 @@ function StudioShell({
               }),
             );
           }
-          onInitialLoadProgress({
-            percent: 78,
-            label: "Validando tus tiendas",
-            detail: "Aplicando recuperación y migraciones…",
-          });
           if (diskMutated) {
             await refreshDisk();
           } else {
             setProjects(diskListing.projects);
             setRecovery(diskListing.recovery);
           }
-          onInitialLoadProgress({
-            percent: 94,
-            label: "Ajustando el dashboard",
-            detail: "Preparando la biblioteca de tiendas…",
-          });
           return;
         }
 
         const result = await refreshBrowser();
-        onInitialLoadProgress({
-          percent: 52,
-          label: "Cargando tiendas guardadas",
-          detail: "Verificando la tienda base y sus recursos…",
-        });
         if (consumeStorageResetNotice()) {
           setNotice(
             "Se reinició la base local para activar el contrato de tienda v2. Los respaldos y exportaciones no fueron modificados.",
@@ -796,11 +611,6 @@ function StudioShell({
         // administrado, IndexedDB puede contener RecoveryDrafts que deben
         // conservarse y reconciliarse con el almacenamiento comercial en disco.
         if (!detectedStorage.managed) await purgeNonDemoStores();
-        onInitialLoadProgress({
-          percent: 62,
-          label: "Preparando la biblioteca",
-          detail: "Verificando la tienda inicial y sus categorías…",
-        });
         if (result.projects.length === 0 && result.recovery.length === 0) {
           await ensureFirstProject();
         }
@@ -814,17 +624,7 @@ function StudioShell({
             "Se retiraron las categorias Sale y Novedades; los productos y sus precios se conservaron.",
           );
         }
-        onInitialLoadProgress({
-          percent: 80,
-          label: "Sincronizando el catálogo",
-          detail: "Aplicando las últimas comprobaciones…",
-        });
         const browserResult = await refreshBrowser();
-        onInitialLoadProgress({
-          percent: 92,
-          label: "Ajustando el dashboard",
-          detail: "Preparando la biblioteca de tiendas…",
-        });
         if (detectedStorage.managed && detectedStorage.writable) {
           await Promise.allSettled(
             browserResult.projects.map(async (stored) => {
@@ -837,38 +637,16 @@ function StudioShell({
             }),
           );
           await refreshDisk();
-          onInitialLoadProgress({
-            percent: 96,
-            label: "Ajustando el dashboard",
-            detail: "Confirmando las tiendas guardadas en disco…",
-          });
           notify("Las tiendas locales se migraron a proyectos/.");
         }
       } catch (reason) {
-        bootFailed = true;
         setError(reason instanceof Error ? reason.message : "No se pudo abrir Studio.");
       } finally {
         setLoading(false);
-        onInitialLoadProgress(
-          bootFailed
-            ? {
-                percent: 100,
-                label: "Arranque con avisos",
-                detail: "El dashboard se abrirá con el estado disponible.",
-              }
-            : {
-                percent: 100,
-                label: "Todo listo",
-                detail: "Abriendo tu espacio de trabajo…",
-              },
-        );
-        onInitialLoadComplete();
       }
     })();
   }, [
     notify,
-    onInitialLoadComplete,
-    onInitialLoadProgress,
     persistToDisk,
     refreshBrowser,
     refreshDisk,
@@ -1128,7 +906,7 @@ function StudioShell({
   return (
     <ToastProvider>
       <div
-        className="app-root app-root--dashboard-cosmic"
+        className={`app-root app-root--dashboard-cosmic${dashboardEntryPending ? " is-dashboard-entering" : ""}`}
         data-gargantua-debug="true"
         data-gargantua-settings-open={gravitySettingsOpen ? "true" : undefined}
       >
@@ -1223,6 +1001,36 @@ function StudioShell({
           onSaveCustomPreset={saveCustomGravityPreset}
           onTaaQualityChange={updateGravityTaaQuality}
           onToggleStaticDiskDetails={toggleGravityStaticDiskDetails}
+          onToggleDustBelt={toggleGravityDustBelt}
+          onToggleProceduralDetail={toggleGravityProceduralDetail}
+          onToggleDiskWarp={toggleGravityDiskWarp}
+          onToggleLensedSecondary={toggleGravityLensedSecondary}
+          onToggleCloudEnvelope={toggleGravityCloudEnvelope}
+          onToggleErosion={toggleGravityErosion}
+          onToggleLaneBrightness={toggleGravityLaneBrightness}
+          onToggleStreamers={toggleGravityStreamers}
+          onToggleHotRim={toggleGravityHotRim}
+          onToggleGasCloudBrightness={toggleGravityGasCloudBrightness}
+          onToggleStreaks={toggleGravityStreaks}
+          onToggleTemperatureCloudModulation={toggleGravityTemperatureCloudModulation}
+          onToggleDensityEnvelope={toggleGravityDensityEnvelope}
+          onToggleDensityLaneAbsorption={toggleGravityDensityLaneAbsorption}
+          onToggleLensedErosionClouds={toggleGravityLensedErosionClouds}
+          onToggleGasCloudStructure={toggleGravityGasCloudStructure}
+          onToggleOrbitalLanePattern={toggleGravityOrbitalLanePattern}
+          onToggleLensedBreakup={toggleGravityLensedBreakup}
+          onToggleLensedBaseEmission={toggleGravityLensedBaseEmission}
+          onToggleLensedDensityMask={toggleGravityLensedDensityMask}
+          onToggleBroadWisps={toggleGravityBroadWisps}
+          onToggleLensedStaticEnvelope={toggleGravityLensedStaticEnvelope}
+          onToggleLensedGlowCloud={toggleGravityLensedGlowCloud}
+          onToggleRimCloudModulation={toggleGravityRimCloudModulation}
+          onToggleFarSideDisk={toggleGravityFarSideDisk}
+          onToggleNearSideDisk={toggleGravityNearSideDisk}
+          onToggleThermalColor={toggleGravityThermalColor}
+          onToggleRadialHeat={toggleGravityRadialHeat}
+          onToggleDepthAbsorption={toggleGravityDepthAbsorption}
+          onToggleLayerCorrugation={toggleGravityLayerCorrugation}
           onTogglePauseWhenHidden={toggleGravityPauseWhenHidden}
           onReset={resetGravitySettings}
           onClose={closeGravitySettings}
@@ -1280,9 +1088,10 @@ function StudioShell({
           </div>
         ) : null}
         <Dashboard
-          clockOrigin={clockOrigin}
           gravitySettings={gravitySettings}
           settingsOpen={gravitySettingsOpen}
+          startupReveal={dashboardEntryPending}
+          onStartupRevealComplete={completeDashboardEntry}
           projects={projects}
           onCreate={async (input) => {
             setError("");

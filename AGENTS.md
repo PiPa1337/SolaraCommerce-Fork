@@ -181,6 +181,17 @@ Studio, storefront, Preview, módulos visuales, CSS, renderer HTML o comportamie
 responsive. No se usa para schema, persistencia, operaciones de tiendas, el agente
 nativo, tests puros, scripts ni backend.
 
+- El viewport operativo principal del Studio es **1920×912 px**. Representa el
+  área útil habitual de una pantalla física 16:9 de 1920×1080 después de descontar
+  la interfaz de Chrome y la barra de tareas de Windows. Se asume que
+  aproximadamente el **99% del uso del Studio** ocurrirá en este viewport; por lo
+  tanto, el diseño, ajuste fino y QA visual del dashboard/editor deben priorizar
+  1920×912 y no invertir tiempo en optimizar otras relaciones de aspecto del
+  Studio salvo que una tarea lo pida explícitamente o exista una regresión
+  funcional. Esto no elimina el contrato responsive del storefront ni los presets
+  Mobile/Tablet/Desktop del Preview, documentados en `DESIGN.md` y
+  `docs/TESTING.md`.
+
 - En una UI nueva, usar `$impeccable shape` antes de editar.
 - En una UI existente, usar `$impeccable critique` o `$impeccable audit` según el
   problema; el hook del proyecto hace además la detección automática después de

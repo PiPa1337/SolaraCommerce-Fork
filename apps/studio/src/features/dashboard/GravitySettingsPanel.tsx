@@ -26,6 +26,36 @@ interface GravitySettingsPanelProps {
   onSaveCustomPreset(): void;
   onTaaQualityChange(value: GravityTaaQuality): void;
   onToggleStaticDiskDetails(value: boolean): void;
+  onToggleDustBelt(value: boolean): void;
+  onToggleProceduralDetail(value: boolean): void;
+  onToggleDiskWarp(value: boolean): void;
+  onToggleLensedSecondary(value: boolean): void;
+  onToggleCloudEnvelope(value: boolean): void;
+  onToggleErosion(value: boolean): void;
+  onToggleLaneBrightness(value: boolean): void;
+  onToggleStreamers(value: boolean): void;
+  onToggleHotRim(value: boolean): void;
+  onToggleGasCloudBrightness(value: boolean): void;
+  onToggleStreaks(value: boolean): void;
+  onToggleTemperatureCloudModulation(value: boolean): void;
+  onToggleDensityEnvelope(value: boolean): void;
+  onToggleDensityLaneAbsorption(value: boolean): void;
+  onToggleLensedErosionClouds(value: boolean): void;
+  onToggleGasCloudStructure(value: boolean): void;
+  onToggleOrbitalLanePattern(value: boolean): void;
+  onToggleLensedBreakup(value: boolean): void;
+  onToggleLensedBaseEmission(value: boolean): void;
+  onToggleLensedDensityMask(value: boolean): void;
+  onToggleBroadWisps(value: boolean): void;
+  onToggleLensedStaticEnvelope(value: boolean): void;
+  onToggleLensedGlowCloud(value: boolean): void;
+  onToggleRimCloudModulation(value: boolean): void;
+  onToggleFarSideDisk(value: boolean): void;
+  onToggleNearSideDisk(value: boolean): void;
+  onToggleThermalColor(value: boolean): void;
+  onToggleRadialHeat(value: boolean): void;
+  onToggleDepthAbsorption(value: boolean): void;
+  onToggleLayerCorrugation(value: boolean): void;
   onTogglePauseWhenHidden(value: boolean): void;
   onReset(): void;
   onClose(): void;
@@ -102,6 +132,36 @@ export function GravitySettingsPanel({
   onSaveCustomPreset,
   onTaaQualityChange,
   onToggleStaticDiskDetails,
+  onToggleDustBelt,
+  onToggleProceduralDetail,
+  onToggleDiskWarp,
+  onToggleLensedSecondary,
+  onToggleCloudEnvelope,
+  onToggleErosion,
+  onToggleLaneBrightness,
+  onToggleStreamers,
+  onToggleHotRim,
+  onToggleGasCloudBrightness,
+  onToggleStreaks,
+  onToggleTemperatureCloudModulation,
+  onToggleDensityEnvelope,
+  onToggleDensityLaneAbsorption,
+  onToggleLensedErosionClouds,
+  onToggleGasCloudStructure,
+  onToggleOrbitalLanePattern,
+  onToggleLensedBreakup,
+  onToggleLensedBaseEmission,
+  onToggleLensedDensityMask,
+  onToggleBroadWisps,
+  onToggleLensedStaticEnvelope,
+  onToggleLensedGlowCloud,
+  onToggleRimCloudModulation,
+  onToggleFarSideDisk,
+  onToggleNearSideDisk,
+  onToggleThermalColor,
+  onToggleRadialHeat,
+  onToggleDepthAbsorption,
+  onToggleLayerCorrugation,
   onTogglePauseWhenHidden,
   onReset,
   onClose,
@@ -351,8 +411,8 @@ export function GravitySettingsPanel({
               <span>
                 <strong>Manchas estables del disco</strong>
                 <small>
-                  Conserva las manchas suaves de la zona exterior; desactivá esta opción para que
-                  esa textura se anime junto con el resto del gas.
+                  Conserva las formas grandes y lentas del gas; desactivá esta opción para que
+                  toda esa envolvente siga el movimiento del disco.
                 </small>
               </span>
               <input
@@ -360,6 +420,456 @@ export function GravitySettingsPanel({
                 type="checkbox"
                 checked={settings.staticDiskDetails}
                 onChange={(event) => onToggleStaticDiskDetails(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Cinturón de polvo de fondo</strong>
+                <small>
+                  Muestra la nube diagonal de polvo, con sus grietas y grano, detrás del agujero
+                  negro.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-dustBeltEnabled"
+                type="checkbox"
+                checked={settings.dustBeltEnabled}
+                onChange={(event) => onToggleDustBelt(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Detalle fino del gas</strong>
+                <small>
+                  Activa los filamentos y detalles procedurales finos que forman las pequeñas
+                  estructuras del disco.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-proceduralDetailEnabled"
+                type="checkbox"
+                checked={settings.proceduralDetailEnabled}
+                onChange={(event) => onToggleProceduralDetail(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Ondulación del disco</strong>
+                <small>
+                  Activa la deformación local y la corrugación de las capas del gas durante su
+                  recorrido orbital.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-diskWarpEnabled"
+                type="checkbox"
+                checked={settings.diskWarpEnabled}
+                onChange={(event) => onToggleDiskWarp(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Imagen secundaria por lente</strong>
+                <small>
+                  Muestra la imagen doblada del lado lejano del disco y el resplandor que la
+                  acompaña alrededor de la sombra.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-lensedSecondaryEnabled"
+                type="checkbox"
+                checked={settings.lensedSecondaryEnabled}
+                onChange={(event) => onToggleLensedSecondary(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Envolvente de nubes</strong>
+                <small>
+                  Mezcla la envolvente amplia y lenta con el gas local que define las manchas de
+                  gran escala del disco.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-cloudEnvelopeEnabled"
+                type="checkbox"
+                checked={settings.cloudEnvelopeEnabled}
+                onChange={(event) => onToggleCloudEnvelope(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Erosión del gas</strong>
+                <small>
+                  Activa el recorte de densidad y brillo que abre huecos irregulares dentro de las
+                  nubes del disco.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-erosionEnabled"
+                type="checkbox"
+                checked={settings.erosionEnabled}
+                onChange={(event) => onToggleErosion(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Manchas de erosión lenteadas</strong>
+                <small>
+                  Controla las grandes manchas fijas de erosión que aparecen en la imagen inferior
+                  lenteada del disco.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-lensedErosionCloudsEnabled"
+                type="checkbox"
+                checked={settings.lensedErosionCloudsEnabled}
+                onChange={(event) => onToggleLensedErosionClouds(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Estructura base de nubes</strong>
+                <small>
+                  Controla la textura amplia que alimenta brillo, temperatura y densidad; desactivá
+                  esta opción para comprobar si las manchas nacen de la nube base.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-gasCloudStructureEnabled"
+                type="checkbox"
+                checked={settings.gasCloudStructureEnabled}
+                onChange={(event) => onToggleGasCloudStructure(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Patrón de carriles orbitales</strong>
+                <small>
+                  Controla el ruido que oscurece y separa carriles del gas, incluso cuando los
+                  filamentos finos están apagados.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-orbitalLanePatternEnabled"
+                type="checkbox"
+                checked={settings.orbitalLanePatternEnabled}
+                onChange={(event) => onToggleOrbitalLanePattern(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Fragmentación de la imagen lenteada · manchas inferiores</strong>
+                <small>
+                  Opción confirmada: al desactivarla desaparecen las formas estáticas encerradas en
+                  rojo, sin ocultar el disco entero.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-lensedBreakupEnabled"
+                type="checkbox"
+                checked={settings.lensedBreakupEnabled}
+                onChange={(event) => onToggleLensedBreakup(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Emisión base de la imagen lenteada</strong>
+                <small>
+                  Opción confirmada para el residuo: al desactivarla desaparece la emisión estática
+                  restante bajo el disco, sin ocultar el disco directo.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-lensedBaseEmissionEnabled"
+                type="checkbox"
+                checked={settings.lensedBaseEmissionEnabled}
+                onChange={(event) => onToggleLensedBaseEmission(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Máscara de densidad lenteada</strong>
+                <small>
+                  Aísla la segunda máscara que modula la fragmentación según la densidad del gas
+                  doblado.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-lensedDensityMaskEnabled"
+                type="checkbox"
+                checked={settings.lensedDensityMaskEnabled}
+                onChange={(event) => onToggleLensedDensityMask(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Wisps amplios de nubes</strong>
+                <small>
+                  Aísla el aporte de baja frecuencia que puede conservar la forma estática después
+                  de quitar la fragmentación.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-broadWispsEnabled"
+                type="checkbox"
+                checked={settings.broadWispsEnabled}
+                onChange={(event) => onToggleBroadWisps(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Envolvente estática lenteada</strong>
+                <small>
+                  Aísla la envolvente lenta reutilizada por la imagen doblada, sin cambiar la
+                  envolvente del disco directo.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-lensedStaticEnvelopeEnabled"
+                type="checkbox"
+                checked={settings.lensedStaticEnvelopeEnabled}
+                onChange={(event) => onToggleLensedStaticEnvelope(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Nube del halo lenteado</strong>
+                <small>
+                  Controla la nube de baja frecuencia que modula el resplandor alrededor de la
+                  imagen doblada.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-lensedGlowCloudEnabled"
+                type="checkbox"
+                checked={settings.lensedGlowCloudEnabled}
+                onChange={(event) => onToggleLensedGlowCloud(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Modulación irregular del anillo</strong>
+                <small>
+                  Controla la variación lenta del brillo en el borde crítico, separada de la forma
+                  geométrica del agujero negro.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-rimCloudModulationEnabled"
+                type="checkbox"
+                checked={settings.rimCloudModulationEnabled}
+                onChange={(event) => onToggleRimCloudModulation(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Cara lejana del disco</strong>
+                <small>
+                  Aísla la emisión directa que llega desde la parte posterior del disco, antes de
+                  la imagen secundaria por lente.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-farSideDiskEnabled"
+                type="checkbox"
+                checked={settings.farSideDiskEnabled}
+                onChange={(event) => onToggleFarSideDisk(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Cara cercana del disco</strong>
+                <small>
+                  Aísla las capas que cruzan por delante de la sombra y su absorción de profundidad;
+                  sirve para separar volumen de fragmentación.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-nearSideDiskEnabled"
+                type="checkbox"
+                checked={settings.nearSideDiskEnabled}
+                onChange={(event) => onToggleNearSideDisk(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Color térmico del gas</strong>
+                <small>
+                  Desactiva el mapa cobre/crema/caliente para comprobar si lo señalado es sólo una
+                  variación cromática.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-thermalColorEnabled"
+                type="checkbox"
+                checked={settings.thermalColorEnabled}
+                onChange={(event) => onToggleThermalColor(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Caída radial de calor</strong>
+                <small>
+                  Controla el oscurecimiento y la concentración de energía según la distancia al
+                  horizonte.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-radialHeatEnabled"
+                type="checkbox"
+                checked={settings.radialHeatEnabled}
+                onChange={(event) => onToggleRadialHeat(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Absorción por profundidad</strong>
+                <small>
+                  Controla las diferencias de densidad que oscurecen carriles y separan manchas entre
+                  capas.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-depthAbsorptionEnabled"
+                type="checkbox"
+                checked={settings.depthAbsorptionEnabled}
+                onChange={(event) => onToggleDepthAbsorption(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Corrugación de capas</strong>
+                <small>
+                  Desactiva la deformación local de los planos de profundidad para separar volumen de
+                  textura.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-layerCorrugationEnabled"
+                type="checkbox"
+                checked={settings.layerCorrugationEnabled}
+                onChange={(event) => onToggleLayerCorrugation(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Brillo de carriles</strong>
+                <small>
+                  Conserva la variación de luminosidad causada por los carriles de ruido que
+                  atraviesan el gas.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-laneBrightnessEnabled"
+                type="checkbox"
+                checked={settings.laneBrightnessEnabled}
+                onChange={(event) => onToggleLaneBrightness(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Corrientes exteriores</strong>
+                <small>
+                  Activa las corrientes largas que alteran la forma y el brillo del borde exterior
+                  del disco.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-streamersEnabled"
+                type="checkbox"
+                checked={settings.streamersEnabled}
+                onChange={(event) => onToggleStreamers(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Borde caliente interior</strong>
+                <small>
+                  Muestra la franja de emisión concentrada junto al borde interno del disco de
+                  acreción.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-hotRimEnabled"
+                type="checkbox"
+                checked={settings.hotRimEnabled}
+                onChange={(event) => onToggleHotRim(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Brillo amplio de nubes</strong>
+                <small>
+                  Activa el aporte luminoso de baja frecuencia de las nubes, tanto en el fondo como
+                  sobre las estelas.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-gasCloudBrightnessEnabled"
+                type="checkbox"
+                checked={settings.gasCloudBrightnessEnabled}
+                onChange={(event) => onToggleGasCloudBrightness(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Estelas luminosas</strong>
+                <small>
+                  Activa las bandas finas de alta frecuencia que recorren el gas y forman vetas
+                  brillantes.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-streaksEnabled"
+                type="checkbox"
+                checked={settings.streaksEnabled}
+                onChange={(event) => onToggleStreaks(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Temperatura modulada por nubes</strong>
+                <small>
+                  Deja que la textura de nubes empuje zonas del gas hacia tonos más calientes cerca
+                  del horizonte.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-temperatureCloudModulationEnabled"
+                type="checkbox"
+                checked={settings.temperatureCloudModulationEnabled}
+                onChange={(event) => onToggleTemperatureCloudModulation(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Densidad de la envolvente</strong>
+                <small>
+                  Incluye la envolvente amplia en la opacidad del gas, capaz de formar masas oscuras
+                  o compactas.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-densityEnvelopeEnabled"
+                type="checkbox"
+                checked={settings.densityEnvelopeEnabled}
+                onChange={(event) => onToggleDensityEnvelope(event.target.checked)}
+              />
+            </label>
+            <label className="dashboard-gargantua-settings__toggle">
+              <span>
+                <strong>Absorción de carriles oscuros</strong>
+                <small>
+                  Activa la opacidad extra de los carriles oscuros que pueden verse como bandas o
+                  manchas sobre el disco inferior.
+                </small>
+              </span>
+              <input
+                data-testid="gravity-setting-densityLaneAbsorptionEnabled"
+                type="checkbox"
+                checked={settings.densityLaneAbsorptionEnabled}
+                onChange={(event) => onToggleDensityLaneAbsorption(event.target.checked)}
               />
             </label>
           </section>

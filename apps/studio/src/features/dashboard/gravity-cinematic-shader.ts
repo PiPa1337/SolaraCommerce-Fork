@@ -33,6 +33,36 @@ uniform float uGalaxyIntensity;
 uniform float uStarTwinkle;
 uniform float uVignette;
 uniform float uStaticDiskDetails;
+uniform float uDustBeltEnabled;
+uniform float uProceduralDetailEnabled;
+uniform float uDiskWarpEnabled;
+uniform float uLensedSecondaryEnabled;
+uniform float uCloudEnvelopeEnabled;
+uniform float uErosionEnabled;
+uniform float uLaneBrightnessEnabled;
+uniform float uStreamersEnabled;
+uniform float uHotRimEnabled;
+uniform float uGasCloudBrightnessEnabled;
+uniform float uStreaksEnabled;
+uniform float uTemperatureCloudModulationEnabled;
+uniform float uDensityEnvelopeEnabled;
+uniform float uDensityLaneAbsorptionEnabled;
+uniform float uLensedErosionCloudsEnabled;
+uniform float uGasCloudStructureEnabled;
+uniform float uOrbitalLanePatternEnabled;
+uniform float uLensedBreakupEnabled;
+uniform float uLensedBaseEmissionEnabled;
+uniform float uLensedDensityMaskEnabled;
+uniform float uLensedGlowCloudEnabled;
+uniform float uBroadWispsEnabled;
+uniform float uLensedStaticEnvelopeEnabled;
+uniform float uRimCloudModulationEnabled;
+uniform float uFarSideDiskEnabled;
+uniform float uNearSideDiskEnabled;
+uniform float uThermalColorEnabled;
+uniform float uRadialHeatEnabled;
+uniform float uDepthAbsorptionEnabled;
+uniform float uLayerCorrugationEnabled;
 uniform vec2 uTaaJitter;
 uniform sampler2D uTaaHistory;
 uniform float uTaaHistoryWeight;
@@ -79,7 +109,7 @@ vec3 gasPopulation(vec2 orbit, float r, float age, float footprint) {
   float cloud = fbm(flow*3.3 + vec2(sourceRadius*1.4,0));
   float warp = noise(flow*7.0 + cloud*2.0);
   float branches = noise(flow*11.0 + vec2(cloud,-cloud));
-  float radial = sourceRadius + (cloud-.5)*.12 + (warp-.5)*.09;
+  float radial = sourceRadius + (cloud-.5)*.12 + (warp-.5)*.09*uDiskWarpEnabled;
   float thread = noise(vec2(radial*38.0,4.0)+direction*vec2(5.0,9.0));
   float fine = noise(vec2((radial+(branches-.5)*.026)*79.0,17.0)+direction*12.0);
   float segments = smoothstep(.16,.8,noise(flow*vec2(13.0,8.0)));
@@ -88,12 +118,13 @@ vec3 gasPopulation(vec2 orbit, float r, float age, float footprint) {
   float fineVisibility=1.0-smoothstep(.25,1.0,footprint*79.0);
   // Mix filament energy, not raw noise: averaging before the power erased
   // highlights and dark lanes whenever the two populations overlapped.
-  return vec3(cloud,mix(.14,pow(thread,2.7),threadVisibility)*(.35+segments*.65),
-    mix(.07,pow(fine,3.5),fineVisibility)*(.2+branches*.8));
+  return vec3(cloud,
+    mix(.14,pow(thread,2.7),threadVisibility)*(.35+segments*.65)*uProceduralDetailEnabled,
+    mix(.07,pow(fine,3.5),fineVisibility)*(.2+branches*.8)*uProceduralDetailEnabled);
 }
 
 // RGB is emission; alpha is optical density. Dark gas still absorbs light.
-vec4 matter(vec2 orbit, float t) {
+vec4 matter(vec2 orbit, float t, float lensedPass) {
   float r = length(orbit);
   // Derivatives are evaluated before the support branch, even at disk edges.
   // Express the footprint in CSS pixels so adaptive resolution retains detail.
@@ -107,32 +138,45 @@ vec4 matter(vec2 orbit, float t) {
   float weight = .5-.5*cos(phase*TAU);
   vec3 gas = mix(gasPopulation(orbit,r,fract(phase+.5)*48.0,footprint),
     gasPopulation(orbit,r,phase*48.0,footprint),weight);
+  float cloudBase = mix(.5,gas.x,uGasCloudStructureEnabled);
   // A slow envelope retains the large forms while the small filaments flow.
   float staticEnvelope = fbm(rotate(t*.001)*orbit*1.7);
-  float distantDetails = smoothstep(2.6,4.8,r);
-  float envelope = mix(staticEnvelope,gas.x,(1.0-uStaticDiskDetails)*distantDetails);
-  float cloud = mix(envelope,gas.x,.5);
-  float erosion = smoothstep(.22,.72,gas.x*.65+envelope*.35);
-  float lanes=smoothstep(.25,.66,noise(orbit*5.5+vec2(gas.x*2.0,0)));
-  float streaks = (gas.y*2.7+gas.z*1.1)*erosion*uFilamentDetail;
-  float wisps = (.08+cloud*.22+streaks*1.1)*(.25+cloud)*(.5+lanes*.5);
+  float staticEnvelopeMix = uStaticDiskDetails * mix(1.0,uLensedStaticEnvelopeEnabled,lensedPass);
+  float envelope = mix(cloudBase,staticEnvelope,staticEnvelopeMix);
+  float cloud = mix(cloudBase,mix(envelope,cloudBase,.5),uCloudEnvelopeEnabled);
+  float erosionGas = mix(cloudBase,0.0,lensedPass*(1.0-uLensedErosionCloudsEnabled));
+  float erosionRaw = smoothstep(.22,.72,erosionGas*.65+envelope*.35);
+  float erosion = mix(1.0,erosionRaw,uErosionEnabled);
+  float lanes=smoothstep(.25,.66,noise(orbit*5.5+vec2(cloudBase*2.0,0)));
+  lanes=mix(.5,lanes,uOrbitalLanePatternEnabled);
+  float streaks = (gas.y*2.7+gas.z*1.1)*erosion*uFilamentDetail*uStreaksEnabled;
+  float broadWisps = mix(.02,(.08+cloud*.22)*(.25+cloud),uGasCloudBrightnessEnabled);
+  broadWisps *= uBroadWispsEnabled;
+  float laneBrightness = mix(1.0,.5+lanes*.5,uLaneBrightnessEnabled);
+  float streakCloud = mix(.25,.25+cloud,uGasCloudBrightnessEnabled);
+  float wisps = (broadWisps+streaks*1.1*streakCloud)*laneBrightness;
   float inner = smoothstep(1.05+(cloud-.5)*.035,1.27,r);
   float outer = 1.0 - smoothstep(2.5,5.6,r);
-  float streamers = smoothstep(.48,.72,gas.x)*gas.y;
+  float streamers = smoothstep(.48,.72,cloud)*gas.y*uStreamersEnabled;
   outer *= mix(.65+erosion*.35,.045+streamers*2.5,smoothstep(3.2,5.4,r));
-  float heat = exp(-(r - 1.2) * .87);
+  float heatFalloff = exp(-(r - 1.2) * .87);
+  float heat = mix(1.0,heatFalloff,uRadialHeatEnabled);
   vec3 copper = vec3(.72,.235,.068);
   vec3 cream = vec3(1.0,.80,.55);
   vec3 hot = vec3(1.0,.95,.83);
-  vec3 temperature = mix(copper,cream,smoothstep(.08,.8,heat));
-  temperature = mix(temperature,hot,pow(heat,3.0)*(.5+gas.x*.3));
+  vec3 thermalColor = mix(copper,cream,smoothstep(.08,.8,heatFalloff));
+  vec3 temperature = mix(vec3(1.0),thermalColor,uThermalColorEnabled);
+  temperature = mix(temperature,hot,
+    pow(heat,3.0)*(.5+cloud*.3*uTemperatureCloudModulationEnabled)*uThermalColorEnabled);
   float beaming = .8 + .65 * smoothstep(-3.0,2.0,orbit.x);
-  float hotRim = band(r-1.26-(cloud-.5)*.09,.055) * (.2+cloud*.8);
+  float hotRim = band(r-1.26-(cloud-.5)*.09,.055) * (.2+cloud*.8)*uHotRimEnabled;
   vec3 emission = (temperature*wisps+hot*hotRim*.26)*inner*outer*heat*beaming*5.0;
   // Concentrate the extra emission in the inner gas, not the outer halo.
   emission *= 1.0+.2*(1.0-smoothstep(2.0,3.0,r));
   // Dense cool lanes may absorb strongly while emitting very little.
-  float density = inner*outer*(.18+envelope*.9+(1.0-lanes)*.8+erosion*.35);
+  float depthAbsorption = .18+envelope*.9*uDensityEnvelopeEnabled
+    +(1.0-lanes)*.8*uDensityLaneAbsorptionEnabled+erosionRaw*.35*uErosionEnabled;
+  float density = inner*outer*mix(.18,depthAbsorption,uDepthAbsorptionEnabled);
   return vec4(emission,density);
 }
 
@@ -167,7 +211,7 @@ vec3 sky(vec2 p, float t) {
   float grains = dustSample.g*dustSample.b;
   vec3 c = vec3(.0006,.00085,.0013);
   c += mix(vec3(.055,.067,.08), vec3(.17,.085,.042),cloud)
-    * dust * (rifts*.7 + grains*.6) * 1.3 * uDustIntensity;
+    * dust * (rifts*.7 + grains*.6) * 1.3 * uDustIntensity * uDustBeltEnabled;
   c += stars(p,18.0,.91,t,1.0,uStarDensity)*1.0;
   c += stars(p+3.1,42.0,.96,t,.42,uStarDensity)*.9;
   c += stars(p-1.7,78.0,.978,t,.14,uStarDensity)*.65;
@@ -186,9 +230,15 @@ void main() {
   vec2 screen = ((gl_FragCoord.xy + uTaaJitter) / uResolution - .5) * vec2(aspect,1);
   float seconds = uTime * .001;
   float launch = smoothstep(0.0,1.0,uLaunchProgress);
+  // Start bending the disk earlier so the approach shows the distortion longer
+  // while the smoothstep keeps the first movement gradual.
+  float plunge=smoothstep(.12,.97,launch);
   vec2 center = mix(uCenter,vec2(0),launch);
-  float zoom = mix(1.0,.12,launch);
-  float radius = uDisk.x * .48;
+  float zoom = mix(1.0,.12,launch) * mix(1.0,.54,plunge*plunge);
+  // Make Gargantua itself grow 120% during the approach. Finish the scale-up
+  // before the final blackout so the change remains visible to the user.
+  float gargantuaScale=1.0+1.20*smoothstep(.18,.72,launch);
+  float radius = uDisk.x * .48 * gargantuaScale;
   // Pointer translation supplies parallax without changing the disk's tilt.
   vec2 q = rotate(.16) * (screen-center) * zoom / radius;
   float radial = length(q);
@@ -198,14 +248,25 @@ void main() {
   // Keep the visible slider range intact: this is the internal base strength.
   // A bounded response prevents the stronger base from flipping the background
   // while the falloff concentrates the extra bend around the black hole.
-  float horizonProximity=1.0-smoothstep(.82,2.35,radial);
+  float launchLens=smoothstep(.16,.94,launch);
+  float launchLensBoost=1.0+7.0*launchLens*launchLens;
+  float horizonProximity=1.0-smoothstep(.78,2.55+launchLens*1.15,radial);
   float lensArgument=.038*50.0*uLensStrength
-    *pow(horizonProximity,1.65)/(radial*radial+.5);
+    *launchLensBoost*pow(horizonProximity,mix(1.65,1.08,launchLens))/(radial*radial+.5);
   float deflection=lensArgument/(1.0+lensArgument);
   vec2 bent=q*(1.0-deflection);
   vec2 skyPoint=center+rotate(-.16)*bent*radius/zoom;
   vec3 background = sky(skyPoint,seconds * uMaterialSpeed);
   vec3 color = background;
+
+  // During the plunge the disk is magnified radially, then sheared along the
+  // local tangent. This folds its bright bands around the horizon while the
+  // central shadow keeps using the undistorted q/radial silhouette.
+  vec2 radialDirection=q/max(radial,.001);
+  vec2 tangent=vec2(-radialDirection.y,radialDirection.x);
+  float plungeShear=.62*plunge*plunge*horizonProximity*horizonProximity
+    *clamp(q.x,-1.35,1.35);
+  vec2 diskQ=mix(q,bent,launchLens*.88)-tangent*plungeShear;
 
   // Rays meet a genuinely inclined disk in 3D. Several parallel slices give
   // the optically thin gas thickness without a costly full-screen ray march.
@@ -214,7 +275,7 @@ void main() {
   vec3 forward = normalize(-eye);
   vec3 right = vec3(1,0,0);
   vec3 up = normalize(cross(right,forward));
-  vec3 ray = normalize(forward * 18.0 + right*q.x + up*q.y);
+  vec3 ray = normalize(forward * 18.0 + right*diskQ.x + up*diskQ.y);
   vec3 behind = vec3(0), front = vec3(0);
   float frontTransmission = 1.0;
   vec2 directOrbit=vec2(0);
@@ -228,7 +289,8 @@ void main() {
     float depth = (altitude-eye.y) / min(ray.y,-.00001);
     vec3 hit = eye + ray*depth;
     // Corrugated sheets approximate a varying gas thickness with bounded cost.
-    float corrugation = (noise(hit.xz*2.3+vec2(t*.006,0))-.5)*(.012+abs(slice)*.009);
+    float corrugation = (noise(hit.xz*2.3+vec2(t*.006,0))-.5)*(.012+abs(slice)*.009)
+      * uDiskWarpEnabled*uLayerCorrugationEnabled;
     depth = (altitude+corrugation-eye.y)/min(ray.y,-.00001);
     hit = eye+ray*depth;
     vec2 orbit = hit.xz;
@@ -236,7 +298,7 @@ void main() {
     if (layer == 1 || (uDiskLayers > 3.0 && layer == int(floor(uDiskLayers*.5)))
       || (uDiskLayers < 2.0 && layer == 0)) directOrbit=orbit;
     float density = (centralLayer && uDiskLayers >= 2.0) ? .72 : .14;
-    vec4 gas = matter(orbit,t);
+    vec4 gas = matter(orbit,t,0.0);
     float nearSide = smoothstep(-.1,.1,hit.z);
     float pathLength=clamp(.15/max(abs(ray.y),.045),.6,3.0);
     float tau=gas.a*density*pathLength*3.4*uGasAbsorption;
@@ -248,19 +310,19 @@ void main() {
     behind=behind*farTrans+source*(1.0-farTrans);
     frontTransmission*=nearTrans;
   }
-  color += behind;
+  color += behind*uFarSideDiskEnabled;
 
   // The far-side disk has a second image folded over the shadow. Its radius
   // maps back to the same material as the direct disk, so both shear together.
-  float upper = smoothstep(-.15,.2,q.y);
+  float upper = smoothstep(-.15,.2,diskQ.y);
   float arcRadius = mix(1.0,1.025,upper);
   // Flare the far image tangentially into the disk instead of terminating
   // a circular hoop vertically at either side of the shadow.
-  float flare = exp(-abs(q.y)*2.0)/(abs(q.y)+.18)*mix(.025,.105,upper);
+  float flare = exp(-abs(diskQ.y)*2.0)/(abs(diskQ.y)+.18)*mix(.025,.105,upper);
   // Pull the upper image toward the inner disk lip as it approaches the
   // plane; the old lateral flare landed too far out on the disk surface.
-  flare *= mix(1.0,mix(.18,1.0,smoothstep(.08,.65,abs(q.y))),upper);
-  vec2 lensPoint = vec2(q.x/(1.0+flare),q.y);
+  flare *= mix(1.0,mix(.18,1.0,smoothstep(.08,.65,abs(diskQ.y))),upper);
+  vec2 lensPoint = vec2(diskQ.x/(1.0+flare),diskQ.y);
   float lensRadius = length(lensPoint);
   float arcDistance = lensRadius-arcRadius;
   float distanceFromArc=max(arcDistance,0.0);
@@ -268,13 +330,13 @@ void main() {
   vec2 arcDirection = lensPoint / max(lensRadius,.001);
   // Far-side emission has negative disk Z. The secondary image reverses parity.
   // Parity is discrete, not a coordinate interpolation through zero width.
-  float parity=q.y >= 0.0 ? 1.0 : -1.0;
+  float parity=diskQ.y >= 0.0 ? 1.0 : -1.0;
   vec2 lensedOrbit = vec2(parity*arcDirection.x,
     -abs(arcDirection.y)) * lensedRadius;
   // A tangent transition has no outer cutoff to fold the filaments back.
   // Interpolate radius and direction separately: Cartesian blending shortened
   // orbits at the junction and created the visible compressed zigzag bands.
-  float junction=band(q.y,.34)*smoothstep(.88,1.12,abs(q.x));
+  float junction=band(diskQ.y,.34)*smoothstep(.88,1.12,abs(diskQ.x));
   vec2 farOrbit=vec2(directOrbit.x,-abs(directOrbit.y));
   float farRadius=max(length(farOrbit),.001);
   float orbitBlend=junction*upper;
@@ -286,17 +348,20 @@ void main() {
   float arcVisibility = smoothstep(0.0,.075,arcDistance);
   // The direct image takes over at the plane instead of adding the same gas twice.
   float merge = smoothstep(.0,.20,abs(arcDirection.y))*(1.0-junction*.85);
-  vec4 lensedGas = matter(lensedOrbit,t);
-  vec3 lensed = lensedGas.rgb * arcVisibility * merge;
+  vec4 lensedGas = matter(lensedOrbit,t,1.0);
+  vec3 lensed = lensedGas.rgb * arcVisibility * merge * uLensedBaseEmissionEnabled;
   float lowerLanes=smoothstep(.25,.75,noise(lensedOrbit*vec2(6.0,2.0)+vec2(t*.012,0)));
-  float lowerBreakup = mix(.24,.95,lowerLanes)*smoothstep(.15,.8,lensedGas.a);
-  color += lensed * mix(lowerBreakup,3.6,upper);
+  float lensedDensityMask = mix(1.0,smoothstep(.15,.8,lensedGas.a),uLensedDensityMaskEnabled);
+  float lowerBreakup = mix(1.0,mix(.24,.95,lowerLanes),uLensedBreakupEnabled)
+    *lensedDensityMask;
+  color += lensed * mix(lowerBreakup,3.6,upper) * uLensedSecondaryEnabled;
   // Low-frequency emission controls the local halo, not individual hot pixels.
-  float glowCloud=texture(uDust,lensedOrbit*.06+vec2(t*.0002,0)).r;
+  float glowCloud=mix(.5,texture(uDust,lensedOrbit*.06+vec2(t*.0002,0)).r,uLensedGlowCloudEnabled);
   float glowEnergy=exp(-max(lensedRadius-1.2,0.0)*.8)*(.35+glowCloud*.9);
   float bloomWidth = (.24+glowEnergy*.04)*uBloomSpread;
   color += vec3(1.0,.78,.48) * band(lensRadius-1.12,bloomWidth)
-    * mix(.18,.55,upper)*merge*min(glowEnergy,1.6)*arcVisibility*uHaloIntensity;
+    * mix(.18,.55,upper)*merge*min(glowEnergy,1.6)*arcVisibility*uHaloIntensity
+    * uLensedSecondaryEnabled;
   // Broad exterior scattering is separate from filament exposure. Keep it
   // above the disk and under the shadow/front masks to protect the junctions.
   float exteriorHalo=band(radial-1.35,.75*uBloomSpread)*smoothstep(1.02,1.25,radial)
@@ -309,7 +374,7 @@ void main() {
   float shadowDistance=radial-1.0;
   float outside=smoothstep(-edge*.5,edge*.5,shadowDistance);
   vec2 criticalDirection=q/max(radial,.001);
-  float angularCloud=noise(rotate(t*.037)*criticalDirection*7.0);
+  float angularCloud=mix(.5,noise(rotate(t*.037)*criticalDirection*7.0),uRimCloudModulationEnabled);
   // The final reference is a single continuous ivory line, not broken bands.
   float illumination=mix(.72,1.0,upper)*(.96+angularCloud*.08);
   vec3 criticalTint=vec3(1.0,.92,.84);
@@ -323,7 +388,8 @@ void main() {
   float rimBloom=band(shadowDistance-.004,.022)*.14
     +band(shadowDistance-.004,.065)*.03;
   color+=criticalTint*illumination*rimBloom*uHaloIntensity;
-  color = color * frontTransmission + front*vec3(1.0,.97,.91)*1.25;
+  float nearTransmission = mix(1.0,frontTransmission,uNearSideDiskEnabled);
+  color = color * nearTransmission + front*vec3(1.0,.97,.91)*1.25*uNearSideDiskEnabled;
 
   // Bloom is analytical and local to the caustics, keeping the empty space black.
   float causticY = q.y + .23 + .014*q.x*q.x;

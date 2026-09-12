@@ -61,13 +61,75 @@ export interface GravitySettings {
   starTwinkle: number;
   vignette: number;
   staticDiskDetails: boolean;
+  dustBeltEnabled: boolean;
+  proceduralDetailEnabled: boolean;
+  diskWarpEnabled: boolean;
+  lensedSecondaryEnabled: boolean;
+  cloudEnvelopeEnabled: boolean;
+  erosionEnabled: boolean;
+  laneBrightnessEnabled: boolean;
+  streamersEnabled: boolean;
+  hotRimEnabled: boolean;
+  gasCloudBrightnessEnabled: boolean;
+  streaksEnabled: boolean;
+  temperatureCloudModulationEnabled: boolean;
+  densityEnvelopeEnabled: boolean;
+  densityLaneAbsorptionEnabled: boolean;
+  lensedErosionCloudsEnabled: boolean;
+  gasCloudStructureEnabled: boolean;
+  orbitalLanePatternEnabled: boolean;
+  lensedBreakupEnabled: boolean;
+  lensedBaseEmissionEnabled: boolean;
+  lensedDensityMaskEnabled: boolean;
+  lensedGlowCloudEnabled: boolean;
+  broadWispsEnabled: boolean;
+  lensedStaticEnvelopeEnabled: boolean;
+  rimCloudModulationEnabled: boolean;
+  farSideDiskEnabled: boolean;
+  nearSideDiskEnabled: boolean;
+  thermalColorEnabled: boolean;
+  radialHeatEnabled: boolean;
+  depthAbsorptionEnabled: boolean;
+  layerCorrugationEnabled: boolean;
   pauseWhenHidden: boolean;
   taaQuality: GravityTaaQuality;
 }
 
 export type NumericGravitySetting = Exclude<
   keyof GravitySettings,
-  "staticDiskDetails" | "pauseWhenHidden" | "taaQuality"
+  | "staticDiskDetails"
+  | "dustBeltEnabled"
+  | "proceduralDetailEnabled"
+  | "diskWarpEnabled"
+  | "lensedSecondaryEnabled"
+  | "cloudEnvelopeEnabled"
+  | "erosionEnabled"
+  | "laneBrightnessEnabled"
+  | "streamersEnabled"
+  | "hotRimEnabled"
+  | "gasCloudBrightnessEnabled"
+  | "streaksEnabled"
+  | "temperatureCloudModulationEnabled"
+  | "densityEnvelopeEnabled"
+  | "densityLaneAbsorptionEnabled"
+  | "lensedErosionCloudsEnabled"
+  | "gasCloudStructureEnabled"
+  | "orbitalLanePatternEnabled"
+  | "lensedBreakupEnabled"
+  | "lensedBaseEmissionEnabled"
+  | "lensedDensityMaskEnabled"
+  | "lensedGlowCloudEnabled"
+  | "broadWispsEnabled"
+  | "lensedStaticEnvelopeEnabled"
+  | "rimCloudModulationEnabled"
+  | "farSideDiskEnabled"
+  | "nearSideDiskEnabled"
+  | "thermalColorEnabled"
+  | "radialHeatEnabled"
+  | "depthAbsorptionEnabled"
+  | "layerCorrugationEnabled"
+  | "pauseWhenHidden"
+  | "taaQuality"
 >;
 
 export const GRAVITY_NUMERIC_SETTINGS: NumericGravitySetting[] = [
@@ -119,6 +181,36 @@ export function applyBuiltInGravityPreset(
     next[setting] = current[setting];
   }
   next.staticDiskDetails = current.staticDiskDetails;
+  next.dustBeltEnabled = current.dustBeltEnabled;
+  next.proceduralDetailEnabled = current.proceduralDetailEnabled;
+  next.diskWarpEnabled = current.diskWarpEnabled;
+  next.lensedSecondaryEnabled = current.lensedSecondaryEnabled;
+  next.cloudEnvelopeEnabled = current.cloudEnvelopeEnabled;
+  next.erosionEnabled = current.erosionEnabled;
+  next.laneBrightnessEnabled = current.laneBrightnessEnabled;
+  next.streamersEnabled = current.streamersEnabled;
+  next.hotRimEnabled = current.hotRimEnabled;
+  next.gasCloudBrightnessEnabled = current.gasCloudBrightnessEnabled;
+  next.streaksEnabled = current.streaksEnabled;
+  next.temperatureCloudModulationEnabled = current.temperatureCloudModulationEnabled;
+  next.densityEnvelopeEnabled = current.densityEnvelopeEnabled;
+  next.densityLaneAbsorptionEnabled = current.densityLaneAbsorptionEnabled;
+  next.lensedErosionCloudsEnabled = current.lensedErosionCloudsEnabled;
+  next.gasCloudStructureEnabled = current.gasCloudStructureEnabled;
+  next.orbitalLanePatternEnabled = current.orbitalLanePatternEnabled;
+  next.lensedBreakupEnabled = current.lensedBreakupEnabled;
+  next.lensedBaseEmissionEnabled = current.lensedBaseEmissionEnabled;
+  next.lensedDensityMaskEnabled = current.lensedDensityMaskEnabled;
+  next.lensedGlowCloudEnabled = current.lensedGlowCloudEnabled;
+  next.broadWispsEnabled = current.broadWispsEnabled;
+  next.lensedStaticEnvelopeEnabled = current.lensedStaticEnvelopeEnabled;
+  next.rimCloudModulationEnabled = current.rimCloudModulationEnabled;
+  next.farSideDiskEnabled = current.farSideDiskEnabled;
+  next.nearSideDiskEnabled = current.nearSideDiskEnabled;
+  next.thermalColorEnabled = current.thermalColorEnabled;
+  next.radialHeatEnabled = current.radialHeatEnabled;
+  next.depthAbsorptionEnabled = current.depthAbsorptionEnabled;
+  next.layerCorrugationEnabled = current.layerCorrugationEnabled;
   return next;
 }
 
@@ -152,6 +244,36 @@ export const DEFAULT_GRAVITY_SETTINGS: GravitySettings = {
   starTwinkle: 1,
   vignette: 1,
   staticDiskDetails: true,
+  dustBeltEnabled: true,
+  proceduralDetailEnabled: true,
+  diskWarpEnabled: true,
+  lensedSecondaryEnabled: true,
+  cloudEnvelopeEnabled: true,
+  erosionEnabled: true,
+  laneBrightnessEnabled: true,
+  streamersEnabled: true,
+  hotRimEnabled: true,
+  gasCloudBrightnessEnabled: true,
+  streaksEnabled: true,
+  temperatureCloudModulationEnabled: true,
+  densityEnvelopeEnabled: true,
+  densityLaneAbsorptionEnabled: true,
+  lensedErosionCloudsEnabled: true,
+  gasCloudStructureEnabled: true,
+  orbitalLanePatternEnabled: true,
+  lensedBreakupEnabled: true,
+  lensedBaseEmissionEnabled: true,
+  lensedDensityMaskEnabled: true,
+  lensedGlowCloudEnabled: true,
+  broadWispsEnabled: true,
+  lensedStaticEnvelopeEnabled: true,
+  rimCloudModulationEnabled: true,
+  farSideDiskEnabled: true,
+  nearSideDiskEnabled: true,
+  thermalColorEnabled: true,
+  radialHeatEnabled: true,
+  depthAbsorptionEnabled: true,
+  layerCorrugationEnabled: true,
   pauseWhenHidden: true,
   taaQuality: "off",
 };
@@ -181,6 +303,36 @@ export const GRAVITY_PRESETS: Record<GravityPresetId, GravitySettings> = {
     starTwinkle: 0.1,
     vignette: 0.1,
     staticDiskDetails: true,
+    dustBeltEnabled: true,
+    proceduralDetailEnabled: true,
+    diskWarpEnabled: true,
+    lensedSecondaryEnabled: true,
+    cloudEnvelopeEnabled: true,
+    erosionEnabled: true,
+    laneBrightnessEnabled: true,
+    streamersEnabled: true,
+    hotRimEnabled: true,
+    gasCloudBrightnessEnabled: true,
+    streaksEnabled: true,
+    temperatureCloudModulationEnabled: true,
+    densityEnvelopeEnabled: true,
+    densityLaneAbsorptionEnabled: true,
+    lensedErosionCloudsEnabled: true,
+    gasCloudStructureEnabled: true,
+    orbitalLanePatternEnabled: true,
+    lensedBreakupEnabled: true,
+    lensedBaseEmissionEnabled: true,
+    lensedDensityMaskEnabled: true,
+    lensedGlowCloudEnabled: true,
+    broadWispsEnabled: true,
+    lensedStaticEnvelopeEnabled: true,
+    rimCloudModulationEnabled: true,
+    farSideDiskEnabled: true,
+    nearSideDiskEnabled: true,
+    thermalColorEnabled: true,
+    radialHeatEnabled: true,
+    depthAbsorptionEnabled: true,
+    layerCorrugationEnabled: true,
     pauseWhenHidden: true,
     taaQuality: "off",
   },
@@ -207,6 +359,36 @@ export const GRAVITY_PRESETS: Record<GravityPresetId, GravitySettings> = {
     starTwinkle: 3,
     vignette: 3,
     staticDiskDetails: true,
+    dustBeltEnabled: true,
+    proceduralDetailEnabled: true,
+    diskWarpEnabled: true,
+    lensedSecondaryEnabled: true,
+    cloudEnvelopeEnabled: true,
+    erosionEnabled: true,
+    laneBrightnessEnabled: true,
+    streamersEnabled: true,
+    hotRimEnabled: true,
+    gasCloudBrightnessEnabled: true,
+    streaksEnabled: true,
+    temperatureCloudModulationEnabled: true,
+    densityEnvelopeEnabled: true,
+    densityLaneAbsorptionEnabled: true,
+    lensedErosionCloudsEnabled: true,
+    gasCloudStructureEnabled: true,
+    orbitalLanePatternEnabled: true,
+    lensedBreakupEnabled: true,
+    lensedBaseEmissionEnabled: true,
+    lensedDensityMaskEnabled: true,
+    lensedGlowCloudEnabled: true,
+    broadWispsEnabled: true,
+    lensedStaticEnvelopeEnabled: true,
+    rimCloudModulationEnabled: true,
+    farSideDiskEnabled: true,
+    nearSideDiskEnabled: true,
+    thermalColorEnabled: true,
+    radialHeatEnabled: true,
+    depthAbsorptionEnabled: true,
+    layerCorrugationEnabled: true,
     pauseWhenHidden: true,
     taaQuality: "extreme",
   },
@@ -276,13 +458,131 @@ function parseGravitySettings(value: unknown): GravitySettings | null {
   }
   const staticDiskDetails =
     candidate.staticDiskDetails === undefined ? true : candidate.staticDiskDetails;
-  if (typeof staticDiskDetails !== "boolean") return null;
+  const dustBeltEnabled = candidate.dustBeltEnabled === undefined ? true : candidate.dustBeltEnabled;
+  const proceduralDetailEnabled =
+    candidate.proceduralDetailEnabled === undefined ? true : candidate.proceduralDetailEnabled;
+  const diskWarpEnabled = candidate.diskWarpEnabled === undefined ? true : candidate.diskWarpEnabled;
+  const lensedSecondaryEnabled =
+    candidate.lensedSecondaryEnabled === undefined ? true : candidate.lensedSecondaryEnabled;
+  const cloudEnvelopeEnabled =
+    candidate.cloudEnvelopeEnabled === undefined ? true : candidate.cloudEnvelopeEnabled;
+  const erosionEnabled = candidate.erosionEnabled === undefined ? true : candidate.erosionEnabled;
+  const laneBrightnessEnabled =
+    candidate.laneBrightnessEnabled === undefined ? true : candidate.laneBrightnessEnabled;
+  const streamersEnabled =
+    candidate.streamersEnabled === undefined ? true : candidate.streamersEnabled;
+  const hotRimEnabled = candidate.hotRimEnabled === undefined ? true : candidate.hotRimEnabled;
+  const gasCloudBrightnessEnabled =
+    candidate.gasCloudBrightnessEnabled === undefined ? true : candidate.gasCloudBrightnessEnabled;
+  const streaksEnabled = candidate.streaksEnabled === undefined ? true : candidate.streaksEnabled;
+  const temperatureCloudModulationEnabled =
+    candidate.temperatureCloudModulationEnabled === undefined
+      ? true
+      : candidate.temperatureCloudModulationEnabled;
+  const densityEnvelopeEnabled =
+    candidate.densityEnvelopeEnabled === undefined ? true : candidate.densityEnvelopeEnabled;
+  const densityLaneAbsorptionEnabled =
+    candidate.densityLaneAbsorptionEnabled === undefined
+      ? true
+      : candidate.densityLaneAbsorptionEnabled;
+  const lensedErosionCloudsEnabled =
+    candidate.lensedErosionCloudsEnabled === undefined
+      ? true
+      : candidate.lensedErosionCloudsEnabled;
+  const gasCloudStructureEnabled =
+    candidate.gasCloudStructureEnabled === undefined ? true : candidate.gasCloudStructureEnabled;
+  const orbitalLanePatternEnabled =
+    candidate.orbitalLanePatternEnabled === undefined ? true : candidate.orbitalLanePatternEnabled;
+  const lensedBreakupEnabled =
+    candidate.lensedBreakupEnabled === undefined ? true : candidate.lensedBreakupEnabled;
+  const lensedBaseEmissionEnabled =
+    candidate.lensedBaseEmissionEnabled === undefined ? true : candidate.lensedBaseEmissionEnabled;
+  const lensedDensityMaskEnabled =
+    candidate.lensedDensityMaskEnabled === undefined ? true : candidate.lensedDensityMaskEnabled;
+  const lensedGlowCloudEnabled =
+    candidate.lensedGlowCloudEnabled === undefined ? true : candidate.lensedGlowCloudEnabled;
+  const broadWispsEnabled = candidate.broadWispsEnabled === undefined ? true : candidate.broadWispsEnabled;
+  const lensedStaticEnvelopeEnabled =
+    candidate.lensedStaticEnvelopeEnabled === undefined ? true : candidate.lensedStaticEnvelopeEnabled;
+  const rimCloudModulationEnabled =
+    candidate.rimCloudModulationEnabled === undefined ? true : candidate.rimCloudModulationEnabled;
+  const farSideDiskEnabled = candidate.farSideDiskEnabled === undefined ? true : candidate.farSideDiskEnabled;
+  const nearSideDiskEnabled = candidate.nearSideDiskEnabled === undefined ? true : candidate.nearSideDiskEnabled;
+  const thermalColorEnabled = candidate.thermalColorEnabled === undefined ? true : candidate.thermalColorEnabled;
+  const radialHeatEnabled = candidate.radialHeatEnabled === undefined ? true : candidate.radialHeatEnabled;
+  const depthAbsorptionEnabled = candidate.depthAbsorptionEnabled === undefined ? true : candidate.depthAbsorptionEnabled;
+  const layerCorrugationEnabled = candidate.layerCorrugationEnabled === undefined ? true : candidate.layerCorrugationEnabled;
+  if (
+    typeof staticDiskDetails !== "boolean" ||
+    typeof dustBeltEnabled !== "boolean" ||
+    typeof proceduralDetailEnabled !== "boolean" ||
+    typeof diskWarpEnabled !== "boolean" ||
+    typeof lensedSecondaryEnabled !== "boolean" ||
+    typeof cloudEnvelopeEnabled !== "boolean" ||
+    typeof erosionEnabled !== "boolean" ||
+    typeof laneBrightnessEnabled !== "boolean" ||
+    typeof streamersEnabled !== "boolean" ||
+    typeof hotRimEnabled !== "boolean" ||
+    typeof gasCloudBrightnessEnabled !== "boolean" ||
+    typeof streaksEnabled !== "boolean" ||
+    typeof temperatureCloudModulationEnabled !== "boolean" ||
+    typeof densityEnvelopeEnabled !== "boolean" ||
+    typeof densityLaneAbsorptionEnabled !== "boolean" ||
+    typeof lensedErosionCloudsEnabled !== "boolean" ||
+    typeof gasCloudStructureEnabled !== "boolean" ||
+    typeof orbitalLanePatternEnabled !== "boolean" ||
+    typeof lensedBreakupEnabled !== "boolean" ||
+    typeof lensedBaseEmissionEnabled !== "boolean" ||
+    typeof lensedDensityMaskEnabled !== "boolean" ||
+    typeof lensedGlowCloudEnabled !== "boolean" ||
+    typeof broadWispsEnabled !== "boolean" ||
+    typeof lensedStaticEnvelopeEnabled !== "boolean" ||
+    typeof rimCloudModulationEnabled !== "boolean" ||
+    typeof farSideDiskEnabled !== "boolean" ||
+    typeof nearSideDiskEnabled !== "boolean" ||
+    typeof thermalColorEnabled !== "boolean" ||
+    typeof radialHeatEnabled !== "boolean" ||
+    typeof depthAbsorptionEnabled !== "boolean" ||
+    typeof layerCorrugationEnabled !== "boolean"
+  ) {
+    return null;
+  }
   const taaQuality = candidate.taaQuality === undefined ? "off" : candidate.taaQuality;
   if (!isGravityTaaQuality(taaQuality)) return null;
   return {
     ...DEFAULT_GRAVITY_SETTINGS,
     ...candidate,
     staticDiskDetails,
+    dustBeltEnabled,
+    proceduralDetailEnabled,
+    diskWarpEnabled,
+    lensedSecondaryEnabled,
+    cloudEnvelopeEnabled,
+    erosionEnabled,
+    laneBrightnessEnabled,
+    streamersEnabled,
+    hotRimEnabled,
+    gasCloudBrightnessEnabled,
+    streaksEnabled,
+    temperatureCloudModulationEnabled,
+    densityEnvelopeEnabled,
+    densityLaneAbsorptionEnabled,
+    lensedErosionCloudsEnabled,
+    gasCloudStructureEnabled,
+    orbitalLanePatternEnabled,
+    lensedBreakupEnabled,
+    lensedBaseEmissionEnabled,
+    lensedDensityMaskEnabled,
+    lensedGlowCloudEnabled,
+    broadWispsEnabled,
+    lensedStaticEnvelopeEnabled,
+    rimCloudModulationEnabled,
+    farSideDiskEnabled,
+    nearSideDiskEnabled,
+    thermalColorEnabled,
+    radialHeatEnabled,
+    depthAbsorptionEnabled,
+    layerCorrugationEnabled,
     taaQuality,
   } as GravitySettings;
 }

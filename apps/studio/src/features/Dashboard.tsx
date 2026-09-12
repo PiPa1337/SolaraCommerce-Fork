@@ -72,8 +72,9 @@ import { formatCompactDate, ProjectCard, statusLabel } from "./dashboard/Project
 
 interface DashboardProps {
   gravitySettings?: GravitySettings;
-  clockOrigin?: number;
   settingsOpen?: boolean;
+  startupReveal?: boolean;
+  onStartupRevealComplete?(): void;
   projects: StoredProject[];
   onCreate(input: { name: string; brandName: string; email: string; phone: string }): Promise<void>;
   onImport(file: File): Promise<void>;
@@ -243,13 +244,15 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
   );
 });
 
-const GARGANTUA_LAUNCH_DURATION_MS = 1460;
-const GARGANTUA_LAUNCH_HANDOFF = 0.84;
+const GARGANTUA_LAUNCH_DURATION_MS = 3000;
+const GARGANTUA_LAUNCH_HANDOFF = 0.92;
+const GARGANTUA_STARTUP_REVEAL_DURATION_MS = 3000;
 
 export function Dashboard({
   gravitySettings = DEFAULT_GRAVITY_SETTINGS,
-  clockOrigin,
   settingsOpen = false,
+  startupReveal = false,
+  onStartupRevealComplete,
   projects,
   onCreate,
   onImport,
@@ -295,6 +298,7 @@ export function Dashboard({
   const [backingUp, setBackingUp] = useState<string>();
   const [openingStoreId, setOpeningStoreId] = useState<string>();
   const [launchProgress, setLaunchProgress] = useState(0);
+  const [startupProgress, setStartupProgress] = useState(startupReveal ? 1 : 0);
   const shutdownDialogRef = useRef<HTMLDialogElement>(null);
   const shutdownTerminalRef = useRef(shutdownTerminal === true);
   const selectedPanelRef = useRef<HTMLElement>(null);
@@ -307,6 +311,7 @@ export function Dashboard({
   const focusCardOnSelectRef = useRef(false);
   const actionNoticeTimerRef = useRef<number | undefined>(undefined);
   const launchFrameRef = useRef<number | undefined>(undefined);
+  const startupFrameRef = useRef<number | undefined>(undefined);
   const launchTokenRef = useRef<string | undefined>(undefined);
   const launchHandoffRef = useRef(false);
   const libraryTitleId = useId();
@@ -350,6 +355,42 @@ export function Dashboard({
     const right = projects.find((record) => record.id === compareIds[1]);
     return left && right ? { left, right } : undefined;
   }, [compareIds, projects]);
+
+  useEffect(() => {
+    if (!startupReveal) {
+      setStartupProgress(0);
+      return;
+    }
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reducedMotion) {
+      setStartupProgress(0);
+      onStartupRevealComplete?.();
+      return;
+    }
+
+    const startedAt = performance.now();
+    setStartupProgress(1);
+    const animateStartupReveal = (now: number) => {
+      const elapsed = Math.min(1, (now - startedAt) / GARGANTUA_STARTUP_REVEAL_DURATION_MS);
+      const progress = 1 - elapsed;
+      setStartupProgress(progress);
+      if (progress <= 0) {
+        startupFrameRef.current = undefined;
+        onStartupRevealComplete?.();
+        return;
+      }
+      startupFrameRef.current = window.requestAnimationFrame(animateStartupReveal);
+    };
+
+    startupFrameRef.current = window.requestAnimationFrame(animateStartupReveal);
+    return () => {
+      if (startupFrameRef.current !== undefined) {
+        window.cancelAnimationFrame(startupFrameRef.current);
+        startupFrameRef.current = undefined;
+      }
+    };
+  }, [onStartupRevealComplete, startupReveal]);
 
   useEffect(() => {
     if (page !== paginated.page) setPage(paginated.page);
@@ -939,6 +980,7 @@ export function Dashboard({
   const openingStore = openingStoreId
     ? projects.find((record) => record.id === openingStoreId)
     : undefined;
+  const isDashboardEntering = startupReveal && startupProgress > 0;
 
   return (
     <main
@@ -946,11 +988,10 @@ export function Dashboard({
       tabIndex={-1}
       className={`dashboard-page dashboard-cosmic dashboard-gargantua${
         openingStoreId ? " is-store-launching" : ""
-      }`}
-      aria-busy={openingStoreId ? "true" : undefined}
+      }${isDashboardEntering ? " is-dashboard-entering" : ""}`}
+      aria-busy={openingStoreId || isDashboardEntering ? "true" : undefined}
     >
       <GravityField
-        clockOrigin={clockOrigin}
         settings={gravitySettings}
         activeIndex={selectedId ? (pageIndexById.get(selectedId) ?? 0) : 0}
         selectionVisible={Boolean(
@@ -958,8 +999,15 @@ export function Dashboard({
         )}
         storeCount={pageVisible.length}
         templateSelected={Boolean(selected && isBaseTemplate(selected.project))}
-        launchProgress={launchProgress}
+        launchProgress={openingStoreId ? launchProgress : startupProgress}
       />
+      {isDashboardEntering ? (
+        <output
+          className="dashboard-gargantua-transition dashboard-gargantua-transition--reverse"
+          data-testid="gargantua-entry"
+          aria-hidden="true"
+        />
+      ) : null}
       {openingStoreId ? (
         <output
           className="dashboard-gargantua-transition"
@@ -971,7 +1019,7 @@ export function Dashboard({
       ) : null}
       <div
         className="dashboard-wrap dashboard-cosmic__content"
-        aria-hidden={settingsOpen ? "true" : undefined}
+        aria-hidden={settingsOpen || isDashboardEntering ? "true" : undefined}
       >
         {isShutdownTerminal ? (
           <output className="shutdown-status shutdown-status--cosmic">

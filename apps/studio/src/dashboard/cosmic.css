@@ -7420,355 +7420,6 @@ tbody tr[data-selected="true"] {
   }
 }
 
-/* Arranque de la app: primero una splash negra plana y centrada, luego un
- * blackout completo y finalmente un segundo fade que acompaña el zoom real de
- * Gargantua antes de descubrir el dashboard ya preparado. */
-.app-boot-sequence {
-  position: fixed;
-  z-index: 2000;
-  inset: 0;
-  overflow: hidden;
-  isolation: isolate;
-  background: #000;
-  transition: background-color 720ms cubic-bezier(0.16, 1, 0.3, 1);
-  pointer-events: none;
-  /* El splash usa el mismo material frío de las cards del dashboard. */
-  --boot-ink: #f3f7fb;
-  --boot-muted: #aab8c8;
-  --boot-faint: #8190a4;
-  --boot-amber: #c4d2e1;
-  --boot-line: rgb(232 242 255 / 0.16);
-  --boot-card-border: rgb(242 248 255 / 0.3);
-  --boot-card-surface: rgb(13 22 36 / 0.78);
-  --boot-card-highlight: rgb(255 255 255 / 0.075);
-  --boot-card-shadow: 0 18px 48px rgb(0 0 0 / 0.28);
-}
-
-.app-boot-sequence__veil {
-  position: absolute;
-  z-index: 1;
-  inset: 0;
-  background:
-    radial-gradient(
-      circle at 67% 61%,
-      transparent 0 17%,
-      rgb(0 0 0 / 0.18) 48%,
-      rgb(0 0 0 / 0.72) 100%
-    ), linear-gradient(180deg, rgb(0 0 0 / 0.08), rgb(0 0 0 / 0.3));
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 280ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.app-boot-sequence__blackout {
-  position: absolute;
-  z-index: 2;
-  inset: 0;
-  background: #000;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 720ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.app-boot-sequence__panel {
-  position: absolute;
-  z-index: 3;
-  top: 50%;
-  left: 50%;
-  width: min(470px, calc(100vw - 40px));
-  padding: 26px;
-  border: 1px solid var(--boot-card-border);
-  border-radius: 18px;
-  color: var(--boot-ink);
-  background:
-    linear-gradient(145deg, rgb(255 255 255 / 0.075), rgb(255 255 255 / 0.018)),
-    var(--boot-card-surface);
-  box-shadow: var(--boot-card-shadow), 0 1px 0 var(--boot-card-highlight) inset;
-  -webkit-backdrop-filter: blur(14px) saturate(120%);
-  backdrop-filter: blur(14px) saturate(120%);
-  transform: translate(-50%, -50%);
-  transition:
-    opacity 420ms cubic-bezier(0.16, 1, 0.3, 1),
-    transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.app-boot-sequence__brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--boot-line);
-}
-
-.app-boot-sequence__logo {
-  flex: 0 0 auto;
-  width: 44px;
-  height: 44px;
-  border: 1px solid rgb(242 248 255 / 0.32);
-  border-radius: 50%;
-  box-shadow: none;
-  /* El PNG de marca trae un halo cálido; acá debe pertenecer al vidrio frío. */
-  filter: grayscale(1) brightness(1.12) contrast(0.96);
-}
-
-.app-boot-sequence__eyebrow,
-.app-boot-sequence__brand-detail,
-.app-boot-sequence__copy h1,
-.app-boot-sequence__copy p {
-  margin: 0;
-}
-
-.app-boot-sequence__eyebrow {
-  color: var(--boot-amber);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  line-height: 1.2;
-  text-transform: uppercase;
-}
-
-.app-boot-sequence__brand-detail {
-  margin-top: 5px;
-  color: var(--boot-faint);
-  font-size: 12px;
-  letter-spacing: 0.02em;
-}
-
-.app-boot-sequence__copy {
-  padding-top: 26px;
-}
-
-.app-boot-sequence__copy h1 {
-  max-width: 17ch;
-  font-size: clamp(22px, 3vw, 28px);
-  font-weight: 600;
-  letter-spacing: -0.025em;
-  line-height: 1.08;
-}
-
-.app-boot-sequence__copy p {
-  min-height: 2.6em;
-  margin-top: 10px;
-  color: var(--boot-muted);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.app-boot-sequence__progress {
-  margin-top: 24px;
-}
-
-.app-boot-sequence__progress-track {
-  overflow: hidden;
-  height: 6px;
-  border: 1px solid rgb(255 255 255 / 0.08);
-  border-radius: 999px;
-  background: rgb(255 255 255 / 0.08);
-  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.35);
-}
-
-.app-boot-sequence__progress-value {
-  display: block;
-  height: 100%;
-  width: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, rgb(166 188 214 / 0.95), rgb(243 247 251 / 0.98));
-  box-shadow: none;
-  transform-origin: left center;
-  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.app-boot-sequence__progress-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 10px;
-  color: var(--boot-faint);
-  font-size: 11px;
-  letter-spacing: 0.02em;
-}
-
-.app-boot-sequence__progress-meta strong {
-  color: var(--boot-ink);
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-}
-
-.app-boot-sequence.is-blackout {
-  background-color: #000;
-}
-
-.app-boot-sequence.is-blackout .app-boot-sequence__blackout {
-  opacity: 1;
-}
-
-.app-boot-sequence.is-blackout .app-boot-sequence__panel,
-.app-boot-sequence.is-returning .app-boot-sequence__panel,
-.app-boot-sequence.is-dashboard .app-boot-sequence__panel {
-  opacity: 0;
-  transform: translate(-50%, calc(-50% - 10px));
-}
-
-.app-boot-sequence.is-returning .app-boot-sequence__blackout {
-  opacity: 0;
-  transition-duration: 900ms;
-}
-
-.app-boot-sequence.is-returning {
-  background-color: transparent;
-}
-
-body:has(.app-boot-sequence.is-returning) .app-root--dashboard-cosmic > .app-header--dashboard-cosmic,
-body:has(.app-boot-sequence.is-returning) .app-root--dashboard-cosmic .dashboard-cosmic__banners,
-body:has(.app-boot-sequence.is-returning) .app-root--dashboard-cosmic .dashboard-cosmic__content {
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* El dashboard entra después del zoom; el marker queda vivo durante todo el
- * stagger para evitar que React quite las animaciones en el primer frame. */
-.app-boot-sequence.is-dashboard {
-  opacity: 0;
-  transition: none;
-}
-
-html[data-solara-dashboard-entry="true"] .app-root--dashboard-cosmic > .app-header--dashboard-cosmic,
-html[data-solara-dashboard-entry="true"] .app-root--dashboard-cosmic .dashboard-cosmic__banners,
-html[data-solara-dashboard-entry="true"]
-  .app-root--dashboard-cosmic
-  .dashboard-cosmic__content
-  > .shutdown-status,
-html[data-solara-dashboard-entry="true"]
-  .app-root--dashboard-cosmic
-  .dashboard-cosmic__content
-  > .dashboard-cosmic-library {
-  animation: solara-boot-block-in 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-html[data-solara-dashboard-entry="true"] .app-root--dashboard-cosmic > .app-header--dashboard-cosmic {
-  animation-delay: 90ms;
-}
-
-html[data-solara-dashboard-entry="true"] .app-root--dashboard-cosmic .dashboard-cosmic__banners {
-  animation-delay: 210ms;
-}
-
-html[data-solara-dashboard-entry="true"]
-  .app-root--dashboard-cosmic
-  .dashboard-cosmic__content
-  > .shutdown-status {
-  animation-delay: 300ms;
-}
-
-html[data-solara-dashboard-entry="true"]
-  .app-root--dashboard-cosmic
-  .dashboard-cosmic__content
-  > .dashboard-cosmic-library {
-  animation-delay: 360ms;
-  animation-name: solara-boot-shell-in;
-}
-
-html[data-solara-dashboard-entry="true"] .dashboard-cosmic-library-head {
-  animation: solara-boot-block-in 420ms cubic-bezier(0.16, 1, 0.3, 1) 640ms both;
-}
-
-html[data-solara-dashboard-entry="true"] .dashboard-cosmic-toolbar {
-  animation: solara-boot-block-in 390ms cubic-bezier(0.16, 1, 0.3, 1) 790ms both;
-}
-
-html[data-solara-dashboard-entry="true"] .dashboard-cosmic-actions {
-  animation: solara-boot-block-in 390ms cubic-bezier(0.16, 1, 0.3, 1) 920ms both;
-}
-
-html[data-solara-dashboard-entry="true"] .dashboard-cosmic-results {
-  animation: solara-boot-block-in 460ms cubic-bezier(0.16, 1, 0.3, 1) 1050ms both;
-}
-
-@keyframes solara-boot-block-in {
-  0% {
-    opacity: 0;
-    transform: translate3d(0, 16px, 0);
-  }
-
-  68% {
-    opacity: 1;
-  }
-
-  100% {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-}
-
-@keyframes solara-boot-shell-in {
-  from {
-    transform: translate3d(0, 16px, 0);
-  }
-
-  to {
-    transform: translate3d(0, 0, 0);
-  }
-}
-
-@media (max-width: 640px) {
-  .app-boot-sequence__panel {
-    width: calc(100vw - 32px);
-    padding: 20px;
-    transform: translate(-50%, -50%);
-  }
-
-  .app-boot-sequence__copy {
-    padding-top: 20px;
-  }
-
-  .app-boot-sequence__progress {
-    margin-top: 20px;
-  }
-
-  .app-boot-sequence__progress-status {
-    max-width: 22ch;
-  }
-
-  .app-boot-sequence.is-blackout .app-boot-sequence__panel,
-  .app-boot-sequence.is-returning .app-boot-sequence__panel {
-    transform: translate(-50%, calc(-50% - 10px));
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .app-boot-sequence__blackout,
-  .app-boot-sequence__panel,
-  .app-boot-sequence__progress-value {
-    transition-duration: 120ms;
-  }
-
-  .app-boot-sequence.is-blackout .app-boot-sequence__panel,
-  .app-boot-sequence.is-returning .app-boot-sequence__panel {
-    transform: translate(-50%, -50%);
-  }
-
-  html[data-solara-dashboard-entry="true"] .app-root--dashboard-cosmic > .app-header--dashboard-cosmic,
-  html[data-solara-dashboard-entry="true"] .app-root--dashboard-cosmic .dashboard-cosmic__banners,
-  html[data-solara-dashboard-entry="true"]
-    .app-root--dashboard-cosmic
-    .dashboard-cosmic__content
-    > .shutdown-status,
-  html[data-solara-dashboard-entry="true"]
-    .app-root--dashboard-cosmic
-    .dashboard-cosmic__content
-    > .dashboard-cosmic-library,
-  html[data-solara-dashboard-entry="true"] .dashboard-cosmic-library-head,
-  html[data-solara-dashboard-entry="true"] .dashboard-cosmic-toolbar,
-  html[data-solara-dashboard-entry="true"] .dashboard-cosmic-actions,
-  html[data-solara-dashboard-entry="true"] .dashboard-cosmic-results {
-    animation: none;
-    filter: none;
-    opacity: 1;
-    transform: none;
-  }
-}
-
 /* Refinamiento desktop del rail: las acciones recuperan una escala legible,
  * los grupos se leen a simple vista y el feedback no mueve el panel. */
 @media (min-width: 821px) {
@@ -9350,8 +9001,43 @@ body:has(.app-root--dashboard-cosmic) .confirm-dialog {
     transform 720ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.app-root--dashboard-cosmic:has(.dashboard-gargantua.is-dashboard-entering)
+  > .app-header--dashboard-cosmic {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-14px) scale(0.98);
+  transition:
+    opacity 500ms ease,
+    transform 720ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.app-root--dashboard-cosmic.is-dashboard-entering > :not(.dashboard-page) {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .dashboard-gargantua.is-store-launching {
   overflow: hidden;
+}
+
+.dashboard-gargantua.is-dashboard-entering {
+  overflow: hidden;
+}
+
+.dashboard-gargantua.is-dashboard-entering .dashboard-cosmic__content {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.app-root--dashboard-cosmic.is-dashboard-entering
+  > .dashboard-page
+  > .dashboard-cosmic__content {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .dashboard-gargantua.is-store-launching .dashboard-cosmic__content {
@@ -9396,22 +9082,14 @@ body:has(.app-root--dashboard-cosmic) .confirm-dialog {
     ),
     rgb(1 2 5 / 0.22);
   pointer-events: auto;
-  animation: dashboard-gargantua-curtain 1460ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: dashboard-gargantua-curtain 3000ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* El aro elíptico no forma parte del viaje: el blackout y el campo gravitatorio
+ * ya comunican el movimiento sin dejar un círculo residual sobre el negro. */
 .dashboard-gargantua-transition::before {
-  position: absolute;
-  width: 22vmin;
-  aspect-ratio: 1;
-  border: 1px solid rgb(255 233 176 / 0.42);
-  border-radius: 50%;
-  box-shadow:
-    0 0 26px rgb(255 193 86 / 0.32),
-    0 0 90px rgb(234 104 29 / 0.22),
-    inset 0 0 22px rgb(255 240 192 / 0.25);
-  content: "";
-  pointer-events: none;
-  animation: dashboard-gargantua-entry-ring 1460ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  display: none;
+  content: none;
 }
 
 .dashboard-gargantua-transition::after {
@@ -9421,7 +9099,12 @@ body:has(.app-root--dashboard-cosmic) .confirm-dialog {
   content: "";
   opacity: 0;
   pointer-events: none;
-  animation: dashboard-gargantua-blackout 1460ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: dashboard-gargantua-blackout 3000ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.dashboard-gargantua-transition--reverse,
+.dashboard-gargantua-transition--reverse::after {
+  animation-direction: reverse;
 }
 
 .store-launch-curtain {
@@ -9438,20 +9121,17 @@ body:has(.app-root--dashboard-cosmic) .confirm-dialog {
 
 .store-launch-curtain.is-releasing {
   opacity: 1;
-  animation: store-launch-curtain-release 460ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: store-launch-curtain-release 320ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 @keyframes dashboard-gargantua-curtain {
-  0% {
+  0%,
+  72% {
     opacity: 0;
   }
 
-  18% {
-    opacity: 0.16;
-  }
-
-  68% {
-    opacity: 0.58;
+  88% {
+    opacity: 0.12;
   }
 
   100% {
@@ -9459,30 +9139,14 @@ body:has(.app-root--dashboard-cosmic) .confirm-dialog {
   }
 }
 
-@keyframes dashboard-gargantua-entry-ring {
-  0% {
-    opacity: 0;
-    transform: scale(0.2) rotate(-20deg);
-  }
-
-  32% {
-    opacity: 0.8;
-  }
-
-  100% {
-    opacity: 0;
-    transform: scale(12) rotate(35deg);
-  }
-}
-
 @keyframes dashboard-gargantua-blackout {
   0%,
-  62% {
+  84% {
     opacity: 0;
   }
 
-  82% {
-    opacity: 0.42;
+  94% {
+    opacity: 0.48;
   }
 
   100% {
@@ -9506,6 +9170,11 @@ body:has(.app-root--dashboard-cosmic) .confirm-dialog {
     transition: none;
   }
 
+  .app-root--dashboard-cosmic:has(.dashboard-gargantua.is-dashboard-entering)
+    > .app-header--dashboard-cosmic {
+    transition: none;
+  }
+
   .dashboard-gargantua.is-store-launching .dashboard-cosmic__content {
     filter: none;
     transition: opacity 120ms ease;
@@ -9516,8 +9185,12 @@ body:has(.app-root--dashboard-cosmic) .confirm-dialog {
     transition: none;
   }
 
+  .dashboard-gargantua-transition--reverse,
+  .dashboard-gargantua-transition--reverse::after {
+    animation-duration: 1ms;
+  }
+
   .dashboard-gargantua-transition,
-  .dashboard-gargantua-transition::before,
   .dashboard-gargantua-transition::after {
     animation-duration: 240ms;
   }
